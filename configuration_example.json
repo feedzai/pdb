@@ -1,0 +1,9 @@
+{
+	"configurations" : [
+		{
+			"database" : "H2",
+			"connection" : "jdbc:h2:target/pulse-tests",
+			"username" : "pulse",
+			"password" : "pulse"
+		}]
+}

@@ -1,0 +1,249 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.feedzai.commons</groupId>
+  <artifactId>pdb</artifactId>
+  <version>1.0.1-SNAPSHOT</version>
+  <name>pdb</name>
+
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <scm>
+    <connection>scm:git:git@github.com:feedzai/pdb.git</connection>
+    <url>scm:git:git@github.com:feedzai/pdb.git</url>
+    <developerConnection>scm:git:git@github.com:feedzai/pdb.git</developerConnection>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <project.source>1.7</project.source>
+    <mysql.version>5.1.17</mysql.version>
+    <db2.version>10.1fp2</db2.version>
+    <postgresql.version>8.4-702.jdbc4</postgresql.version>
+    <oracle.version>11.2.0.2.0</oracle.version>
+    <sqlserver.version>3.0.1301.101</sqlserver.version>
+    <h2.version>1.3.164</h2.version>
+    <guava.version>14.0.1</guava.version>
+    <slf4j.version>1.6.0</slf4j.version>
+    <commons-lang.version>2.5</commons-lang.version>
+    <commons-codec.version>1.5</commons-codec.version>
+    <junit.version>4.8.1</junit.version>
+    <logback-classic.version>0.9.21</logback-classic.version>
+    <jmockit.version>1.0</jmockit.version>
+    <jackson.version>1.9.13</jackson.version>
+  </properties>
+
+  <dependencies>
+    <!-- MySQL -->
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>${mysql.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- db2 -->
+    <dependency>
+      <groupId>com.ibm</groupId>
+      <artifactId>com.ibm.db2jcc</artifactId>
+      <version>${db2.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- PostgreSql -->
+    <dependency>
+      <groupId>postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${postgresql.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- Oracle -->
+    <dependency>
+      <groupId>com.oracle</groupId>
+      <artifactId>ojdbc6</artifactId>
+      <version>${oracle.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- SQL Server -->
+    <dependency>
+      <groupId>com.microsoft.sqlserver</groupId>
+      <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
+      <version>${sqlserver.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- H2 -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>${h2.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- slf4j -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>${commons-lang.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>${commons-codec.version}</version>
+    </dependency>
+    <!-- junit -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+    </dependency>
+    <!-- logback. -->
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>${logback-classic.version}</version>
+    </dependency>
+    <!-- jmockit dependency must be above junit -->
+    <dependency>
+      <groupId>com.googlecode.jmockit</groupId>
+      <artifactId>jmockit</artifactId>
+      <version>${jmockit.version}</version>
+    </dependency>
+    <!-- jackson configuration helper -->
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>${jackson.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+    <!-- By default only run the H2 tests. -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>3.1</version>
+          <configuration>
+            <source>${project.source}</source>
+            <target>${project.source}</target>
+          </configuration>
+          </plugin>
+          <!-- maven-surefire-plugin -->
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <groupId>org.apache.maven.plugins</groupId>
+            <version>2.15</version>
+            <configuration>
+              <includes>
+                <include>**/*Test.java</include>
+              </includes>
+            </configuration>
+      </plugin>
+      <!-- maven-release-plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.4.1</version>
+        <configuration>
+          <localCheckout>true</localCheckout>
+          <pushChanges>false</pushChanges>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <distributionManagement>
+    <repository>
+      <id>pdb-test</id>
+      <url>http://intra.feedzai.com/nexus/content/repositories/pdb-test</url>
+    </repository>
+  </distributionManagement>
+
+  <profiles>
+    <profile>
+      <id>testing</id>
+      <activation>
+        <property>
+          <name>TESTING</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <!-- maven-surefire-plugin -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration combine.self="override">
+              <trimStackTrace>false</trimStackTrace>
+              <skipTests>false</skipTests>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>jacoco</id>
+      <activation>
+        <property>
+          <name>jacoco</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/*Test.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
+  <repositories>
+    <!-- Use FeedZai's repository -->
+    <repository>
+      <id>internal-feedzai-mvn-repo</id>
+      <name>FeedZai internal repository</name>
+      <url>http://intra.feedzai.com/nexus/content/repositories/releases</url>
+    </repository>
+    <repository>
+      <id>internal-feedzai-thirdparty-mvn-repo</id>
+      <name>FeedZai thirdparty repository</name>
+      <url>http://intra.feedzai.com/nexus/content/repositories/thirdparty</url>
+    </repository>
+    <repository>
+      <id>internal-feedzai-snapshots-mvn-repo</id>
+      <name>FeedZai snapshots repository</name>
+      <url>http://intra.feedzai.com/nexus/content/repositories/snapshots</url>
+    </repository>
+    <repository>
+      <id>jstd-maven-plugin-google-code-repo</id>
+      <url>http://jstd-maven-plugin.googlecode.com/svn/maven2</url>
+    </repository>
+  </repositories>
+</project>
