@@ -2,7 +2,7 @@
 
 PulseDB is a database-mapping software library in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
-PDB provides a DSL that covers most of SQL functionalities and allows a to easely integrate persistence in your projects and modules.
+PDB provides a DSL that covers most of SQL functionalities and allows to easely integrate persistence into your projects and modules.
 
 ## Using PDB
 
@@ -705,20 +705,8 @@ For more insight on the available functionality please consult the javadoc docum
 
 ## Contact
 
-For more information please contact helpdesk@feedzai.com, we will happily answer your questions.
+For more information please send us a message through github, we will happily answer your questions.
 
 ## License
 
-Copyright 2013 Feedzai
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+See [LICENSE](https://github.com/feedzai/pdb/blob/master/LICENSE).
