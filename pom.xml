@@ -4,7 +4,10 @@
   <groupId>com.feedzai</groupId>
   <artifactId>pdb</artifactId>
   <version>1.0.1-SNAPSHOT</version>
+  <packaging>jar</packaging>
   <name>pdb</name>
+  <description>A database-mapping software library for Java</description>
+  <url>https://github.com/feedzai/pdb</url>
 
   <licenses>
     <license>
@@ -19,6 +22,14 @@
     <developerConnection>scm:git:git@github.com:feedzai/pdb.git</developerConnection>
     <url>git@github.com:feedzai/pdb.git</url>
   </scm>
+
+  <developers>
+    <developer>
+      <id></id>
+      <name></name>
+      <email></email>
+    </developer>
+  </developers>
 
   <properties>
     <project.source>1.7</project.source>
@@ -135,7 +146,7 @@
     </dependency>
   </dependencies>
 
-    <!-- By default only run the H2 tests. -->
+  <!-- By default only run the H2 tests. -->
   <build>
     <plugins>
       <plugin>
@@ -154,7 +165,7 @@
             <version>2.15</version>
             <configuration>
               <includes>
-                <include>**/*Test.java</include>
+                <include>**/H2*Test.java</include>
               </includes>
             </configuration>
       </plugin>

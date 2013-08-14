@@ -2,7 +2,7 @@
 
 PulseDB is a database-mapping software library in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
-PDB provides a DSL that covers most of SQL functionalities and allows to easely integrate persistence into your projects and modules.
+PDB provides a DSL that covers most of SQL functionalities and allows to easily integrate persistence into your projects and modules.
 
 ## Using PDB
 
@@ -64,9 +64,9 @@ DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 
 Always remember to provide your own credentials and schema name.
 It is also important to select a schema policy. There are four possible schema policies:
-- create - New entities are created normaly.
-- create-drop - Same as create policy but before the connection is closed all entries created during this session will be droped.
-- drop-create - New entities are droped before creation if they already exist.
+- create - New entities are created normally.
+- create-drop - Same as create policy but before the connection is closed all entries created during this session will be dropped.
+- drop-create - New entities are dropped before creation if they already exist.
 - none - The program is not allowed to create new entities.
 
 Note that this is an example for PostgreSql, but PDB also supports H2, MySql, Oracle, SqlServer and others.
@@ -94,7 +94,7 @@ entity.setName(String name)
 
 entity.addColumn(String name, DbColumnType type, boolean autoincrement, DbColumnProperties... constraints)
 - Create a column with a given name and type.
-- Additionaly you can had autoincrement behaviour and define some extra constraints.
+- Additionally you can had autoincrement behaviour and define some extra constraints.
 - There are two possible constraints available: UNIQUE and NOT_NULL.
 
 entity.setPkFields(String... columns)
@@ -102,7 +102,7 @@ entity.setPkFields(String... columns)
 ```
 
 To create the data_type_table you call addEntity method on the previously created database engine.
-Depending on the policy you chose existing tables may be droped before creation.
+Depending on the policy you chose existing tables may be dropped before creation.
 
 ```java
 engine.addEntity(data_type_table);
@@ -153,9 +153,9 @@ A foreign key is created with DbFk, and it is defined using methods:
 - Define which columns will be part of this constraint.
 
 .setForeignTable(String foreignTable)
-- Define the foreign table we are refering to.
+- Define the foreign table we are referring to.
 
-.addForeignColumn(String... foreigmColumns)
+.addForeignColumn(String... foreignColumns)
 - Selects the affected columns in the foreign table.
 ```
 
@@ -213,7 +213,7 @@ engine.dropEntity("stream_to_module");
 ### Alter Table
 
 With PDB you can change some aspects of a previously created tables.
-After calling the the addEntity method with the created entity you can continue to modify this local representation by calling the methods described in the previos sections.
+After calling the the addEntity method with the created entity you can continue to modify this local representation by calling the methods described in the previous sections.
 Then to synchronize the local representation with the actual table in the database you call the updateEntity method.
 
 ```java
@@ -227,7 +227,7 @@ engine.updateEntity(data_type_table);
 
 .updateEntity(DbEntity entity)
 - Synchronizes the entity representation with the table in the database.
-- If schema policy is set to drop-create the whole table is droped and created again.
+- If schema policy is set to drop-create the whole table is dropped and created again.
 ```
 
 Another mechanism to alter table is by using the AlterColumn expression creation and the executeUpdate method provided by the database engine.
@@ -363,7 +363,7 @@ engine.executeUpdate(
 	update(table("stream"))
 	.set(
 		eq(column("cd"), k("Double")),
-		eq(column("description", k("Double precision floatinf point number")))
+		eq(column("description", k("Double precision floating point number")))
 	.where(eq(column(id), k(1))));
 ```
 
@@ -457,7 +457,7 @@ select(Expression... select)
 - Expression defining the selection of columns or other manipulations of its values.
 
 .distinct()
-- Filter the query so it only returns distinc values.
+- Filter the query so it only returns distinct values.
 
 .from(final Expression... sources)
 - Defines what tables or combination of them the data must be fetched from.
@@ -477,7 +477,7 @@ column(String tableName, String columnName)
 - Defines a reference to a given column.
 ```
 
-This is usefull but not very interesting.
+This is useful but not very interesting.
 We should proceed by filtering the results with some condition of our choice.
 
 ```java
@@ -496,20 +496,20 @@ results = engine.query(
 
 eq(Expression... expressions)
 - Applies the equality condition to the expressions.
-- It is also used in insertion queries to represent atribution.
+- It is also used in insertion queries to represent attribution.
 
 neq(Expression... expressions)
 - Negation of the equality condition.
 
 like(Expression... expressions)
-- Likelyhood comparison between expression.
+- Likelihood comparison between expression.
 - Those expression must resolve to String constants or columns of the same type.
 
 lt(Expression... expressions)
 lteq(Expression... expressions)
 gt(Expression... expressions)
 gteq(Expression... expressions)
-- Numerical or alphanumerical comparation of values.
+- Predicate over numerical or alphanumerical values.
 ```
 
 A more complex filter would be one that select Streams from a given range of data Types and a set of Providers.
@@ -542,7 +542,7 @@ L(Expression... expressions)
 ```
 
 It is widely known that greater the id greater the Stream of data.
-For this porpuse you just design a query that selects the maximum Stream id of data Type 4 from Provider 1.
+For this purpose you just design a query that selects the maximum Stream id of data Type 4 from Provider 1.
 You might just get a raise for this.
 
 ```java
@@ -564,14 +564,14 @@ sum(Expression expression)
 avg(Expression expression)
 stddev(Expression expression)
 - Aggregation operator for numeric values.
-- They are aplicable to expression involving columns.
+- They are applicable to expression involving columns.
 
 udf(String name, Expression exp)
 - If you have defined your own sql function you may access it with udf
 ```
 
 Sometimes it is required to merge the content of more than one table.
-For that porpuse you can use joins.
+For that purpose you can use joins.
 They allow you to merge content of two or more table regrading some condition.
 In this example we provide a little bit more flavor to the result by adding the data Type information to the Stream information.
 
@@ -583,10 +583,10 @@ results = engine.query(
 					join(column("stream", "data_type_id"), column("data_type", "id")))));
 ```
 ```
-.innerJoin(Expression table, Expression codition)
-.leftOuterJoin(Expression table, Expression codition)
-.rightOuterJoin(Expression table, Expression codition)
-.fullOuterJoin(Expression table, Expression codition)
+.innerJoin(Expression table, Expression condition)
+.leftOuterJoin(Expression table, Expression condition)
+.rightOuterJoin(Expression table, Expression condition)
+.fullOuterJoin(Expression table, Expression condition)
 - Merges the table result of two expression regarding a condition.
 
 .join(Expressions expressions)
@@ -616,12 +616,12 @@ results = engine.query(
 
 .asc()
 .desc()
-- Sets the ordering of your choice, either ascendent or descendent.
+- Sets the ordering of your choice, either ascendant or descendant.
 ```
 
-Some documents leaked online last week sugest that there are some hidden message in our data.
-To visualize this hidden message we need to do some aritmetics with the ids of the provider and data_type on table Streams.
-Even more strange is the need to filter the description column, where in case of a null value an altenative is presented.
+Some documents leaked online last week suggest that there are some hidden message in our data.
+To visualize this hidden message we need to do some arithmetic's with the ids of the provider and data_type on table Streams.
+Even more strange is the need to filter the description column, where in case of a null value an alternative is presented.
 
 ```java
 results = engine.query(
@@ -651,7 +651,7 @@ coalesce(Expression expression, Expression... alternatives)
 ```
 
 For this next example, imagine you want to select all Streams for which the sum of data_type_id and provider_id is greater than 5.
-It might not be a very usefull query, but when you had that you just want 10 rows of the result with and offset of 2, people might wonder what you are up to.
+It might not be a very useful query, but when you had that you just want 10 rows of the result with and offset of 2, people might wonder what you are up to.
 
 ```java
 results = engine.query(
@@ -678,7 +678,7 @@ offset(Integer offset)
 
 ### Create View
 
-Sometimes, for securty reasons or just for simplicity, it is usefull to have a view of the database.
+Sometimes, for security reasons or just for simplicity, it is useful to have a view of the database.
 
 ```java
 Expression view = createView("simple_stream")
@@ -695,8 +695,8 @@ createView(String name)
 .as(Query query)
 - Defines the query that provides the data for this view.
 
-.replase()
-- Whether or not the view creation is autorized to overwrite over existing views.
+.replace()
+- Whether or not the view creation is authorized to overwrite over existing views.
 ```
 
 ## Further Documentation
@@ -705,7 +705,7 @@ For more insight on the available functionality please consult the javadoc docum
 
 ## Contact
 
-For more information please send us a message through github, we will happily answer your questions.
+For more information please send us a message to opensource@feedzai.com, we will happily answer your questions.
 
 ## License
 
