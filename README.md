@@ -11,14 +11,18 @@ Add the following dependency to your Maven pom.
 ```
 <dependencies>
 	<dependency>
-		<groupId>pdb</groupId>
+		<groupId>com.feedzai</groupId>
 		<artifactId>pdb</artifactId>
-		<version>1.0</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</dependency>
 </dependencies>
 ```
 
-And you are ready to go!
+## Compiling PDB
+
+In order to compile PDB you will need to had the jar's for OracleDB,SQLServer and DB2 to your local repository.
+See the following link for more info:
+- http://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html
 
 ## Getting  started
 
