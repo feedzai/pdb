@@ -21,7 +21,7 @@ Add the following dependency to your Maven pom.
 ## Compiling PDB
 
 In order to compile PDB you will need to had the jar's for OracleDB,SQLServer and DB2 to your local repository.
-See the following link for more info:
+See the following link for more information on how to do it:
 - http://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html
 
 ## Getting  started
