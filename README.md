@@ -10,6 +10,7 @@ Add the following dependency to your Maven pom.
 
 ```
 <dependencies>
+    ...
 	<dependency>
 		<groupId>com.feedzai</groupId>
 		<artifactId>pdb</artifactId>
@@ -20,7 +21,7 @@ Add the following dependency to your Maven pom.
 
 ## Compiling PDB
 
-In order to compile PDB you will need to had the jar's for OracleDB,SQLServer and DB2 to your local repository.
+In order to compile PDB you will need to had the jar's for OracleDB, SQLServer and DB2 to your local repository.
 See the following link for more information on how to do it:
 - http://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html
 
@@ -295,7 +296,7 @@ engine.persist("data_type", data_type_entry, false);
 ```
 .persist(String tableName, EntityEntry entity, boolean autoincrement)
 - Select the table in which the new entity will be inserted.
-- If the affected table has an autoincrement column you might want to activate the autoincrement flag.
+- If the affected table has an autoincrement column you might want to activate this flag.
 - In case that the autoincrement behaviour is active, this method returns the generated key.
 ```
 
@@ -435,7 +436,9 @@ Expression query =
 List<Map<String, ResultColumn>> results = engine.query(query);
 
 for(Map<String, ResultColumn> result : results) {
-	System.out.println(result.get("id").toInt() + ": " + result.get("description").toString());
+    Int id = result.get("id").toInt();
+    String description = result.get("description").toString();
+	System.out.println(id + ": "+ description);
 }
 ```
 
@@ -446,7 +449,7 @@ for(Map<String, ResultColumn> result : results) {
 
 	.toXXX()
 	- ResultColumn provides methods to convert the data to the type of your preference.
-	- Be aware that it might give an exception if you try to convert the underlying data to some incompatible type.
+	- It throws an exception if you try to convert the underlying data to some incompatible type.
 
 Let's see this simple query in more detail.
 Where we list all entries in table Streams and return all columns.
@@ -584,7 +587,9 @@ results = engine.query(
 	select(all())
 	from(table("stream")
 		.innerJoin((table("data_type"),
-					join(column("stream", "data_type_id"), column("data_type", "id")))));
+					join(
+					    column("stream", "data_type_id"),
+					    column("data_type", "id")))));
 ```
 ```
 .innerJoin(Expression table, Expression condition)
@@ -597,8 +602,8 @@ results = engine.query(
 - Applies the equality condition to the expressions.
 ```
 
-The market is collapsing! The reason some say is that some provider messed up.
-In your contract it says that Provider with id 4 provides a given number of streams for each data_type.
+The market is collapsing! The reason, some say, is that some provider messed up.
+In your contract it is stated that Provider with id 4 provides a given number of streams for each data_type.
 With the following query you will find out if the actual data in the database matches the contract.
 By filtering the results to only account for Provider 4 and grouping on the data Type you are able to count the number of streams by Type.
 You Boss will be pleased.
