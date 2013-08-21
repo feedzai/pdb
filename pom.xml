@@ -65,7 +65,7 @@
     </dependency>
     <!-- db2 -->
     <dependency>
-      <groupId>thirdparty.com.ibm</groupId>
+      <groupId>com.ibm</groupId>
       <artifactId>com.ibm.db2jcc</artifactId>
       <version>${db2.version}</version>
     </dependency>
@@ -77,13 +77,13 @@
     </dependency>
     <!-- Oracle -->
     <dependency>
-      <groupId>thirdparty.com.oracle</groupId>
+      <groupId>com.oracle</groupId>
       <artifactId>ojdbc6</artifactId>
       <version>${oracle.version}</version>
     </dependency>
     <!-- SQL Server -->
     <dependency>
-      <groupId>thirdparty.com.microsoft.sqlserver</groupId>
+      <groupId>com.microsoft.sqlserver</groupId>
       <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
       <version>${sqlserver.version}</version>
     </dependency>
