@@ -710,7 +710,7 @@ createView(String name)
 
 ## Further Documentation
 
-For more insight on the available functionality please consult the javadoc documentation.
+For more insight on the available functionality please see projects [javadoc](http://feedzai.github.io/pdb).
 
 ## Contact
 
