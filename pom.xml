@@ -166,7 +166,7 @@
             <version>2.15</version>
             <configuration>
               <includes>
-                <include>**/*Test.java</include>
+                <include>**/H2*Test.java</include>
               </includes>
             </configuration>
       </plugin>
