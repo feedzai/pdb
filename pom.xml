@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.feedzai</groupId>
   <artifactId>pdb</artifactId>
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.1</version>
   <packaging>jar</packaging>
   <name>pdb</name>
   <description>A database-mapping software library for Java</description>
@@ -21,6 +21,7 @@
     <connection>scm:git:git@github.com:feedzai/pdb.git</connection>
     <developerConnection>scm:git:git@github.com:feedzai/pdb.git</developerConnection>
     <url>git@github.com:feedzai/pdb.git</url>
+    <tag>pdb-1.0.1</tag>
   </scm>
 
   <developers>
