@@ -86,7 +86,7 @@ The following table shows how to connect for the supported database vendors.
 |Oracle|com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine|jdbc:oracle:thin:@&lt;HOST&gt;:1521:&lt;DATABASE&gt;|
 |PostgreSQL|com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine|jdbc:postgresql://&lt;HOST&gt;/&lt;DATABASE&gt;|
 |MySQL|com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine|jdbc:mysql://&lt;HOST&gt;/&lt;DATABASE&gt;|
-|H2|com.feedzai.commons.sql.abstraction.engine.impl.H2Engine|jdbc:h2:&lt;FILE&gt; &amp;#124; jdbc:h2:mem|
+|H2|com.feedzai.commons.sql.abstraction.engine.impl.H2Engine|jdbc:h2:&lt;FILE&gt; &#124; jdbc:h2:mem|
 |SQLServer|com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine|jdbc:sqlserver://&lt;HOST&gt;;database=&lt;DATABASE&gt;|
 
 
