@@ -23,8 +23,14 @@ Add the following dependency to your Maven pom.
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.
-Check the following link for more information on how to do it:
-- http://maven.apache.org/guides/mini/guide-3rd-party-jars-local.html
+The current version assumes Oracle Driver version 11.2.0.2.0. Please download the driver [here] and
+run the following to install the driver in your local maven repository.
+[here]:http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html
+```bash
+mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc14 \
+-Dversion=10.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc14-10.2.0.2.0.jar
+```
+
 
 ## Getting  started
 
@@ -39,7 +45,7 @@ Check the following link for more information on how to do it:
 - Data Manipulation
 	- [Insertion Queries](#insertion-queries)
 	- [Batches](#batches)
-	- [Update and Delete Queries](#update-and-delete-queries)
+	- [Updating and Deleting Queries](#updating-and-deleting-queries)
 	- [Truncate Queries](#truncate-queries)
 	- [Selection Queries](#selection-queries)
 	- [Prepared Statements](#prepared-statements)
@@ -73,14 +79,15 @@ Properties properties = new Properties() {
 DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 ```
 The following table shows how to connect for the supported database vendors.
+
 |Vendor|Engine|JDBC|
 |:---|:---|:---|
-|DB2|com.feedzai.commons.sql.abstraction.engine.impl.DB2Engine|jdbc:db2://<HOST>:<PORT>/<DATABASE>|
-|Oracle|com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine|jdbc:oracle:thin:@<HOST>:1521:<DATABASE>|
-|PostgreSQL|com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine|jdbc:postgresql://<HOST>/<DATABASE>|
-|MySQL|com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine|jdbc:mysql://<HOST>/<DATABASE>|
-|H2|com.feedzai.commons.sql.abstraction.engine.impl.H2Engine|jdbc:h2:<FILE> &#124; jdbc:h2:mem|
-|SQLServer|com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine|jdbc:sqlserver://<HOST>;database=<DATABASE>|
+|DB2|com.feedzai.commons.sql.abstraction.engine.impl.DB2Engine|jdbc:db2://&lt;HOST&gt;:&lt;PORT&gt;/&lt;DATABASE&gt;|
+|Oracle|com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine|jdbc:oracle:thin:@&lt;HOST&gt;:1521:&lt;DATABASE&gt;|
+|PostgreSQL|com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine|jdbc:postgresql://&lt;HOST&gt;/&lt;DATABASE&gt;|
+|MySQL|com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine|jdbc:mysql://&lt;HOST&gt;/&lt;DATABASE&gt;|
+|H2|com.feedzai.commons.sql.abstraction.engine.impl.H2Engine|jdbc:h2:&lt;FILE&gt; &amp;#124; jdbc:h2:mem|
+|SQLServer|com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine|jdbc:sqlserver://&lt;HOST&gt;;database=&lt;DATABASE&gt;|
 
 
 It is also important to select a schema policy. There are four possible schema policies:
@@ -115,9 +122,9 @@ A table is represented with a DbEntity and its properties can be defined with me
 |[name]|Select the name for this table.|
 |[addColumn]|Create a column with a given name and type. Additionally you can had autoincrement behaviour and define some extra constraints. There are two possible constraints available: UNIQUE and NOT_NULL.|
 |[pkFields]|Define which columns are part of the primary key.|
-[name]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.html#setName%28java.lang.String%29
-[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.html#addColumn%28com.feedzai.commons.sql.abstraction.ddl.DbColumn%29
-[pkFields]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.html#setPkFields(java.lang.String...)
+[name]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#name(java.lang.String)
+[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection)
+[pkFields]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection)
 
 To create the data_type_table you call addEntity method on the previously created database engine.
 Depending on the policy you chose existing tables might be dropped before creation.
@@ -177,16 +184,16 @@ A foreign key is created with dbFk(), and it is defined using these methods:
 |[addColumn]|Define which columns will be part of this constraint.|
 |[foreignTable]|Define the foreign table we are referring to.|
 |[addForeignColumn]|Selects the affected columns in the foreign table.|
-[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.html#addColumn(java.lang.String...)
-[foreignTable]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.html#setForeignTable(java.lang.String)
-[addForeignColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.html#addForeignColumn(java.lang.String...)
+[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)
+[foreignTable]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#foreignTable(java.lang.String)
+[addForeignColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)
 
 Wait! Looks like we also created an index in the Stream table.
 
 |Function|Description|
 |:---|:---|
 |[addIndex]|Creates and index for the listed columns. If not specified, an index is not unique.|
-[addIndex]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.html#addIndex(boolean,%20java.lang.String...)
+[addIndex]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#addIndex(boolean,%20java.lang.String...)
 
 The rest of the example case is created with the following code:
 
@@ -234,7 +241,7 @@ engine.dropEntity("stream_to_module");
 |Function|Description|
 |:---|:---|
 |[dropEntity]|Drops an entity given the name.|
-[dropEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#dropEntity(java.lang.String)
+[dropEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropEntity(java.lang.String)
 
 ### Alter Table
 
@@ -254,8 +261,8 @@ engine.updateEntity(data_type_table);
 |:---|:---|
 |[removeColumn]|Removes a column from the local representation of the table.|
 |[updateEntity]|Synchronizes the entity representation with the table in the database. If schema policy is set to drop-create the whole table is dropped and created again.|
-[removeColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.html#removeColumn(java.lang.String)
-[updateEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#updateEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity)
+[removeColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#removeColumn(java.lang.String)
+[updateEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#updateEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity)
 
 Another mechanism to alter table is by using the AlterColumn expression creation and the executeUpdate method provided by the database engine.
 In this case changes are made to each column, one at a time.
@@ -277,10 +284,10 @@ engine.executeUpdate(alterColumn);
 |[dbColumn]|Column definition. Provide new type and autoincrement behavior.|
 |[addConstraint]|Define the constraints you want the column to oblige to.|
 |[addConstraints]|Define the constraints you want the column to oblige to.|
-[alterColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/AlterColumn.html
-[dbColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.html
-[addConstraint]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.html#addConstraint(com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint)
-[addConstraints]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.html#addConstraints(com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint...)
+[alterColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#alterColumn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.ddl.DbColumn)
+[dbColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dbColumn(java.lang.String,%20com.feedzai.commons.sql.abstraction.ddl.DbColumnType)
+[addConstraint]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraint(com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint)
+[addConstraints]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraints(java.util.Collection)
 
 It is also possible to remove the the primary key constraint.
 
@@ -295,8 +302,8 @@ engine.executeUpdate(dropPrimaryKey);
 ```
 |Function|Description|
 |:---|:---|
-|[DropPK]|Drops the primary key constraint on the given table.|
-[DropPK]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dropPK(com.feedzai.commons.sql.abstraction.dml.Expression)
+|[dropPK]|Drops the primary key constraint on the given table.|
+[dropPK]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dropPK(com.feedzai.commons.sql.abstraction.dml.Expression)
 
 ### Insertion Queries
 
@@ -318,7 +325,7 @@ EntityEntry data_type_entry =
 |Function|Description|
 |:---|:---|
 |[set]|Define the value that will be assigned to a given column.|
-[set]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/entry/EntityEntry.html#set(java.lang.String,%20java.lang.Object)
+[set]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/entry/EntityEntry.Builder.html#set(java.lang.String,%20java.lang.Object)
 
 Notice that the values for each column were defined using the set method.
 A new entry for the database is persisted with engine's method persist.
@@ -329,7 +336,7 @@ engine.persist("data_type", data_type_entry, false);
 |Function|Description|
 |:---|:---|
 |[persist]|Select the table in which the new entity will be inserted. If the affected table has an autoincrement column you might want to activate this flag. In case that the autoincrement behaviour is active, this method returns the generated key.|
-[persist]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#persist(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry,%20boolean)
+[persist]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#persist(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
 
 If you want to use the autoincrement behavior you must activate the autoincrement flag when defining the entity.
 
@@ -391,12 +398,13 @@ try {
 |[commit]|Commits the current transaction transaction.|
 |[isTransactionActive]|Tests if the transaction is active.|
 |[rollback]|Rolls back the transaction.|
-[beginTransaction]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#beginTransaction()
-[addBatch]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#addBatch(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
-[flush]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#flush()
-[commit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#commit()
-[isTransactionActive]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#isTransactionActive()
-[rollback]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#rollback()
+[beginTransaction]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#beginTransaction()
+[addBatch]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#addBatch(java.lang.String,
+%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
+[flush]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#flush()
+[commit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#commit()
+[isTransactionActive]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#isTransactionActive()
+[rollback]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#rollback()
 
 ### Updating and Deleting Queries
 
@@ -445,6 +453,7 @@ engine.executeUpdate(
 	delete(table("stream"
 		.where(eq(column(id), k(1))));
 ```
+
 |Function|Description|
 |:---|:---|
 |[delete]|Creates a delete query that will affect the table referred by the given expression.|
@@ -463,6 +472,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 
 engine.executeUpdate(truncate(table("stream")));
 ```
+
 |Function|Description|
 |:---|:---|
 |[truncate]|Creates a truncate query that will affect the table referred by the given expression.|
@@ -502,15 +512,16 @@ while ((next = it.next()) != null) {
 }
 ```
 The iterator closes automatically when it reaches the end of the result set, but you can close it on any time by calling it.close().
+
 |Function|Description|
 |:---|:---|
 |[query]|Processes a given query and computes the corresponding result. It returns a List of results if any. For each column a result is a Map that maps
 column names to ResultColumn objects.|
 |[iterator]|Returns an iterator to cycle through the result set. Preferable when dealing with large result sets.|
 |[toXXX]|ResultColumn provides methods to convert the data to the type of your preference. It throws an exception if you try to convert the underlying data to some incompatible type.|
-[query]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#query(java.lang.String)
-[iterator]:TODO.com
-[toXXX]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/result/ResultColumn.html#toString()
+[query]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#query(com.feedzai.commons.sql.abstraction.dml.Expression)
+[iterator]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#iterator(com.feedzai.commons.sql.abstraction.dml.Expression)
+[toXXX]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/result/ResultColumn.html
 
 Let's see this simple query in more detail.
 Where we list all entries in table Streams and return all columns.
@@ -763,7 +774,7 @@ results = engine.query(
 |[having]|Query will select only the result rows where aggregate values meet the specified conditions.|
 |[limit]|Defines the number of rows that the query returns.|
 |[offset]|Defines the offset for the start position of the resulting rows.|
-[having]:hhttp://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#having(com.feedzai.commons.sql.abstraction.dml.Expression)
+[having]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#having(com.feedzai.commons.sql.abstraction.dml.Expression)
 [limit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#limit(java.lang.Integer)
 [offset]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#offset(java.lang.Integer)
 
@@ -822,13 +833,13 @@ int affectedEntries = engine.executePSUpdate("MyPS");
 |[executePSUpdate]|Executes a given update prepared statement and returns the number of affected rows.|
 |[getPSResultSet]|Returns the result set of the last executed query.|
 |[getPSIterator]|Returns an iterator to the result set of the last executed query.|
-[createPreparedStatement]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#createPreparedStatement(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[clearParameters]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#as(com.feedzai.commons.sql.abstraction.dml.Expression)
-[setParameter]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#setParameter(java.lang.String,%20int,%20java.lang.Object)
-[executePS]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#executePS(java.lang.String)
-[executePSUpdate]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#executePSUpdate(java.lang.String)
-[getPSResultSet]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#getPSResultSet(java.lang.String)
-[getPSIterator]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/DatabaseEngineImpl.html#getPSIterator(java.lang.String)
+[createPreparedStatement]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#createPreparedStatement(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
+[clearParameters]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#clearParameters(java.lang.String)
+[setParameter]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#setParameter(java.lang.String,%20int,%20java.lang.Object)
+[executePS]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePS(java.lang.String)
+[executePSUpdate]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePSUpdate(java.lang.String)
+[getPSResultSet]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSResultSet(java.lang.String)
+[getPSIterator]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSIterator(java.lang.String)
 
 ### Create View
 
