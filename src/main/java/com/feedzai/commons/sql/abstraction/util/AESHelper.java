@@ -80,7 +80,7 @@ public final class AESHelper {
      * Decrypts a string encrypted by {@link #encrypt} method.
      *
      * @param c   The encrypted HEX string.
-     * @param The key.
+     * @param key The  key.
      * @return The decrypted string.
      */
     public static String decrypt(String c, String key) {
@@ -116,7 +116,7 @@ public final class AESHelper {
     }
 
     /**
-     * Decrypts a file encrypted by {@link #encryptToFile(String, byte[], String) method.
+     * Decrypts a file encrypted by {@link #encryptToFile(String, byte[], String)} method.
      *
      * @param path The file path to decrypt.
      * @param key  The key.

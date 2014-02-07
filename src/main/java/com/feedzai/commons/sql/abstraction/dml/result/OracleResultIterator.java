@@ -44,7 +44,6 @@ public class OracleResultIterator extends ResultIterator {
      * Creates a new instance of {@link OracleResultIterator}.
      *
      * @param statement The statement.
-     * @param sql       The sql statement.
      * @throws DatabaseEngineException If a database access error occurs.
      */
     public OracleResultIterator(PreparedStatement statement) throws DatabaseEngineException {

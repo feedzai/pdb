@@ -341,7 +341,7 @@ public abstract class AbstractTranslator {
     /**
      * Translates {@link Name}.
      *
-     * @param n The object to translate.
+     * @param ac The object to translate.
      * @return The string representation of the given object.
      */
     public abstract String translate(AlterColumn ac);

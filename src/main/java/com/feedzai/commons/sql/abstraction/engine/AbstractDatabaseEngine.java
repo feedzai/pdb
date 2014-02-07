@@ -1215,9 +1215,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * Gets the schema
+     * Gets the schema.
      *
-     * @return
+     * @return The schema.
      */
     protected String getSchema() {
         return properties.getSchema();
