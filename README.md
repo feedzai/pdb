@@ -108,11 +108,11 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 DbEntity data_type_table =
 	dbEntity()
 		.name("data_type")
-			.addColumn("id", INT, UNIQUE, NOT_NULL)
-			.addColumn("code", STRING, UNIQUE, NOT_NULL)
-			.addColumn("description", CLOB)
-			.pkFields("id")
-			.build();
+		.addColumn("id", INT, UNIQUE, NOT_NULL)
+		.addColumn("code", STRING, UNIQUE, NOT_NULL)
+		.addColumn("description", CLOB)
+		.pkFields("id")
+		.build();
 ```
 
 A table is represented with a DbEntity and its properties can be defined with methods:
