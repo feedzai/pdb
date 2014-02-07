@@ -1,0 +1,11 @@
+com.feedzai.commons.sql.abstraction.batch
+com.feedzai.commons.sql.abstraction.ddl
+com.feedzai.commons.sql.abstraction.dml
+com.feedzai.commons.sql.abstraction.dml.dialect
+com.feedzai.commons.sql.abstraction.dml.result
+com.feedzai.commons.sql.abstraction.engine
+com.feedzai.commons.sql.abstraction.engine.configuration
+com.feedzai.commons.sql.abstraction.engine.handler
+com.feedzai.commons.sql.abstraction.engine.impl
+com.feedzai.commons.sql.abstraction.entry
+com.feedzai.commons.sql.abstraction.util
