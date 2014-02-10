@@ -31,8 +31,8 @@ The current version assumes Oracle Driver version 11.2.0.2.0. Please download th
 run the following to install the driver in your local maven repository.
 [here]:http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html
 ```bash
-mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc14 \
--Dversion=10.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc14-10.2.0.2.0.jar
+mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 \
+-Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6-11.2.0.2.0.jar
 ```
 
 
