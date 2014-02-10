@@ -4,6 +4,10 @@ PulseDB is a database-mapping software library writtem in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
 PDB provides a DSL that covers most of SQL functionalities and allows to easily integrate persistence into your projects and modules.
 
+[![Build Status](https://feedzaios.ci.cloudbees.com/buildStatus/icon?job=pdb)](https://feedzaios.ci.cloudbees.com/job/pdb/)
+
+[![CloudbeesDevCloud](http://www.cloudbees.com/sites/default/files/Button-Built-on-CB-1.png)](http://www.cloudbees.com/dev)
+
 ## Using PDB
 
 Add the following dependency to your Maven pom.
@@ -399,8 +403,7 @@ try {
 |[isTransactionActive]|Tests if the transaction is active.|
 |[rollback]|Rolls back the transaction.|
 [beginTransaction]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#beginTransaction()
-[addBatch]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#addBatch(java.lang.String,
-%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
+[addBatch]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#addBatch(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
 [flush]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#flush()
 [commit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#commit()
 [isTransactionActive]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#isTransactionActive()
