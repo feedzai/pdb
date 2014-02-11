@@ -1,6 +1,6 @@
 # PDB
 
-PulseDB is a database-mapping software library writtem in Java,
+PulseDB is a database-mapping software library written in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
 PDB provides a DSL that covers most of SQL functionalities and allows to easily integrate persistence into your projects and modules.
 
