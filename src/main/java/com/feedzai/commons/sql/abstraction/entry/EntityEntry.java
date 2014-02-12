@@ -53,6 +53,16 @@ public class EntityEntry implements Serializable {
     }
 
     /**
+     * Checks if the given key is set in the internal map.
+     *
+     * @param k The key to check.
+     * @return {@code true} if the internal map contains the key, {@code false} otherwise.
+     */
+    public boolean containsKey(final String k) {
+        return this.map.containsKey(k);
+    }
+
+    /**
      * Returns a new Builder out of this {@link EntityEntry}.
      *
      * @return A new Builder out of this {@link EntityEntry}.

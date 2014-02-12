@@ -98,7 +98,13 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
 
             try {
-                Object val = entry.get(column.getName());
+                final Object val;
+                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
+                    val = column.getDefaultValue().getConstant();
+                } else {
+                    val = entry.get(column.getName());
+                }
+
                 switch (column.getDbColumnType()) {
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));

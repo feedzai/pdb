@@ -101,7 +101,12 @@ public class DB2Engine extends AbstractDatabaseEngine {
             }
 
             try {
-                Object val = entry.get(column.getName());
+                final Object val;
+                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
+                    val = column.getDefaultValue().getConstant();
+                } else {
+                    val = entry.get(column.getName());
+                }
                 switch (column.getDbColumnType()) {
                     /*
                      * CLOB and BLOB are handled the same way in DB2 since CLOB is not supported.

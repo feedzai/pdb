@@ -3088,4 +3088,26 @@ public class EngineGeneralTest {
         assertEquals("Check COL7", 7, record.get("COL7").toInt().intValue());
         connection2.close();
     }
+
+    @Test
+    public void defaultValueOnBooleanColumnsTest() throws DatabaseEngineException {
+        DbEntity.Builder entity =
+                dbEntity()
+                        .name("TEST")
+                        .addColumn("COL1", INT, new K(1))
+                        .addColumn("COL2", BOOLEAN, new K(false), NOT_NULL)
+                        .addColumn("COL3", DOUBLE, new K(2.2d))
+                        .addColumn("COL4", LONG, new K(3L))
+                        .pkFields("COL1");
+
+        engine.addEntity(entity.build());
+
+        engine.persist("TEST", entry().build());
+        Map<String, ResultColumn> row = engine.query(select(all()).from(table("TEST"))).get(0);
+
+        assertEquals("", 1, row.get("COL1").toInt().intValue());
+        assertFalse("", row.get("COL2").toBoolean());
+        assertEquals("", 2.2d, row.get("COL3").toDouble().doubleValue(), 0D);
+        assertEquals("", 3L, row.get("COL4").toLong().longValue());
+    }
 }

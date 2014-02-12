@@ -84,7 +84,13 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             }
 
             try {
-                Object val = entry.get(column.getName());
+                final Object val;
+                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
+                    val = column.getDefaultValue().getConstant();
+                } else {
+                    val = entry.get(column.getName());
+                }
+
                 switch (column.getDbColumnType()) {
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));
@@ -104,15 +110,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
-                        break;
-                    case BOOLEAN:
-                        Boolean b = (Boolean) val;
-                        if (b == null) {
-                            ps.setObject(i, null);
-                        } else {
-                            ps.setObject(i, b);
-                        }
-
                         break;
                     default:
                         ps.setObject(i, val);

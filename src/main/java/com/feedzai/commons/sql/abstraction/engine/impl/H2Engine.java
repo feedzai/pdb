@@ -23,6 +23,7 @@ import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.base.Optional;
 
 import java.io.StringReader;
 import java.sql.*;
@@ -105,12 +106,18 @@ public class H2Engine extends AbstractDatabaseEngine {
 
         int i = 1;
         for (DbColumn column : entity.getColumns()) {
-            if (column.isAutoInc() && useAutoInc) {
+            if ((column.isAutoInc() && useAutoInc)) {
                 continue;
             }
 
             try {
-                Object val = entry.get(column.getName());
+                final Object val;
+                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
+                   val = column.getDefaultValue().getConstant();
+                } else {
+                    val = entry.get(column.getName());
+                }
+
                 switch (column.getDbColumnType()) {
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));
@@ -128,15 +135,6 @@ public class H2Engine extends AbstractDatabaseEngine {
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
-                        break;
-                    case BOOLEAN:
-                        Boolean b = (Boolean) val;
-                        if (b == null) {
-                            ps.setObject(i, null);
-                        } else {
-                            ps.setObject(i, b);
-                        }
-
                         break;
                     default:
                         ps.setObject(i, val);
