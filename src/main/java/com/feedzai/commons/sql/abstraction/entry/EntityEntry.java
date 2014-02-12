@@ -57,6 +57,7 @@ public class EntityEntry implements Serializable {
      *
      * @param k The key to check.
      * @return {@code true} if the internal map contains the key, {@code false} otherwise.
+     * @since 2.0.1
      */
     public boolean containsKey(final String k) {
         return this.map.containsKey(k);
