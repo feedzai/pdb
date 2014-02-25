@@ -157,7 +157,7 @@ public abstract class AbstractBatch implements Runnable {
         buffer.add(batchEntry);
         batch--;
 
-        if (batch == 0) {
+        if (batch <= 0) {
             flush();
         }
     }
@@ -177,6 +177,10 @@ public abstract class AbstractBatch implements Runnable {
      * Flushes the pending batches.
      */
     public synchronized void flush() {
+        // Even if the flush fails we want to reset this state.
+        batch = batchSize;
+        lastFlush = System.currentTimeMillis();
+
         // If something goes wrong we still have a copy to recover.
         final List<BatchEntry> temp = new ArrayList<>();
 
@@ -185,17 +189,18 @@ public abstract class AbstractBatch implements Runnable {
             while (!buffer.isEmpty()) {
                 BatchEntry entry = buffer.poll();
                 temp.add(entry);
+            }
+
+            // This has to be separate because it accesses to the database.
+            for (BatchEntry entry : temp) {
                 de.addBatch(entry.getTableName(), entry.getEntityEntry());
             }
 
             de.beginTransaction();
-
             try {
                 de.flush();
                 de.commit();
                 logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
-                batch = batchSize;
-                lastFlush = System.currentTimeMillis();
             } finally {
                 if (de.isTransactionActive()) {
                     de.rollback();
