@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.MySqlResultIterator;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
@@ -32,6 +33,8 @@ import java.util.*;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static java.sql.ResultSet.CONCUR_READ_ONLY;
+import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static org.apache.commons.lang.StringUtils.join;
 
 /**
@@ -666,7 +669,8 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             final String sString = format(
                     "SELECT TABLE_NAME, CONSTRAINT_NAME "
                             + "FROM information_schema.KEY_COLUMN_USAGE "
-                            + "WHERE REFERENCED_TABLE_NAME = '%s'", entity.getName());
+                            + "WHERE REFERENCED_TABLE_NAME = '%s'", entity.getName()
+            );
 
             logger.trace(sString);
             s.executeQuery(sString);
@@ -736,6 +740,23 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             } catch (Exception e) {
                 logger.trace("Error closing statement.", e);
             }
+        }
+    }
+
+    @Override
+    public synchronized ResultIterator iterator(String query) throws DatabaseEngineException {
+        List<Map<String, ResultColumn>> res = new ArrayList<>();
+        Statement stmt = null;
+
+        try {
+            getConnection();
+            stmt = conn.createStatement(TYPE_FORWARD_ONLY, CONCUR_READ_ONLY);
+            stmt.setFetchSize(properties.getFetchSize());
+
+            return createResultIterator(stmt, query);
+
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Error querying", e);
         }
     }
 
