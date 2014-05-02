@@ -761,8 +761,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * <p>Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of statements in the batch is reached.</p>
-     * <p>Please be sure to call {@link com.feedzai.commons.sql.abstraction.batch.AbstractBatch#destroy() } before closing the session with the database.</p>
+     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of statements in the batch is reached.
+     * <p/>
+     * Please be sure to call {@link com.feedzai.commons.sql.abstraction.batch.AbstractBatch#destroy() } before closing the session with the database
      *
      * @param batchSize    The batch size.
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
@@ -948,10 +949,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException {
-        final String queryString = translate(query);
-        logger.trace(queryString);
-
-        return query(queryString);
+        return query(translate(query));
     }
 
     /**
