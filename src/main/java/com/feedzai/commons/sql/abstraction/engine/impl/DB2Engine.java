@@ -516,7 +516,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
         Statement drop = null;
         try {
             drop = conn.createStatement();
-            final String query = format("DROP TABLE %s", entity.getName());
+            final String query = format("DROP TABLE %s", quotize(entity.getName()));
             logger.trace(query);
             drop.executeUpdate(query);
         } catch (SQLException ex) {
