@@ -458,6 +458,47 @@ public final class SqlBuilder {
     }
 
     /**
+     * The UPPER operator.
+     *
+     * @param exp The expression inside the operator.
+     * @return The UPPER representation.
+     */
+    public static Expression upper(final Expression exp) {
+        return new Function(UPPER, exp);
+    }
+
+    /**
+     * The LOWER operator.
+     *
+     * @param exp The expression inside the operator.
+     * @return The LOWER representation.
+     */
+    public static Expression lower(final Expression exp) {
+        return new Function(LOWER, exp);
+    }
+
+    /**
+     * An internal function (provided by the engine in place).
+     *
+     * @param function The function.
+     * @return The function representation.
+     */
+    public static Expression f(final String function) {
+        return f(function, null);
+    }
+
+    /**
+     * An internal function (provided by the engine in place).
+     *
+     * @param function The function.
+     * @param exp      The expression.
+     * @return The function representation.
+     */
+    public static final Expression f(final String function, final Expression exp) {
+        return new InternalFunction(function, exp);
+    }
+
+    /**
      * The same of making eq(e1, e2).
      *
      * @param e1 The first expression.

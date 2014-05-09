@@ -1364,10 +1364,10 @@ public class EngineGeneralTest {
                 .addColumn("COL1", INT, true)
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
-                        .addColumn("COL2")
-                        .foreignTable("TEST1")
-                        .addForeignColumn("COL1")
-                        .build()
+                                .addColumn("COL2")
+                                .foreignTable("TEST1")
+                                .addForeignColumn("COL1")
+                                .build()
                 )
                 .pkFields("COL1")
                 .build();
@@ -1398,10 +1398,10 @@ public class EngineGeneralTest {
                 .addColumn("COL1", INT)
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
-                        .addColumn("COL1")
-                        .foreignTable("USER")
-                        .addForeignColumn("COL1")
-                        .build(),
+                                .addColumn("COL1")
+                                .foreignTable("USER")
+                                .addForeignColumn("COL1")
+                                .build(),
                         dbFk()
                                 .addColumn("COL2")
                                 .foreignTable("ROLE")
@@ -1784,7 +1784,8 @@ public class EngineGeneralTest {
                                 select(
                                         k(1).alias("one"),
                                         k(2L).alias("two"),
-                                        k(3.0).alias("three")).alias("sq_1"))
+                                        k(3.0).alias("three")).alias("sq_1")
+                        )
         );
 
         assertEquals("result ok?", 1000, (long) query.get(0).get("timestamp").toLong());
@@ -2865,10 +2866,10 @@ public class EngineGeneralTest {
                 .addColumn("COL1", INT)
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
-                        .addColumn("COL1")
-                        .foreignTable("USER")
-                        .addForeignColumn("COL1")
-                        .build(),
+                                .addColumn("COL1")
+                                .foreignTable("USER")
+                                .addForeignColumn("COL1")
+                                .build(),
                         dbFk()
                                 .addColumn("COL2")
                                 .foreignTable("ROLE")
@@ -3109,5 +3110,27 @@ public class EngineGeneralTest {
         assertFalse("", row.get("COL2").toBoolean());
         assertEquals("", 2.2d, row.get("COL3").toDouble().doubleValue(), 0D);
         assertEquals("", 3L, row.get("COL4").toLong().longValue());
+    }
+
+    @Test
+    public void upperTest() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL5", "ola").build());
+        assertEquals("text is uppercase", "OLA", engine.query(select(upper(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
+    }
+
+    @Test
+    public void lowerTest() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL5", "OLA").build());
+        assertEquals("text is lowercase", "ola", engine.query(select(lower(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
+    }
+
+    @Test
+    public void internalFunctionTest() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL5", "OLA").build());
+        assertEquals("text is uppercase", "ola", engine.query(select(f("LOWER", column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES")
+                .toString());
     }
 }

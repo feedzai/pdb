@@ -52,6 +52,14 @@ public class Function extends Expression {
      */
     public static final String SUM = "SUM";
     /**
+     * The UPPER function.
+     */
+    public static final String UPPER = "UPPER";
+    /**
+     * The LOWER function.
+     */
+    public static final String LOWER = "lower";
+    /**
      * The list of functions.
      */
     public static final Set<String> FUNCTIONS;
@@ -64,6 +72,8 @@ public class Function extends Expression {
                 .add(COUNT)
                 .add(STDDEV)
                 .add(SUM)
+                .add(UPPER)
+                .add(LOWER)
                 .build();
     }
 
