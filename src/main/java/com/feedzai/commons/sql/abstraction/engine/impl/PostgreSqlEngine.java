@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.PostgreSqlResultIterator;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
@@ -414,12 +415,12 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void addColumn(DbEntity entity, DbColumn... columns) throws DatabaseEngineException {
-        List<String> addColumns = new ArrayList<String>();
+        List<String> addColumns = new ArrayList<>();
         addColumns.add("ALTER TABLE");
         addColumns.add(quotize(entity.getName()));
-        List<String> cols = new ArrayList<String>();
+        List<String> cols = new ArrayList<>();
         for (DbColumn c : columns) {
-            List<String> column = new ArrayList<String>();
+            List<String> column = new ArrayList<>();
             column.add("ADD COLUMN");
             column.add(quotize(c.getName()));
             column.add(translateType(c));
@@ -502,17 +503,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                     ret = generatedKeys.getLong(1);
                 }
             } else if (hasIdentityColumn(me.getEntity())) {
-                generatedKeys = getConnection().createStatement().executeQuery("select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\"");
-                if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
+                final List<Map<String, ResultColumn>> q = query("select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\"");
+                if (!q.isEmpty()) {
+                    ret = q.get(0).values().iterator().next().toLong();
                 }
 
-                final String sql = "ALTER SEQUENCE \"" + name + "_" + me.getAutoIncColumn() + "_seq\" RESTART " + (ret + 1);
-                logger.trace(sql);
-                getConnection().createStatement().execute(sql);
+                executeUpdateSilently("ALTER SEQUENCE \"" + name + "_" + me.getAutoIncColumn() + "_seq\" RESTART " + (ret + 1));
                 ret = 0;
             }
-
 
             return ret == 0 ? null : ret;
         } catch (Exception ex) {

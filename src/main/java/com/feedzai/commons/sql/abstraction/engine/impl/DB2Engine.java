@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.DB2ResultIterator;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
@@ -29,10 +30,7 @@ import com.google.common.base.Optional;
 import org.apache.commons.lang.StringUtils;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -671,10 +669,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
         return persist(name, entry, true);
     }
 
-
     @Override
     public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
         try {
             getConnection();
 
@@ -697,63 +693,43 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
             long ret = 0;
 
-            if (me.getAutoIncColumn() != null /* if the entity has autoinc columns then retrieve the sequence number or adjust it*/) {
+            // if the entity has autoinc columns then retrieve the sequence number or adjust it
+            if (me.getAutoIncColumn() != null) {
                 final String sequenceName = md5(format("%s_%s_SEQ", name, me.getAutoIncColumn()), properties.getMaxIdentifierSize());
                 if (useAutoInc) {
 
-                    String sql = String.format("SELECT PREVIOUS VALUE FOR \"%s\" FROM sysibm.sysdummy1", sequenceName);
-                    logger.trace(sql);
-
-                    generatedKeys = getConnection().createStatement().executeQuery(sql);
-
-                    if (generatedKeys.next()) {
-                        ret = generatedKeys.getLong(1);
+                    final List<Map<String, ResultColumn>> q = query(String.format("SELECT PREVIOUS VALUE FOR \"%s\" FROM sysibm.sysdummy1", sequenceName));
+                    if (!q.isEmpty()) {
+                        for (ResultColumn rc : q.get(0).values()) {
+                            ret = rc.toLong();
+                            break;
+                        }
                     }
 
-                    generatedKeys.close();
                 } else {
                     final String sql = "select (select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\") , \"" + sequenceName + "\".NEXTVAL FROM sysibm.sysdummy1";
+                    final List<Map<String, ResultColumn>> q = query(sql);
 
+                    if (!q.isEmpty()) {
+                        final Iterator<ResultColumn> it = q.get(0).values().iterator();
+                        long max = Optional.fromNullable(it.next().toLong()).or(-1L);
+                        long seqCurVal = Optional.fromNullable(it.next().toLong()).or(-1L);
 
-                    logger.trace(sql);
-                    try (
-                            Statement restart = conn.createStatement();
-                            ResultSet restartRs = restart.executeQuery(sql);
-                    ) {
-                        if (restartRs.next()) {
-                            long max = restartRs.getObject(1) != null ? restartRs.getLong(1) : -1L;
-                            long seqCurVal = restartRs.getObject(2) != null ? restartRs.getLong(2) : -1L;
-
-                            if (seqCurVal != max) {
-                            /* table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1) */
-
-                                try (
-                                        Statement alter = conn.createStatement();
-                                ) {
-                                    alter.execute("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
-                                } catch (SQLException e) {
-                                    logger.debug("Could not synchronize sequence with maximum of the table.", e);
-                                } catch (Exception e) {
-                                    logger.trace(dev, "Could not close statement.", e);
-                                }
-
-
-                            }
+                        if (seqCurVal != max) {
+                            //table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
+                            executeUpdateSilently("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
                         }
-
-                    } catch (SQLException e) {
-                        logger.debug(dev, "Could not fetch query.", e);
-                    } catch (Exception e) {
-                        logger.debug("Could not close resources.", e);
                     }
 
-                    generatedKeys = getConnection().createStatement().executeQuery(sql);
-                    if (generatedKeys.next()) {
-                        ret = generatedKeys.getLong(1);
-                        long seqCurVal = generatedKeys.getLong(2);
+
+                    final List<Map<String, ResultColumn>> keys = query(sql);
+                    if (!keys.isEmpty()) {
+                        final Iterator<ResultColumn> it = keys.get(0).values().iterator();
+                        ret = it.next().toLong();
+                        long seqCurVal = it.next().toLong();
                         if (seqCurVal != ret) {
-                          /* table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1) */
-                            getConnection().createStatement().execute("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
+                            // table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
+                            executeUpdateSilently("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
                         }
                     }
                 }
@@ -763,14 +739,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
             return ret == 0 ? null : ret;
         } catch (Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (Exception e) {
-                logger.trace("Error closing result set.", e);
-            }
         }
     }
 

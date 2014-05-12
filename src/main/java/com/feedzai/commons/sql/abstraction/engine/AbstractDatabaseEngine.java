@@ -1213,6 +1213,23 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
+     * Executes the given statement.
+     * <p/>
+     * If the statement for some reason fails to execute, the error is logged
+     * but no exception is thrown.
+     *
+     * @param statement The statement.
+     */
+    protected void executeUpdateSilently(String statement) {
+        logger.trace(statement);
+        try (Statement alter = conn.createStatement()) {
+            alter.execute(statement);
+        } catch (SQLException e) {
+            logger.debug("Could not execute {}.", statement, e);
+        }
+    }
+
+    /**
      * Gets the schema.
      *
      * @return The schema.

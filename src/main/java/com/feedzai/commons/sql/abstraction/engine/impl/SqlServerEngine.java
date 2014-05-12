@@ -563,7 +563,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             if (!useAutoInc) {
                 // Only SET IDENTITY_INSERT for tables that have an identity column
                 if (hasIdentityColumn(me.getEntity())) {
-                    getConnection().createStatement().execute("SET IDENTITY_INSERT \"" + name + "\" ON");
+                    executeUpdateSilently("SET IDENTITY_INSERT \"" + name + "\" ON");
                 }
                 ps.execute();
             } else {
