@@ -24,6 +24,12 @@ Add the following dependency to your Maven pom.
 </dependencies>
 ```
 
+## Changes from 2.0.0
+* It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
+* Added lower and upper functions
+* Fixed several connection leaks
+* Fixed MySQL large result fetching
+
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.
