@@ -883,6 +883,9 @@ For more insight on the available functionality please see projects [javadoc](ht
 
 For more information please contact opensource@feedzai.com, we will happily answer your questions.
 
+## Special Thanks
+* Miguel Miranda (miguelnmiranda@gmail.com) for the documentation and first steps on making this library opensource
+
 ## License
 
 Copyright 2014 Feedzai
