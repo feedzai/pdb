@@ -34,7 +34,7 @@
   </licenses>
 
   <properties>
-    <project.source>1.7</project.source>
+    <project.source>1.8</project.source>
   </properties>
 
   <developers>
@@ -71,9 +71,9 @@
       <!-- DB2       is not available in public repositories. -->
       <!-- SQLServer is not available in public repositories. -->
       <dependency>
-        <groupId>com.googlecode.jmockit</groupId>
+        <groupId>org.jmockit</groupId>
         <artifactId>jmockit</artifactId>
-        <version>1.1</version>
+        <version>1.9</version>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
@@ -140,7 +140,7 @@
     </dependency>
     <!-- JMockit -->
     <dependency>
-      <groupId>com.googlecode.jmockit</groupId>
+      <groupId>org.jmockit</groupId>
       <artifactId>jmockit</artifactId>
       <scope>test</scope>
     </dependency>
