@@ -48,7 +48,7 @@ import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 
 /**
  * Provides a set of functions to interact with the database.
- * <p/>
+ * <p>
  * This Engine already provides thread safeness to all public exposed methods
  *
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -165,7 +165,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @return A string with the private key.
      * @throws Exception If something occurs while reading.
      */
-    private String getPrivateKey() throws Exception {
+    protected String getPrivateKey() throws Exception {
         String location = this.properties.getProperty(SECRET_LOCATION);
         if (StringUtils.isBlank(location)) {
             throw new DatabaseEngineException("Encryption was specified but there's no location specified for the private key.");
@@ -222,7 +222,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     /**
      * Gets the final JDBC connection.
-     * <p/>
+     * <p>
      * Implementations might override this method in order to change the JDBC connection.
      *
      * @param jdbc The current JDBC connection.
@@ -546,7 +546,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             toRemove.getInsert().executeBatch();
         } catch (SQLException ex) {
-            logger.debug(String.format("Could not flush before remove '%s'", name), ex);
+            logger.debug("Could not flush before remove '{}'", name, ex);
         }
 
         if (properties.isSchemaPolicyCreateDrop()) {
@@ -574,7 +574,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException
      */
     @Override
-    public void dropEntity(String entity) throws DatabaseEngineException {
+    public synchronized void dropEntity(String entity) throws DatabaseEngineException {
+        if (!containsEntity(entity)) {
+            return;
+        }
+
         dropEntity(entities.get(entity).getEntity());
     }
 
@@ -584,7 +588,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entity The entity.
      * @throws DatabaseEngineException If something goes wrong while dropping the structures.
      */
-    public void dropEntity(final DbEntity entity) throws DatabaseEngineException {
+    public synchronized void dropEntity(final DbEntity entity) throws DatabaseEngineException {
         dropSequences(entity);
         dropTable(entity);
         entities.remove(entity.getName());
@@ -762,7 +766,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of statements in the batch is reached.
-     * <p/>
+     * <p>
      * Please be sure to call {@link com.feedzai.commons.sql.abstraction.batch.AbstractBatch#destroy() } before closing the session with the database
      *
      * @param batchSize    The batch size.
@@ -1214,7 +1218,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     /**
      * Executes the given statement.
-     * <p/>
+     * <p>
      * If the statement for some reason fails to execute, the error is logged
      * but no exception is thrown.
      *
