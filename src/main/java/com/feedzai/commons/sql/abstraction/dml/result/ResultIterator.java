@@ -151,7 +151,7 @@ public abstract class ResultIterator {
                 return null;
             }
 
-            Map<String, ResultColumn> temp = new LinkedHashMap<>();
+            Map<String, ResultColumn> temp = new LinkedHashMap<>(columnNames.size());
             int i = 1;
             for (String cname : columnNames) {
                 temp.put(cname, createResultColumn(cname, resultSet.getObject(i)));
@@ -166,12 +166,63 @@ public abstract class ResultIterator {
     }
 
     /**
+     * Retrieves the values of the next row in the result set as an array oj objects.
+     * <p>
+     * This method provides an optimized version of the {@link #next()} method with less overhead.
+     * <p>
+     * This method also closes the result set upon the last call on the result set.
+     * </p>
+     * <p>
+     * If the statement in place is not a {@link PreparedStatement} it also closes the statement.
+     * </p>
+     * <p>
+     * If an exception is thrown the calling thread is responsible for repeating the action in place.
+     * </p>
+     *
+     * @return The result row.
+     * @throws DatabaseEngineException If a database access error occurs.
+     * @see #getColumnNames() for the names of the columns of this method return.
+     */
+    public ResultColumn[] nextResult() throws DatabaseEngineException {
+        try {
+
+            if (closed) {
+                return null;
+            }
+
+            if (!resultSet.next()) {
+                close();
+
+                return null;
+            }
+
+            ResultColumn[] temp = new ResultColumn[columnNames.size()];
+            for (int i = 0; i < columnNames.size(); i++) {
+                temp[i] = createResultColumn(columnNames.get(i), resultSet.getObject(i + 1));
+            }
+            return temp;
+        } catch (Exception e) {
+            close();
+            throw new DatabaseEngineException("Could not fetch data.", e);
+        }
+    }
+
+    /**
      * Checks if this result iterator is closed.
      *
      * @return {@code true} if the result set is closed, {@code false} otherwise.
      */
     public boolean isClosed() {
         return closed;
+    }
+
+    /**
+     * Retrieves the column names of the iterator.
+     *
+     * @return the column names of the iterator.
+     */
+    public List<String> getColumnNames() {
+        return columnNames;
     }
 
     /**
