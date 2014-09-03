@@ -66,6 +66,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     @Inject
     protected AbstractTranslator translator;
     /**
+     * The default fetch size for iterators.
+     */
+    private static final int DEFAULT_FETCH_SIZE = 1000;
+    /**
      * The database connection.
      */
     protected Connection conn;
@@ -983,14 +987,21 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public synchronized ResultIterator iterator(String query) throws DatabaseEngineException {
-        List<Map<String, ResultColumn>> res = new ArrayList<>();
-        Statement stmt = null;
+        return iterator(query, DEFAULT_FETCH_SIZE);
+    }
 
+    @Override
+    public synchronized ResultIterator iterator(Expression query) throws DatabaseEngineException {
+        return iterator(query, DEFAULT_FETCH_SIZE);
+    }
+
+    @Override
+    public ResultIterator iterator(String query, int fetchSize) throws DatabaseEngineException {
         try {
             getConnection();
-            stmt = conn.createStatement();
-            stmt.setFetchSize(properties.getFetchSize());
-
+            Statement stmt = conn.createStatement();
+            stmt.setFetchSize(fetchSize);
+            logger.trace(query);
             return createResultIterator(stmt, query);
 
         } catch (final Exception e) {
@@ -999,11 +1010,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public synchronized ResultIterator iterator(Expression query) throws DatabaseEngineException {
-        final String queryString = translate(query);
-        logger.trace(queryString);
-
-        return iterator(queryString);
+    public ResultIterator iterator(Expression query, int fetchSize) throws DatabaseEngineException {
+        return iterator(translate(query), fetchSize);
     }
 
     /**
@@ -1517,9 +1525,20 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public synchronized ResultIterator getPSIterator(String name) throws DatabaseEngineException {
+        return getPSIterator(name, DEFAULT_FETCH_SIZE);
+    }
+
+    @Override
+    public ResultIterator getPSIterator(String name, int fetchSize) throws DatabaseEngineException {
         final PreparedStatementCapsule ps = stmts.get(name);
         if (ps == null) {
             throw new DatabaseEngineRuntimeException(String.format("PreparedStatement named '%s' does not exist", name));
+        }
+
+        try {
+            ps.ps.setFetchSize(fetchSize);
+        } catch (SQLException e) {
+            throw new DatabaseEngineException("Error creating PS Iterator", e);
         }
 
         return createResultIterator(ps.ps);

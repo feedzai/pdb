@@ -478,6 +478,26 @@ public interface DatabaseEngine {
     ResultIterator iterator(final Expression query) throws DatabaseEngineException;
 
     /**
+     * Creates an iterator for the given SQL sentence.
+     *
+     * @param query     The query.
+     * @param fetchSize The number of rows to fetch each time.
+     * @return An iterator for the results of the given SQL query.
+     * @throws DatabaseEngineException If a database access error occurs.
+     */
+    ResultIterator iterator(final String query, final int fetchSize) throws DatabaseEngineException;
+
+    /**
+     * Creates an iterator for the given SQL expression.
+     *
+     * @param query     The expression that represents the query.
+     * @param fetchSize The number of rows to fetch each time.
+     * @return An iterator for the results of the given SQL expression.
+     * @throws DatabaseEngineException If a database access error occurs.
+     */
+    ResultIterator iterator(final Expression query, final int fetchSize) throws DatabaseEngineException;
+
+    /**
      * Creates an iterator for the {@link java.sql.PreparedStatement} bound to the given name.
      *
      * @param name The name of the prepared statement.
@@ -485,6 +505,16 @@ public interface DatabaseEngine {
      * @throws DatabaseEngineException
      */
     ResultIterator getPSIterator(final String name) throws DatabaseEngineException;
+
+    /**
+     * Creates an iterator for the {@link java.sql.PreparedStatement} bound to the given name.
+     *
+     * @param name      The name of the prepared statement.
+     * @param fetchSize The number of rows to fetch each time.
+     * @return An iterator for the results of the prepared statement of the given name.
+     * @throws DatabaseEngineException
+     */
+    ResultIterator getPSIterator(final String name, final int fetchSize) throws DatabaseEngineException;
 
     /**
      * Sets the given exception handler in the engine.
