@@ -86,6 +86,23 @@ public class EntityEntry implements Serializable {
         return map.toString();
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        EntityEntry that = (EntityEntry) o;
+
+        if (map != null ? !map.equals(that.map) : that.map != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        return map != null ? map.hashCode() : 0;
+    }
+
     /**
      * Builder to create immutable {@link EntityEntry} objects.
      */
