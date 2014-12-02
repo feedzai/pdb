@@ -1643,26 +1643,66 @@ public class EngineGeneralTest {
     public void booleanTrueComparisonTest() throws DatabaseEngineException {
         test5Columns();
 
-        engine.query(
+        EntityEntry entry1 = entry()
+                .set("COL1", 1)
+                .set("COL2", true)
+                .set("COL3", 1)
+                .set("COL4", 1)
+                .set("COL5", "val 1")
+                .build();
+        engine.persist("TEST", entry1, false);
+
+        EntityEntry entry2 = entry()
+                .set("COL1", 1)
+                .set("COL2", false)
+                .set("COL3", 1)
+                .set("COL4", 1)
+                .set("COL5", "val 1")
+                .build();
+        engine.persist("TEST", entry2, false);
+
+        List<Map<String, ResultColumn>> rows = engine.query(
                 select(all())
                         .from(table("TEST"))
                         .where(
                                 eq(column("COL2"), k(true))
                         )
         );
+
+        assertEquals(1, rows.size());
     }
 
     @Test
     public void booleanFalseComparisonTest() throws DatabaseEngineException {
         test5Columns();
 
-        engine.query(
+        EntityEntry entry1 = entry()
+                .set("COL1", 1)
+                .set("COL2", true)
+                .set("COL3", 1)
+                .set("COL4", 1)
+                .set("COL5", "val 1")
+                .build();
+        engine.persist("TEST", entry1, false);
+
+        EntityEntry entry2 = entry()
+                .set("COL1", 1)
+                .set("COL2", false)
+                .set("COL3", 1)
+                .set("COL4", 1)
+                .set("COL5", "val 1")
+                .build();
+        engine.persist("TEST", entry2, false);
+
+        List<Map<String, ResultColumn>> rows = engine.query(
                 select(all())
                         .from(table("TEST"))
                         .where(
                                 eq(column("COL2"), k(false))
                         )
         );
+
+        assertEquals(1, rows.size());
     }
 
     @Test
