@@ -228,6 +228,7 @@ public abstract class ResultIterator implements AutoCloseable {
     /**
      * Closes the {@link ResultSet} and the {@link Statement} if applicable.
      */
+    @Override
     public void close() {
         // Check for previous closed.
         if (!closed) {
