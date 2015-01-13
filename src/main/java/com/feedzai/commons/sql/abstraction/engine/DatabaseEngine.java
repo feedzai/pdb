@@ -40,7 +40,7 @@ import java.util.Properties;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public interface DatabaseEngine {
+public interface DatabaseEngine extends AutoCloseable {
     /**
      * Closes the connection to the database.
      */

@@ -35,7 +35,7 @@ import java.util.Map;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public abstract class ResultIterator {
+public abstract class ResultIterator implements AutoCloseable {
     /**
      * The logger.
      */
