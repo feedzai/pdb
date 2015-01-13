@@ -144,7 +144,9 @@ public abstract class AbstractBatch implements Runnable {
             logger.debug("Interrupted while waiting.", e);
         }
 
-        flush();
+        if (batch != batchSize) {
+            flush();
+        }
     }
 
     /**
