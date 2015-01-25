@@ -2307,6 +2307,35 @@ public class EngineGeneralTest {
 
     }
 
+    /**
+     * Tests that {@link AbstractDatabaseEngine#updateEntity(DbEntity)} with a "none" schema policy
+     * still creates the in-memory {@link MappedEntity} with the prepared statements for the entities.
+     */
+    @Test
+    public void updateEntityNoneSchemaPolicyCreatesInMemoryPreparedStmtsTest() throws DatabaseEngineException, DatabaseFactoryException {
+        dropSilently("TEST");
+        engine.removeEntity("TEST");
+
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING)
+                .pkFields("COL1")
+                .build();
+
+        engine.addEntity(entity);
+
+        properties.setProperty(SCHEMA_POLICY, "none");
+        DatabaseEngine schemaNoneEngine = DatabaseFactory.getConnection(properties);
+
+        schemaNoneEngine.updateEntity(entity);
+
+        assertTrue("DatabaseEngine should be aware of the entity even with a NONE schema policy.", schemaNoneEngine.containsEntity(entity.getName()));
+    }
+
     @Test
     public void addDropColumnNonExistentDropCreateTest() throws DatabaseEngineException {
         dropSilently("TEST");
