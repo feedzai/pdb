@@ -93,7 +93,7 @@ public class EngineGeneralTest {
         engine.close();
     }
 
-    @Test
+    //@Test
     public void createEntityTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
@@ -109,7 +109,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void createEntityWithTwoColumnsBeingPKTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
@@ -125,7 +125,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityAlreadyExistsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -147,7 +147,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void createUniqueIndexTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -163,7 +163,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void createIndexWithTwoColumnsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -179,7 +179,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void createTwoIndexesTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -196,7 +196,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void createEntityWithTheSameNameButLowerCasedTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -224,7 +224,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void createEntityWithSequencesTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
@@ -240,7 +240,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void createEntityWithIndexesTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
@@ -257,7 +257,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void insertWithControlledTransactionTest() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -302,7 +302,7 @@ public class EngineGeneralTest {
         assertEquals("COL5  ok?", "ADEUS", query.get(0).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void insertWithAutoCommitTest() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -338,7 +338,7 @@ public class EngineGeneralTest {
         assertEquals("COL5  ok?", "ADEUS", query.get(0).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void insertWithControlledTransactionUsingSequenceTest() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -383,7 +383,7 @@ public class EngineGeneralTest {
         assertEquals("COL5  ok?", "ADEUS", query.get(0).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void queryWithIteratorWithDataTest() throws Exception {
         test5Columns();
 
@@ -420,7 +420,7 @@ public class EngineGeneralTest {
         it.close();
     }
 
-    @Test
+    //@Test
     public void queryWithIteratorWithNoDataTest() throws Exception {
         test5Columns();
 
@@ -437,7 +437,7 @@ public class EngineGeneralTest {
         it.close();
     }
 
-    @Test
+    //@Test
     public void batchInsertTest() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -508,7 +508,7 @@ public class EngineGeneralTest {
         assertEquals("COL5  ok?", "OLA", query.get(1).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void batchInsertAutocommitTest() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -571,7 +571,7 @@ public class EngineGeneralTest {
         assertEquals("COL5  ok?", "OLA", query.get(1).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void blobTest() throws DatabaseEngineException {
         final double[] original = new double[]{5, 6, 7};
         DbEntity entity = dbEntity()
@@ -596,7 +596,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void limitNumberOfRowsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -626,7 +626,7 @@ public class EngineGeneralTest {
         assertEquals("number of rows ok?", 5, query.size());
     }
 
-    @Test
+    //@Test
     public void limitAndOffsetNumberOfRowsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -661,7 +661,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void limitOffsetAndOrderNumberOfRowsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -700,7 +700,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void limitOffsetAndOrder2NumberOfRowsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -763,7 +763,7 @@ public class EngineGeneralTest {
         assertEquals("Check correct row col2", "C", query.get(1).get("COL2").toString());
     }
 
-    @Test
+    //@Test
     public void offsetLessThanZero() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -801,7 +801,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void offsetBiggerThanSize() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -836,7 +836,7 @@ public class EngineGeneralTest {
         assertEquals("number of rows ok?", 0, query.size());
     }
 
-    @Test
+    //@Test
     public void limitZeroOrNegative() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -876,7 +876,7 @@ public class EngineGeneralTest {
         assertEquals("number of rows ok?", 19, query.size());
     }
 
-    @Test
+    //@Test
     public void offsetOnlyNumberOfRowsTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -919,7 +919,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void stddevTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -949,7 +949,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 3.0276503540974917D, query.get(0).get("STDDEV").toDouble(), 0.0001D);
     }
 
-    @Test
+    //@Test
     public void sumTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -979,7 +979,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 45, (int) query.get(0).get("SUM").toInt());
     }
 
-    @Test
+    //@Test
     public void countTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1009,7 +1009,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 10, (int) query.get(0).get("COUNT").toInt());
     }
 
-    @Test
+    //@Test
     public void avgTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1039,7 +1039,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 4.5D, query.get(0).get("AVG").toDouble(), 0);
     }
 
-    @Test
+    //@Test
     public void maxTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1069,7 +1069,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 9, (int) query.get(0).get("MAX").toInt());
     }
 
-    @Test
+    //@Test
     public void minTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1099,7 +1099,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 0, (int) query.get(0).get("MIN").toInt());
     }
 
-    @Test
+    //@Test
     public void twoIntegerDivisionMustReturnADoubleTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1121,14 +1121,14 @@ public class EngineGeneralTest {
         assertEquals("", 0.5D, query.get(0).get("DIV").toDouble(), 0);
     }
 
-    @Test
+    //@Test
     public void selectWithoutFromTest() throws DatabaseEngineException {
         List<Map<String, ResultColumn>> query = engine.query(select(k(1).alias("constant")));
 
         assertEquals("constant ok?", 1, (int) query.get(0).get("constant").toInt());
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityWithNullNameTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name(null)
@@ -1144,7 +1144,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityWithNoNameTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("")
@@ -1160,7 +1160,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityWithNameThatExceedsTheMaximumAllowedTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("0123456789012345678901234567891")
@@ -1176,7 +1176,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityWithColumnThatDoesNotHaveNameTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("entname")
@@ -1192,7 +1192,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void createEntityWithMoreThanOneAutoIncColumn() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("entname")
@@ -1208,7 +1208,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void getGeneratedKeysFromAutoIncTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1228,7 +1228,7 @@ public class EngineGeneralTest {
         assertEquals("ret ok?", new Long(1), persist);
     }
 
-    @Test
+    //@Test
     public void getGeneratedKeysFromAutoInc2Test() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1256,7 +1256,7 @@ public class EngineGeneralTest {
         assertEquals("ret ok?", new Long(2), persist);
     }
 
-    @Test
+    //@Test
     public void getGeneratedKeysFromAutoIncWithTransactionTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1294,7 +1294,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void getGeneratedKeysWithNoAutoIncTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1315,7 +1315,7 @@ public class EngineGeneralTest {
         assertNull("ret null?", persist);
     }
 
-    @Test
+    //@Test
     public void abortTransactionTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1349,7 +1349,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void OneToNTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST1")
@@ -1375,7 +1375,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void NtoNTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("USER")
@@ -1414,12 +1414,12 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void NtoNOneToNTest() throws DatabaseEngineException {
         userRolePermissionSchema();
     }
 
-    @Test
+    //@Test
     public void createEntityDropItAndCreateItAgainTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("USER")
@@ -1435,14 +1435,14 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void dropEntityThatDoesNotExistTest() throws DatabaseEngineException {
         DbEntity removeEntity = engine.removeEntity("TABLETHATDOESNOTEXIST");
 
         assertNull(removeEntity);
     }
 
-    @Test
+    //@Test
     public void joinsTest() throws DatabaseEngineException {
 
         userRolePermissionSchema();
@@ -1478,7 +1478,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void joinATableWithQueryTest() throws DatabaseEngineException {
         userRolePermissionSchema();
 
@@ -1495,7 +1495,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void joinAQueryWithATableTest() throws DatabaseEngineException {
         userRolePermissionSchema();
 
@@ -1512,7 +1512,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void joinTwoQueriesTest() throws DatabaseEngineException {
         userRolePermissionSchema();
 
@@ -1530,7 +1530,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void joinThreeQueriesTest() throws DatabaseEngineException {
         userRolePermissionSchema();
 
@@ -1553,7 +1553,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void createViewTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1567,7 +1567,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void createOrReplaceViewTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1576,7 +1576,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void distinctTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1586,7 +1586,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void distinctAndLimitTogetherTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1596,7 +1596,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void notEqualTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1607,7 +1607,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void inTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1623,7 +1623,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void inSelectTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1639,7 +1639,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void booleanTrueComparisonTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1672,7 +1672,7 @@ public class EngineGeneralTest {
         assertEquals(1, rows.size());
     }
 
-    @Test
+    //@Test
     public void booleanFalseComparisonTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1705,7 +1705,7 @@ public class EngineGeneralTest {
         assertEquals(1, rows.size());
     }
 
-    @Test
+    //@Test
     public void coalesceTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1718,7 +1718,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void multipleCoalesceTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1731,7 +1731,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void betweenTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1744,7 +1744,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void betweenWithSelectTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1757,7 +1757,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void betweenEnclosedTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1770,7 +1770,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void notBetweenTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1783,7 +1783,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void modTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1812,7 +1812,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void subSelectTest() throws DatabaseEngineException {
         List<Map<String, ResultColumn>> query = engine.query(
                 select(
@@ -1834,7 +1834,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 3.0, (double) query.get(0).get("third").toDouble(), 0.0);
     }
 
-    @Test
+    //@Test
     public void update1ColTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1847,7 +1847,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void update2ColTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1862,7 +1862,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void updateWithAliasTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1877,7 +1877,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void updateWithWhereTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1893,7 +1893,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void deleteTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1905,7 +1905,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void deleteWithWhereTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1918,7 +1918,7 @@ public class EngineGeneralTest {
         );
     }
 
-    @Test
+    //@Test
     public void deleteCheckReturnTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1934,7 +1934,7 @@ public class EngineGeneralTest {
         assertEquals(2, rowsDeleted);
     }
 
-    @Test
+    //@Test
     public void executePreparedStatementTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
         test5Columns();
 
@@ -1954,7 +1954,7 @@ public class EngineGeneralTest {
         assertTrue("col2 ok?", res.get(0).get("COL2").toBoolean());
     }
 
-    @Test
+    //@Test
     public void executePreparedStatementUpdateTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
         test5Columns();
 
@@ -1975,7 +1975,7 @@ public class EngineGeneralTest {
         assertTrue("col2 ok?", res.get(0).get("COL2").toBoolean());
     }
 
-    @Test
+    //@Test
     public void metadataTest() throws DatabaseEngineException {
         DbEntity entity =
                 dbEntity()
@@ -2001,12 +2001,12 @@ public class EngineGeneralTest {
         assertEquals("meta ok?", metaMap, engine.getMetadata("TEST"));
     }
 
-    @Test
+    //@Test
     public void getMetadataOnATableThatDoesNotExistTest() throws DatabaseEngineException {
         assertTrue("get metadata on table that does not exist is empty", engine.getMetadata("TableThatDoesNotExist").isEmpty());
     }
 
-    @Test
+    //@Test
     public void testSqlInjection1() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2031,7 +2031,7 @@ public class EngineGeneralTest {
         assertEquals("Testing sql injection", 0, result.size());
     }
 
-    @Test
+    //@Test
     public void testBlob() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2069,7 +2069,7 @@ public class EngineGeneralTest {
         assertEquals(updBlob, result.get(0).get("COL2").<BlobTest>toBlob());
     }
 
-    @Test
+    //@Test
     public void testBlobSettingWithIndexTest() throws Exception {
         DbEntity entity = dbEntity().name("TEST").addColumn("COL1", STRING).addColumn("COL2", BLOB)
                 .build();
@@ -2096,7 +2096,7 @@ public class EngineGeneralTest {
         assertEquals(updBlob, result.get(0).get("COL2").<BlobTest>toBlob());
     }
 
-    @Test
+    //@Test
     public void testBlobByteArray() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2142,7 +2142,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void testBlobString() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2168,7 +2168,7 @@ public class EngineGeneralTest {
         assertEquals(bigString, result.get(0).get("COL2").<String>toBlob());
     }
 
-    @Test
+    //@Test
     public void testBlobJSON() throws DatabaseEngineException, DatabaseFactoryException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2189,7 +2189,7 @@ public class EngineGeneralTest {
         assertEquals(bigString, result.get(0).get("COL2").<String>toBlob());
     }
 
-    @Test
+    //@Test
     public void addDropColumnWithDropCreateTest() throws DatabaseEngineException {
         DbEntity.Builder entity = dbEntity()
                 .name("TEST")
@@ -2245,7 +2245,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void addDropColumnTest() throws Exception {
         // First drop-create
         DbEntity.Builder entity = dbEntity()
@@ -2331,12 +2331,41 @@ public class EngineGeneralTest {
         properties.setProperty(SCHEMA_POLICY, "none");
         DatabaseEngine schemaNoneEngine = DatabaseFactory.getConnection(properties);
 
+        EntityEntry entry = entry()
+                .set("COL1", 1)
+                .set("COL2", true)
+                .set("COL3", 1d)
+                .set("COL4", 1l)
+                .set("COL5", "1")
+                .build();
+
+        try {
+            schemaNoneEngine.persist(entity.getName(), entry);
+            fail("Should thrown an exception if trying to persist an entity before calling addEntity/updateEntity a firs time");
+        } catch (DatabaseEngineException e) {
+            assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance", e.getCause().getMessage().contains("Unknown entity"));
+        }
+
         schemaNoneEngine.updateEntity(entity);
 
         assertTrue("DatabaseEngine should be aware of the entity even with a NONE schema policy.", schemaNoneEngine.containsEntity(entity.getName()));
+
+        // Persist the entry and make sure it was successful
+        schemaNoneEngine.persist(entity.getName(), entry);
+        List<Map<String, ResultColumn>> result = schemaNoneEngine.query(select(all()).from(table("TEST")));
+
+        assertEquals("There should be only one entry in the table.", 1, result.size());
+
+        Map<String, ResultColumn> resultEntry = result.get(0);
+
+        assertEquals("COL1 was successfully inserted", 1, resultEntry.get("COL1").toInt().intValue());
+        assertEquals("COL2 was successfully inserted", true, resultEntry.get("COL2").toBoolean());
+        assertEquals("COL3 was successfully inserted", 1d, resultEntry.get("COL3").toDouble().doubleValue(), 0);
+        assertEquals("COL4 was successfully inserted", 1l, resultEntry.get("COL4").toLong().longValue());
+        assertEquals("COL5 was successfully inserted", "1", resultEntry.get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void addDropColumnNonExistentDropCreateTest() throws DatabaseEngineException {
         dropSilently("TEST");
         engine.removeEntity("TEST");
@@ -2386,7 +2415,7 @@ public class EngineGeneralTest {
         assertEquals(DOUBLE, test.get("COL7"));
     }
 
-    @Test
+    //@Test
     public void addDropColumnNonExistentTest() throws Exception {
         dropSilently("TEST");
         engine.removeEntity("TEST");
@@ -2440,7 +2469,7 @@ public class EngineGeneralTest {
         assertEquals(DOUBLE, test.get("COL7"));
     }
 
-    @Test
+    //@Test
     public void testInsertNullCLOB() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2462,7 +2491,7 @@ public class EngineGeneralTest {
     }
 
 
-    @Test
+    //@Test
     public void testCLOB() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2506,7 +2535,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void testCLOBEncoding() throws Exception {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -2542,7 +2571,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void testPersistOverideAutoIncrement() throws Exception {
         DbEntity entity = dbEntity()
                 .name("MYTEST")
@@ -2585,7 +2614,7 @@ public class EngineGeneralTest {
         engine.close();
     }
 
-    @Test
+    //@Test
     public void testPersistOverideAutoIncrement2() throws Exception {
         String APP_ID = "APP_ID";
         DbColumn APP_ID_COLUMN = new DbColumn.Builder().name(APP_ID).type(INT).build();
@@ -2633,7 +2662,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void testPersistOverideAutoIncrement3() throws Exception {
         DbEntity entity = dbEntity()
                 .name("MYTEST")
@@ -2669,7 +2698,7 @@ public class EngineGeneralTest {
         engine.close();
     }
 
-    @Test
+    //@Test
     public void testTruncateTable() throws Exception {
         test5Columns();
 
@@ -2685,7 +2714,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void testRenameTables() throws Exception {
         String oldName = "TBL_OLD";
         String newName = "TBL_NEW";
@@ -2735,7 +2764,7 @@ public class EngineGeneralTest {
         }
     }
 
-    @Test
+    //@Test
     public void testLikeWithTransformation() throws Exception {
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 5).set("COL5", "teste")
@@ -2754,7 +2783,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test(expected = DatabaseEngineException.class)
+    //@Test(expected = DatabaseEngineException.class)
     public void fkTestRemoveRowReferencedByForeignKey() throws DatabaseEngineException {
         DbEntity e1 = dbEntity()
                 .name("TEST1")
@@ -2782,7 +2811,7 @@ public class EngineGeneralTest {
         engine.executeUpdate(delete(table("TEST1")));
     }
 
-    @Test
+    //@Test
     public void fkTestRemoveRowPreviouslyReferencedByForeignKey() throws DatabaseEngineException, DatabaseFactoryException, SQLException, RecoveryException, RetryLimitExceededException, InterruptedException {
         DbEntity e1 = dbEntity()
                 .name("TEST1")
@@ -2826,7 +2855,7 @@ public class EngineGeneralTest {
         assertEquals(1, engine.query(select(all()).from(table("TEST2"))).size());
     }
 
-    @Test
+    //@Test
     public void createSequenceOnLongColumnTest() throws Exception {
         DbEntity entity =
                 dbEntity()
@@ -2847,7 +2876,7 @@ public class EngineGeneralTest {
 
     }
 
-    @Test
+    //@Test
     public void insertWithNoAutoIncAndThatResumeTheAutoIncTest() throws DatabaseEngineException {
         DbEntity entity =
                 dbEntity()
@@ -2951,7 +2980,7 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
-    @Test
+    //@Test
     public void testAndWhere() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -2970,7 +2999,7 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be teste", "teste", query.get(0).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void testAndWhereMultiple() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -3004,7 +3033,7 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be teste", "teste", query.get(0).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void testAndWhereMultipleCheckAndEnclosed() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -3040,7 +3069,7 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be teste", "tesTte", query.get(1).get("COL5").toString());
     }
 
-    @Test
+    //@Test
     public void dropPrimaryKeyWithOneColumnTest() throws Exception {
         DbEntity entity =
                 dbEntity()
@@ -3056,7 +3085,7 @@ public class EngineGeneralTest {
         engine.executeUpdate(dropPK(table("TEST")));
     }
 
-    @Test
+    //@Test
     public void dropPrimaryKeyWithTwoColumnsTest() throws Exception {
         DbEntity entity =
                 dbEntity()
@@ -3072,7 +3101,7 @@ public class EngineGeneralTest {
         engine.executeUpdate(dropPK(table("TEST")));
     }
 
-    @Test
+    //@Test
     public void alterColumnWithConstraintTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
         DbEntity entity =
                 dbEntity()
@@ -3091,7 +3120,7 @@ public class EngineGeneralTest {
                 .build()));
     }
 
-    @Test
+    //@Test
     public void alterColumnToDifferentTypeTest() throws DatabaseEngineException {
         DbEntity entity =
                 dbEntity()
@@ -3109,7 +3138,7 @@ public class EngineGeneralTest {
                 .build()));
     }
 
-    @Test
+    //@Test
     public void createTableWithDefaultsTest() throws DatabaseEngineException, DatabaseFactoryException {
         DbEntity.Builder entity =
                 dbEntity()
@@ -3159,7 +3188,7 @@ public class EngineGeneralTest {
         connection2.close();
     }
 
-    @Test
+    //@Test
     public void defaultValueOnBooleanColumnsTest() throws DatabaseEngineException {
         DbEntity.Builder entity =
                 dbEntity()
@@ -3181,21 +3210,21 @@ public class EngineGeneralTest {
         assertEquals("", 3L, row.get("COL4").toLong().longValue());
     }
 
-    @Test
+    //@Test
     public void upperTest() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL5", "ola").build());
         assertEquals("text is uppercase", "OLA", engine.query(select(upper(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
     }
 
-    @Test
+    //@Test
     public void lowerTest() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL5", "OLA").build());
         assertEquals("text is lowercase", "ola", engine.query(select(lower(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
     }
 
-    @Test
+    //@Test
     public void internalFunctionTest() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL5", "OLA").build());
@@ -3203,7 +3232,7 @@ public class EngineGeneralTest {
                 .toString());
     }
 
-    @Test
+    //@Test
     public void entityEntryHashcodeTest() {
         Map<String, Object> map = new HashMap<>();
         map.put("id1", "val1");
