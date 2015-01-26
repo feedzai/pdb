@@ -493,44 +493,45 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized void updateEntity(DbEntity entity) throws DatabaseEngineException {
-        if (properties.isSchemaPolicyNone()) {
-            return;
+        // Only mutate the schema in the DB (i.e. add schema, drop/add columns, if the schema policy allows it.
+        if (!properties.isSchemaPolicyNone()) {
+            final Map<String, DbColumnType> tableMetadata = getMetadata(entity.getName());
+            if (tableMetadata.size() == 0) { // the table does not exist
+                addEntity(entity);
+            } else if (this.properties.isSchemaPolicyDropCreate()) {
+                dropEntity(entity);
+                addEntity(entity);
+            } else {
+                validateEntity(entity);
+                dropFks(entity.getName());
+                List<String> toRemove = new ArrayList<String>();
+                for (String dbColumn : tableMetadata.keySet()) {
+                    if (!entity.containsColumn(dbColumn)) {
+                        toRemove.add(dbColumn);
+                    }
+                }
+                if (!toRemove.isEmpty()) {
+                    if (properties.allowColumnDrop()) {
+                        dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
+                    } else {
+                        logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.", StringUtils.join(toRemove, ","), entity.getName());
+                    }
+                }
+                List<DbColumn> columns = new ArrayList<DbColumn>();
+                for (DbColumn localColumn : entity.getColumns()) {
+                    if (!tableMetadata.containsKey(localColumn.getName())) {
+                        columns.add(localColumn);
+
+                    }
+                }
+                if (!columns.isEmpty()) {
+                    addColumn(entity, columns.toArray(new DbColumn[columns.size()]));
+                }
+                addFks(entity);
+            }
         }
 
-        final Map<String, DbColumnType> tableMetadata = getMetadata(entity.getName());
-        if (tableMetadata.size() == 0) { // the table does not exist
-            addEntity(entity);
-        } else if (this.properties.isSchemaPolicyDropCreate()) {
-            dropEntity(entity);
-            addEntity(entity);
-        } else {
-            validateEntity(entity);
-            dropFks(entity.getName());
-            List<String> toRemove = new ArrayList<String>();
-            for (String dbColumn : tableMetadata.keySet()) {
-                if (!entity.containsColumn(dbColumn)) {
-                    toRemove.add(dbColumn);
-                }
-            }
-            if (!toRemove.isEmpty()) {
-                if (properties.allowColumnDrop()) {
-                    dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
-                } else {
-                    logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.", StringUtils.join(toRemove, ","), entity.getName());
-                }
-            }
-            List<DbColumn> columns = new ArrayList<DbColumn>();
-            for (DbColumn localColumn : entity.getColumns()) {
-                if (!tableMetadata.containsKey(localColumn.getName())) {
-                    columns.add(localColumn);
-
-                }
-            }
-            if (!columns.isEmpty()) {
-                addColumn(entity, columns.toArray(new DbColumn[columns.size()]));
-            }
-            addFks(entity);
-        }
+        // We still want to create prepared statements for the entity, regardless the schema policy
         MappedEntity me = createPreparedStatementForInserts(entity);
 
         me = me.setEntity(entity);
