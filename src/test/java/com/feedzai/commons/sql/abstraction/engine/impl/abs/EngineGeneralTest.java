@@ -2394,10 +2394,10 @@ public class EngineGeneralTest {
 
         try {
             schemaNoneEngine.updateEntity(entity);
-            fail("Should have failed because updateEntity with schema policy NONE doesnt execute DDL");
+            schemaNoneEngine.query(select(all()).from(table(entity.getName())));
+            fail("Should have failed because updateEntity with schema policy NONE doesn't execute DDL");
         } catch (DatabaseEngineException e) {
-            Pattern pattern = Pattern.compile("Table \"(\\w+)\" not found");
-            assertTrue("Should fail because because updateEntity with schema policy NONE doesn't execute DDL", pattern.matcher(e.getCause().getMessage()).find());
+            // Should fail because because updateEntity with schema policy NONE doesn't execute DDL
         }
     }
 
