@@ -41,6 +41,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
@@ -2339,12 +2340,17 @@ public class EngineGeneralTest {
                 .set("COL5", "1")
                 .build();
 
+        boolean threwExpected = false;
+
         try {
             schemaNoneEngine.persist(entity.getName(), entry);
             fail("Should thrown an exception if trying to persist an entity before calling addEntity/updateEntity a firs time");
         } catch (DatabaseEngineException e) {
             assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance", e.getCause().getMessage().contains("Unknown entity"));
+            threwExpected = true;
         }
+
+        assertTrue("Expected exception should have been thrown", threwExpected);
 
         schemaNoneEngine.updateEntity(entity);
 
@@ -2363,6 +2369,36 @@ public class EngineGeneralTest {
         assertEquals("COL3 was successfully inserted", 1d, resultEntry.get("COL3").toDouble().doubleValue(), 0);
         assertEquals("COL4 was successfully inserted", 1l, resultEntry.get("COL4").toLong().longValue());
         assertEquals("COL5 was successfully inserted", "1", resultEntry.get("COL5").toString());
+    }
+
+    /**
+     * Tests that {@link AbstractDatabaseEngine#updateEntity(DbEntity)} with a "none" schema policy
+     * doesn't execute DDL.
+     */
+    @Test
+    public void updateEntityNoneSchemaPolicyDoesntExecuteDDL() throws DatabaseEngineException, DatabaseFactoryException {
+        dropSilently("TEST");
+
+        properties.setProperty(SCHEMA_POLICY, "none");
+        DatabaseEngine schemaNoneEngine = DatabaseFactory.getConnection(properties);
+
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING)
+                .pkFields("COL1")
+                .build();
+
+        try {
+            schemaNoneEngine.updateEntity(entity);
+            fail("Should have failed because updateEntity with schema policy NONE doesnt execute DDL");
+        } catch (DatabaseEngineException e) {
+            Pattern pattern = Pattern.compile("Table \"(\\w+)\" not found");
+            assertTrue("Should fail because because updateEntity with schema policy NONE doesn't execute DDL", pattern.matcher(e.getCause().getMessage()).find());
+        }
     }
 
     @Test
