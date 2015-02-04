@@ -144,9 +144,7 @@ public abstract class AbstractBatch implements Runnable {
             logger.debug("Interrupted while waiting.", e);
         }
 
-        if (batch != batchSize) {
-            flush();
-        }
+        flush();
     }
 
     /**
@@ -179,9 +177,17 @@ public abstract class AbstractBatch implements Runnable {
      * Flushes the pending batches.
      */
     public synchronized void flush() {
-        // Even if the flush fails we want to reset this state.
-        batch = batchSize;
+        // Reset the last flush timestamp, even if the batch is empty or flush fails
         lastFlush = System.currentTimeMillis();
+
+        // No-op if batch is empty
+        if (batch == batchSize) {
+            logger.trace("[{}] Batch empty, not flushing", name);
+            return;
+        }
+
+        // Declare the batch empty, regardless of flush success/failure
+        batch = batchSize;
 
         // If something goes wrong we still have a copy to recover.
         final List<BatchEntry> temp = new ArrayList<>();
@@ -229,13 +235,13 @@ public abstract class AbstractBatch implements Runnable {
      *
      * @param entries The entries that are pending to be persisted.
      */
-    public void onFlushFailure(BatchEntry[] entries) {
+    public abstract void onFlushFailure(BatchEntry[] entries); {
         // NO-OP.
     }
 
     @Override
     public synchronized void run() {
-        if (System.currentTimeMillis() - lastFlush >= batchTimeout && batch != batchSize) {
+        if (System.currentTimeMillis() - lastFlush >= batchTimeout) {
             logger.trace("[{}] Flush timeout occurred", name);
             flush();
         }
