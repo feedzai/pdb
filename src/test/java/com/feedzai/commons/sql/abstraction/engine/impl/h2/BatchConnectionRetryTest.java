@@ -90,11 +90,12 @@ public class BatchConnectionRetryTest {
     }
 
     /**
-     * Validates that
+     * Tests that a batch retries the connection after a failed flush.
+     *
      * @throws DatabaseEngineException
      */
     @Test
-    public void testBatchFailureTest() throws DatabaseEngineException {
+    public void testConnectionRetryAfterBatchFailure() throws DatabaseEngineException {
         final AtomicBoolean allowTransaction = new AtomicBoolean(true);
         final AtomicBoolean isConnectionOk = new AtomicBoolean(true);
 
