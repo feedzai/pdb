@@ -191,12 +191,16 @@ public abstract class AbstractBatch implements Runnable {
                 temp.add(entry);
             }
 
+            // begin the transaction before the addBatch calls in order to force the retry
+            // of the connection if the same was lost during or since the last batch. Otherwise
+            // the addBatch call that uses a prepared statement will fail
+            de.beginTransaction();
+
             // This has to be separate because it accesses to the database.
             for (BatchEntry entry : temp) {
                 de.addBatch(entry.getTableName(), entry.getEntityEntry());
             }
 
-            de.beginTransaction();
             try {
                 de.flush();
                 de.commit();
