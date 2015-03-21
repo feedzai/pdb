@@ -16,11 +16,15 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
-import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -28,13 +32,20 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.sql.Connection;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
 
@@ -69,6 +80,7 @@ public class EngineCreateTest {
                 setProperty(PASSWORD, config.password);
                 setProperty(ENGINE, config.engine);
                 setProperty(SCHEMA_POLICY, "create");
+                setProperty(RETRY_INTERVAL, "1000");
             }
         };
     }
@@ -165,15 +177,12 @@ public class EngineCreateTest {
         final DatabaseEngine conn = DatabaseFactory.getConnection(properties);
         DatabaseEngine conn2 = conn.duplicate(new Properties(), false);
 
-        conn2.setExceptionHandler(new ExceptionHandler() {
-            @Override
-            public boolean proceed(OperationFault op, Exception e) {
-                if (OperationFault.Type.TABLE_ALREADY_EXISTS.equals(op.getType())) {
-                    return false;
-                }
-
-                return true;
+        conn2.setExceptionHandler((op, e) -> {
+            if (OperationFault.Type.TABLE_ALREADY_EXISTS.equals(op.getType())) {
+                return false;
             }
+
+            return true;
         });
 
         DbEntity entity = dbEntity()
@@ -183,5 +192,185 @@ public class EngineCreateTest {
         conn.addEntity(entity);
         conn2.addEntity(entity);
 
+    }
+
+    /**
+     * Tests the error thrown when an entity is loaded and it doesn't exist in the database.
+     *
+     * @throws Exception
+     * @since 2.1.2
+     */
+    @Test
+    public void testLoadEntityTableDoesNotExist() throws Exception {
+        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
+        // make sure that entity doesn't exist
+        silentTableDrop(engine, "TEST");
+
+        try {
+
+            DbEntity entity = dbEntity()
+                    .name("TEST")
+                    .addColumn("COL1", INT)
+                    .pkFields("COL1")
+                    .build();
+
+            expected.expect(DatabaseEngineException.class);
+            expected.expectMessage("Something went wrong handling statement");
+
+            engine.loadEntity(entity);
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * Tests a normal usage of loadEntity on a database that already has the table defined.
+     * <p>
+     * Also validates that calling loadEntity multiple times is allowed.
+     *
+     * @throws Exception
+     * @since 2.1.2
+     */
+    @Test
+    public void testLoadEntity() throws Exception {
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .pkFields("COL1")
+                .build();
+
+        DatabaseEngine engine = null;
+
+        // make sure that entity doesn't exist and then create it from scratch
+        try {
+            engine = DatabaseFactory.getConnection(properties);
+
+            silentTableDrop(engine, "TEST");
+            engine.addEntity(entity);
+
+        } finally {
+            engine.close();
+        }
+
+        try {
+            engine = DatabaseFactory.getConnection(properties);
+            engine.loadEntity(entity);
+            engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 1).build());
+
+            // make sure that calling loadEntity twice doesn't have any impact.
+            engine.loadEntity(entity);
+            engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 2).build());
+
+            List<Map<String, ResultColumn>> results = engine.query(select(all()).from(table(entity.getName())));
+
+            assertEquals("Check that two lines are returned", 2, results.size());
+            assertEquals("Check that first result is correct", 1, results.get(0).get("COL1").toInt().intValue());
+            assertEquals("Check that second result is correct", 2, results.get(1).get("COL1").toInt().intValue());
+
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * Tests that loadEntity method validates the entities.
+     *
+     * @throws Exception
+     * @since 2.1.2
+     */
+    @Test
+    public void testLoadEntityInvalidTable() throws Exception {
+        DbEntity entity = dbEntity()
+                .addColumn("COL1", INT)
+                .pkFields("COL1")
+                .build();
+
+        DatabaseEngine engine = null;
+        try {
+            engine = DatabaseFactory.getConnection(properties);
+
+            expected.expect(DatabaseEngineException.class);
+            expected.expectMessage("You have to define the entity name");
+
+            engine.loadEntity(entity);
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * Tests that an entity that was loaded ny loadEntity is recovered with success on a database connection failure.
+     *
+     * @throws Exception
+     * @since 2.1.2
+     */
+    @Test
+    public void testLoadAndRecoverEntity() throws Exception {
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .pkFields("COL1")
+                .build();
+
+        DatabaseEngine engine = null;
+
+        // make sure that entity doesn't exist and then create it from scratch
+        try {
+            engine = DatabaseFactory.getConnection(properties);
+
+            silentTableDrop(engine, "TEST");
+            engine.addEntity(entity);
+
+        } finally {
+            engine.close();
+        }
+
+        try {
+            engine = DatabaseFactory.getConnection(properties);
+
+            engine.loadEntity(entity);
+
+            // save the current connection to check if is not the same being used after the failure
+            Connection oldConnection = engine.getConnection();
+
+            // before persist force the connection to be closed in order to force a recover
+            try {
+                engine.getConnection().close();
+            } catch (Exception e) {
+            }
+
+            engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 1).build());
+
+            assertFalse("Check that old and new connections are not the same", engine.getConnection().equals(oldConnection));
+
+            // make sure that calling loadEntity twice doesn't have any impact.
+            engine.loadEntity(entity);
+            engine.loadEntity(entity);
+            engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 2).build());
+
+            List<Map<String, ResultColumn>> results = engine.query(select(all()).from(table(entity.getName())));
+
+            assertEquals("Check that two lines are returned", 2, results.size());
+            assertEquals("Check that first result is correct", 1, results.get(0).get("COL1").toInt().intValue());
+            assertEquals("Check that second result is correct", 2, results.get(1).get("COL1").toInt().intValue());
+
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * Silently drops a table using a provided connection.
+     *
+     * @param engine    The database connection.
+     * @param tableName The name of the table to drop.
+     * @since 2.1.2
+     */
+    private void silentTableDrop(DatabaseEngine engine, String tableName) {
+        try {
+            ((AbstractDatabaseEngine) engine).dropEntity(new DbEntity.Builder().name(tableName).build());
+        } catch (Exception ignored) {
+        }
     }
 }

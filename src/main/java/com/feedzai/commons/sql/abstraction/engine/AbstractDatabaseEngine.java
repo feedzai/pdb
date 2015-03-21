@@ -328,8 +328,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     private void recover() throws DatabaseEngineException, NameAlreadyExistsException {
         // Recover entities.
         final Map<String, MappedEntity> niw = new HashMap<String, MappedEntity>(entities);
+        // clear the entities
+        entities.clear();
         for (MappedEntity me : niw.values()) {
-            addEntity(me.getEntity(), true);
+            loadEntity(me.getEntity());
         }
 
         // Recover prepared statements.
@@ -428,6 +430,16 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         addEntity(entity, false);
     }
 
+    @Override
+    public synchronized void loadEntity(DbEntity entity) throws DatabaseEngineException {
+        if (!entities.containsKey(entity.getName())) {
+            validateEntity(entity);
+            MappedEntity me = createPreparedStatementForInserts(entity).setEntity(entity);
+            entities.put(entity.getName(), me);
+            logger.trace("Entity '{}' loaded", entity.getName());
+        }
+    }
+
     /**
      * Adds an entity to the engine. It will create tables and everything necessary so persistence can work.
      *
@@ -462,13 +474,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             addSequences(entity);
         }
 
-
-        MappedEntity me = createPreparedStatementForInserts(entity);
-
-        me = me.setEntity(entity);
-
-        entities.put(entity.getName(), me);
-        logger.trace("Entity '{}' processed", entity.getName());
+        loadEntity(entity);
     }
 
     /**
