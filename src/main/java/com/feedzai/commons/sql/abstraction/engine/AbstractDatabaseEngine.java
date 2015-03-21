@@ -325,7 +325,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
     }
 
-    private void recover() throws DatabaseEngineException, NameAlreadyExistsException {
+    private synchronized void recover() throws DatabaseEngineException, NameAlreadyExistsException {
         // Recover entities.
         final Map<String, MappedEntity> niw = new HashMap<String, MappedEntity>(entities);
         // clear the entities
