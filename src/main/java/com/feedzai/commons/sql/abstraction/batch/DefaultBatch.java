@@ -42,6 +42,11 @@ public class DefaultBatch extends AbstractBatch {
         super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
     }
 
+    @Override
+    public void onFlushFailure(BatchEntry[] entries) {
+        // ignored
+    }
+
     /**
      * <p>Creates a new instance of {@link DefaultBatch}.</p>
      * <p>Starts the timertask.</p>
