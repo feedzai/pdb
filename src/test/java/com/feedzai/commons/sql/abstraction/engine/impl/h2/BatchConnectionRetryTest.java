@@ -32,9 +32,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
@@ -76,7 +79,7 @@ public class BatchConnectionRetryTest {
                 setProperty(PASSWORD, config.password);
                 setProperty(ENGINE, config.engine);
                 setProperty(SCHEMA_POLICY, "drop-create");
-                setProperty(MAX_NUMBER_OF_RETRIES, "10");
+                setProperty(MAX_NUMBER_OF_RETRIES, "5");
                 setProperty(RETRY_INTERVAL, "1000");
             }
         };
@@ -96,36 +99,28 @@ public class BatchConnectionRetryTest {
      */
     @Test
     public void testConnectionRetryAfterBatchFailure() throws DatabaseEngineException {
-        final AtomicBoolean allowTransaction = new AtomicBoolean(true);
-        final AtomicBoolean isConnectionOk = new AtomicBoolean(true);
+        final AtomicBoolean allowConnection = new AtomicBoolean(true);
+        final AtomicInteger failedConnections = new AtomicInteger(0);
 
+        final AtomicReference<DatabaseEngine> engineCapsule = new AtomicReference<>(engine);
+
+        // mock the connect method to force the retry of the connections to be exausted
         new MockUp<AbstractDatabaseEngine>() {
 
             @Mock
-            void addBatch(Invocation inv, final String name, final EntityEntry entry) throws DatabaseEngineException {
-                // mock the addBatch method as throwing an exception is the connection is ok. the connection status is controlled ty the test case.
-                if (isConnectionOk.get()) {
+            void connect(Invocation inv) throws Exception {
+                if (allowConnection.get()) {
+                    failedConnections.set(0);
                     inv.proceed();
                 } else {
-                    throw new DatabaseEngineRuntimeException("Some random database error");
+                    if (failedConnections.incrementAndGet() == 6) {
+                        allowConnection.set(true);
+                    }
+                    throw new SQLException("Could not connect");
                 }
 
             }
 
-            @Mock
-            public Connection getConnection(Invocation inv) throws RetryLimitExceededException, InterruptedException, RecoveryException {
-                // in this mock, the test can control when a connection can be retrieved (the retry mechanism is inside the getConnection method,
-                // though it will not be executed when the flag is set to false.
-
-                // the isConnectionOk is only set to true/false when the code really calls the getConnection and the test wants to force the broken state of the connection
-                if (allowTransaction.get()) {
-                    isConnectionOk.set(true);
-                    return inv.proceed();
-                } else {
-                    isConnectionOk.set(false);
-                    throw new RetryLimitExceededException();
-                }
-            }
         };
 
 
@@ -156,7 +151,14 @@ public class BatchConnectionRetryTest {
         assertNull("Check that there were no failure results", failureResults);
 
         // 2. force an error disallowing the connection to be fetched
-        allowTransaction.set(false);
+        try {
+            engineCapsule.get().getConnection().close();
+        } catch (Exception e) {
+        }
+        // disallow new connections to force to exaust the retry mechanism
+        allowConnection.set(false);
+
+
         batch.add("TEST", entry().set("COL1", 2).build());
         batch.flush();
         assertEquals("Check that transactions sent to the failure batch", 1, failureResults.length);
@@ -167,7 +169,6 @@ public class BatchConnectionRetryTest {
         failureResults = null;
 
         // 3. restore the connection and make sure that the code tries to reconnect and doesn't fail the batch
-        allowTransaction.set(true);
         batch.add("TEST", entry().set("COL1", 4).build());
         batch.flush();
         assertNull("Check that there were no failure results", failureResults);

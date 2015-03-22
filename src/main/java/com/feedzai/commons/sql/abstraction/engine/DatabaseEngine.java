@@ -62,6 +62,21 @@ public interface DatabaseEngine {
     void addEntity(DbEntity entity) throws DatabaseEngineException;
 
     /**
+     * Loads an entity into the engine.
+     * <p>
+     * No DDL commands will be executed, only prepared statements will be created in order to {@link #persist(String, com.feedzai.commons.sql.abstraction.entry.EntityEntry) persist}
+     * data into the entities.
+     *
+     * @param entity The entity to load into the connection.
+     * @throws DatabaseEngineException If something goes wront while loading the entity.
+     * @implSpec The invocation of this method multiple times is allowed. If the entity already exists, the invocation is a no-op.
+     * @implNote The implementation is similar to the {@link #addEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity) addEntity} that configured with
+     * {@link com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties#SCHEMA_POLICY SCHEMA_POLICY} of none.
+     * @since 2.1.2
+     */
+    void loadEntity(DbEntity entity) throws DatabaseEngineException;
+
+    /**
      * <p>
      * Updates an entity in the engine.
      * </p>
