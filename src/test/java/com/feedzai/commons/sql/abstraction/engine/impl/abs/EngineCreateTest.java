@@ -25,6 +25,9 @@ import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
+import org.hamcrest.Matcher;
+import org.hamcrest.core.AnyOf;
+import org.hamcrest.core.IsEqual;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -216,9 +219,12 @@ public class EngineCreateTest {
                     .build();
 
             expected.expect(DatabaseEngineException.class);
-            expected.expectMessage("Something went wrong handling statement");
-
+            expected.expectMessage(AnyOf.anyOf(IsEqual.equalTo("Something went wrong persisting the entity"),
+                    IsEqual.equalTo("Something went wrong handling statement")));
             engine.loadEntity(entity);
+
+            // some of the databases will throw the error on loadEntity, the others only on persist
+            engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 1).build());
         } finally {
             engine.close();
         }
