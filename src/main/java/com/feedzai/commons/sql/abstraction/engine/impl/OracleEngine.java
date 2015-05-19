@@ -820,11 +820,21 @@ public class OracleEngine extends AbstractDatabaseEngine {
             rsColumns = s.executeQuery(String.format("SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = UPPER('%s')", name, properties.getProperty(PdbProperties.USERNAME)));
 
             while (rsColumns.next()) {
-                final String dataPrecision = rsColumns.getString("DATA_PRECISION");
+                String columnName = rsColumns.getString("COLUMN_NAME");
+                /*
+                Columns starting with SYS_ are Oracle system-generated columns
+                and PDB should not interfere with these columns. Not storing
+                these in the metaMap makes them invisible to PDB.
 
-                final DbColumnType value = toPdbType(dataPrecision == null ? rsColumns.getString("DATA_TYPE") : (rsColumns.getString("DATA_TYPE") + dataPrecision));
-                if (value != DbColumnType.UNMAPPED) {
-                    metaMap.put(rsColumns.getString("COLUMN_NAME"), value);
+                See: http://docs.oracle.com/cd/B19306_01/server.102/b14200/ap_keywd.htm
+                 */
+                if (!columnName.toUpperCase().startsWith("SYS_")) {
+                    final String dataPrecision = rsColumns.getString("DATA_PRECISION");
+
+                    final DbColumnType value = toPdbType(dataPrecision == null ? rsColumns.getString("DATA_TYPE") : (rsColumns.getString("DATA_TYPE") + dataPrecision));
+                    if (value != DbColumnType.UNMAPPED) {
+                        metaMap.put(columnName, value);
+                    }
                 }
             }
 
