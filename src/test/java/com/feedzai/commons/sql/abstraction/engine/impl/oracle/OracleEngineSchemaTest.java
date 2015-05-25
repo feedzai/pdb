@@ -16,16 +16,23 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
 
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.Properties;
 
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static org.junit.Assert.*;
 
 /**
  * @author Rafael Marmelo (rafael.marmelo@feedzai.com)
@@ -65,5 +72,32 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected String getSchema() {
         return "";
+    }
+
+    /**
+     * Checks that system generated columns with name starting with SYS_ in the
+     * Oracle engine do not appear in the table metadata.
+     *
+     * @throws Exception propagates any Exception thrown by the test
+     */
+    @Test
+    public void testSystemGeneratedColumns() throws Exception {
+        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
+        try {
+            DbEntity entity = dbEntity()
+                    .name("TEST_SYS_COL")
+                    // Simulates a system generated column
+                    .addColumn("SYS_COL1", INT)
+                    .addColumn("COL1", INT)
+                    .pkFields("COL1")
+                    .build();
+            engine.addEntity(entity);
+
+            assertFalse("The simulated system generated column should not appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("SYS_COL1"));
+            assertTrue("The regular column should appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("COL1"));
+        } finally {
+            engine.close();
+        }
     }
 }
