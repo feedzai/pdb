@@ -72,6 +72,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
      * Foreign key already exists
      */
     public static final String FOREIGN_ALREADY_EXISTS = "ORA-02275";
+    /**
+     *  Double instance for 0.0, so no Double instance is created whenever 0.0 is necessary.
+     */
+    private static Double ZERO = Double.valueOf(0.0);
 
     /**
      * Creates a new Oracle connection.
@@ -81,6 +85,19 @@ public class OracleEngine extends AbstractDatabaseEngine {
      */
     public OracleEngine(PdbProperties properties) throws DatabaseEngineException {
         super(ORACLE_DRIVER, properties, Dialect.ORACLE);
+    }
+
+    @Override
+    public synchronized void setParameters(final String name, final Object... params) throws DatabaseEngineException, ConnectionResetException {
+        for(int i = 0 ; i < params.length ; i++) {
+            params[i] = ensureNoUnderflow(params[i]);
+        }
+        super.setParameters(name, params);
+    }
+
+    @Override
+    public synchronized void setParameter(final String name, final int index, final Object param) throws DatabaseEngineException, ConnectionResetException {
+        super.setParameter(name, index, ensureNoUnderflow(param));
     }
 
     @Override
@@ -128,7 +145,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
                         break;
                     default:
-                        ps.setObject(i, val);
+                        ps.setObject(i, ensureNoUnderflow(val));
                 }
             } catch (Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
@@ -138,6 +155,25 @@ public class OracleEngine extends AbstractDatabaseEngine {
         }
 
         return i - 1;
+    }
+
+    /**
+     * Returns 0.0 if the provided value is a double and less than 1.0e-131, since values
+     * under 1.0e-131 causes an underflow error in the jdbc driver.
+     *
+     * @param val   The value to check
+     * @return      The value corrected in case val is less than 1.0e-131, unchanged otherwise.
+     *
+     * @since       2.1.4
+     */
+    private Object ensureNoUnderflow(Object val) {
+        if (val instanceof  Double) {
+            Double dblVal = (Double)val;
+            if (Math.abs(dblVal) <= 1.0e-131) {
+                val = ZERO;
+            }
+        }
+        return val;
     }
 
     /**
