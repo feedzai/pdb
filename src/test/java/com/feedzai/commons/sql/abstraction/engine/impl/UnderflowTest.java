@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
+package com.feedzai.commons.sql.abstraction.engine.impl;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
@@ -42,14 +42,15 @@ import static org.junit.Assert.assertNotNull;
 /**
  * Tests to ensure values less than 1.0e-131 are stored as 0. This is necessary because
  * values less than 1.0e-131 provoke an underflow error in the Oracle JDBC driver when
- * used in bind parameters.
+ * used in bind parameters. This is an oracle-specific issue but the test is applicable
+ * to any database server.
  *
  * @author Paulo Leitao (paulo.leitao@feedzai.com)
  *
  * @since 2.1.4
  */
 @RunWith(Parameterized.class)
-public class OracleUnderflowTest {
+public class UnderflowTest {
 
     /*
      * Test table properties, a table with a PK and two double colums.
@@ -70,13 +71,13 @@ public class OracleUnderflowTest {
 
     /**
      * Configurations the test will run with, set them in connection.properties and ensure
-     * VM args includes -Dinstances=oracle
+     * they are included in the -Dinstances VM args.
      *
      * @return  The configurations under which the test runs.
      */
     @Parameterized.Parameters
     public static Collection<Object[]> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("oracle");
+        return DatabaseTestUtil.loadConfigurations();
     }
 
     @Parameterized.Parameter
@@ -91,7 +92,7 @@ public class OracleUnderflowTest {
                 setProperty(JDBC, config.jdbc);
                 setProperty(USERNAME, config.username);
                 setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, "com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine");
+                setProperty(ENGINE, config.engine);
                 setProperty(SCHEMA_POLICY, "create-drop");
             }
         };

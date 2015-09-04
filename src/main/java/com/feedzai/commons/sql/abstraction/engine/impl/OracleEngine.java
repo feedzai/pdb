@@ -74,6 +74,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
     public static final String FOREIGN_ALREADY_EXISTS = "ORA-02275";
     /**
      *  Double instance for 0.0, so no Double instance is created whenever 0.0 is necessary.
+     *
+     *  @since 2.1.4
      */
     private static Double ZERO = Double.valueOf(0.0);
 
