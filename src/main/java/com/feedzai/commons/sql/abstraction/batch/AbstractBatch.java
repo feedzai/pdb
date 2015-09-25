@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A Batch that periodically flushes pending insertions to the database.
@@ -54,6 +56,13 @@ public abstract class AbstractBatch implements Runnable {
      * Salt to avoid erroneous flushes.
      */
     protected static final int salt = 100;
+
+    /**
+     * Lock used for concurrent access to the flush buffer
+     *
+     * @since 2.1.4
+     */
+    private Lock flushLock = new ReentrantLock();
     /**
      * The database engine.
      */
@@ -153,9 +162,14 @@ public abstract class AbstractBatch implements Runnable {
      * @param batchEntry The batch entry.
      * @throws DatabaseEngineException If an error with the database occurs.
      */
-    public synchronized void add(BatchEntry batchEntry) throws DatabaseEngineException {
-        buffer.add(batchEntry);
-        batch--;
+    public void add(BatchEntry batchEntry) throws DatabaseEngineException {
+        flushLock.lock();
+        try {
+            buffer.add(batchEntry);
+            batch--;
+        } finally {
+            flushLock.unlock();
+        }
 
         if (batch <= 0) {
             flush();
@@ -169,35 +183,40 @@ public abstract class AbstractBatch implements Runnable {
      * @param ee         The entity entry.
      * @throws DatabaseEngineException If an error with the database occurs.
      */
-    public synchronized void add(final String entityName, final EntityEntry ee) throws DatabaseEngineException {
+    public void add(final String entityName, final EntityEntry ee) throws DatabaseEngineException {
         add(new BatchEntry(entityName, ee));
     }
 
     /**
      * Flushes the pending batches.
      */
-    public synchronized void flush() {
-        // Reset the last flush timestamp, even if the batch is empty or flush fails
-        lastFlush = System.currentTimeMillis();
+    public void flush() {
+        List<BatchEntry> temp;
 
-        // No-op if batch is empty
-        if (batch == batchSize) {
-            logger.trace("[{}] Batch empty, not flushing", name);
-            return;
+        flushLock.lock();
+        try {
+            // Reset the last flush timestamp, even if the batch is empty or flush fails
+            lastFlush = System.currentTimeMillis();
+
+            // No-op if batch is empty
+            if (batch == batchSize) {
+                logger.trace("[{}] Batch empty, not flushing", name);
+                return;
+            }
+
+            // Declare the batch empty, regardless of flush success/failure
+            batch = batchSize;
+
+            // If something goes wrong we still have a copy to recover.
+            temp = buffer;
+            buffer = new LinkedList<>();
+
+        } finally {
+            flushLock.unlock();
         }
-
-        // Declare the batch empty, regardless of flush success/failure
-        batch = batchSize;
-
-        // If something goes wrong we still have a copy to recover.
-        final List<BatchEntry> temp = new ArrayList<>();
 
         try {
             final long start = System.currentTimeMillis();
-            while (!buffer.isEmpty()) {
-                BatchEntry entry = buffer.poll();
-                temp.add(entry);
-            }
 
             // begin the transaction before the addBatch calls in order to force the retry
             // of the connection if the same was lost during or since the last batch. Otherwise
