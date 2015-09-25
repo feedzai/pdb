@@ -62,7 +62,7 @@ public abstract class AbstractBatch implements Runnable {
      *
      * @since 2.1.4
      */
-    private Lock flushLock = new ReentrantLock();
+    private final Lock flushLock = new ReentrantLock();
     /**
      * The database engine.
      */
@@ -170,7 +170,6 @@ public abstract class AbstractBatch implements Runnable {
         } finally {
             flushLock.unlock();
         }
-
         if (batch <= 0) {
             flush();
         }

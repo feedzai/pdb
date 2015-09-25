@@ -88,6 +88,9 @@ public class BatchUpdateTest {
         engine.close();
     }
 
+    /**
+     * Checks that batch entries are inserted in the DB after an explicit flush.
+     */
     @Test
     public void batchInsertExplicitFlushTest() throws Exception {
         final int numTestEntries = 5;
@@ -116,6 +119,9 @@ public class BatchUpdateTest {
         checkTestEntriesInDB(numTestEntries);
     }
 
+    /**
+     * Checks that batch entries are inserted in the DB after the buffer fills up.
+     */
     @Test
     public void batchInsertFlushBySizeTest() throws Exception {
         final int numTestEntries = 5;
@@ -132,6 +138,9 @@ public class BatchUpdateTest {
         checkTestEntriesInDB(numTestEntries);
     }
 
+    /**
+     * Checks that batch entries are inserted in the DB after the flush timeout.
+     */
     @Test
     public void batchInsertFlushByTimeTest() throws Exception {
         final int numTestEntries = 5;
@@ -150,6 +159,9 @@ public class BatchUpdateTest {
         checkTestEntriesInDB(numTestEntries);
     }
 
+    /**
+     * Checks that batch entries are passed to onFlushFailure on DB errors when the buffer fills up.
+     */
     @Test
     public void batchInsertFlushBySizeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
         final int numTestEntries = 5;
@@ -171,6 +183,9 @@ public class BatchUpdateTest {
         assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
     }
 
+    /**
+     * Checks that batch entries are passed to onFlushFailure on DB errors when the batch timeout expires.
+     */
     @Test
     public void batchInsertFlushByTimeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
         final int numTestEntries = 5;
@@ -195,6 +210,9 @@ public class BatchUpdateTest {
         assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
     }
 
+    /**
+     * Create test table.
+     */
     private void addTestEntity() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -207,14 +225,12 @@ public class BatchUpdateTest {
         engine.addEntity(entity);
     }
 
-    private void checkTestEntriesInDB(int numEntries) throws DatabaseEngineException {
-        List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
-        assertTrue("Inserted entries not as expected", result.size() == numEntries);
-        for(int i = 0 ; i < numEntries ; i++) {
-            checkTestEntry(i, result.get(i));
-        }
-    }
-
+    /**
+     * Creates a test row with values dependent on its position.
+     *
+     * @param idx  The row position.
+     * @return     The test row.
+     */
     private EntityEntry getTestEntry(int idx) {
         return entry()
                 .set("COL1", 200 + idx)
@@ -225,6 +241,27 @@ public class BatchUpdateTest {
                 .build();
     }
 
+    /**
+     * Checks that the test table has a given number of rows and that each row corresponds
+     * to the row generated with getTestEntry().
+     *
+     * @param numEntries  The number of entries
+     * @throws DatabaseEngineException
+     */
+    private void checkTestEntriesInDB(int numEntries) throws DatabaseEngineException {
+        List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
+        assertTrue("Inserted entries not as expected", result.size() == numEntries);
+        for(int i = 0 ; i < numEntries ; i++) {
+            checkTestEntry(i, result.get(i));
+        }
+    }
+
+    /**
+     * Checks that a DB row in a given position matches the test row for that position.
+     *
+     * @param idx   The position.
+     * @param row   The DB row.
+     */
     private void checkTestEntry(int idx, Map<String,ResultColumn> row) {
         assertTrue("COL1 exists", row.containsKey("COL1"));
         assertTrue("COL2 exists", row.containsKey("COL2"));
@@ -240,6 +277,10 @@ public class BatchUpdateTest {
         assertEquals("COL5  ok?", (String) expectedEntry.get("COL5"), row.get("COL5").toString());
     }
 
+    /**
+     * Concrete abstract batch that just collects the entries passed to onFlushFailure,
+     * so it can be checked that onFlushFailure is invoked as expected.
+     */
     private static class MockedBatch extends AbstractBatch {
 
         private List<BatchEntry> failedEntries = new ArrayList<>();
