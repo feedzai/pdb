@@ -111,7 +111,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                      */
                     case CLOB:
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
+                        ps.setBytes(i, blobEncoder.encode(val));
 
                         break;
                     case BOOLEAN:
@@ -995,7 +995,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 throw e;
             }
 
-            ps.ps.setBytes(index, objectToArray(((String) o).getBytes()));
+            ps.ps.setBytes(index, blobEncoder.encode(((String) o).getBytes()));
         }
     }
 

@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.result;
 
+import com.feedzai.commons.sql.abstraction.engine.BlobEncoder;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 
 import java.io.*;
@@ -184,13 +185,7 @@ public abstract class ResultColumn implements Serializable {
         } else {
             throw new DatabaseEngineRuntimeException("Column is not a Blob neither a byte[]");
         }
-
-        try {
-            ObjectInputStream ois = new ObjectInputStream(is);
-            return (T) ois.readObject();
-        } catch (Exception e) {
-            throw new DatabaseEngineRuntimeException("Error converting blob to object", e);
-        }
+        return (T)BlobEncoder.decode(is);
     }
 
     /**
