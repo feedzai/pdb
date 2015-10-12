@@ -19,6 +19,8 @@ import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutput
 import com.google.common.io.ByteStreams;
 
 import java.io.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Logic to encode java values into blob values and vice-versa. BLOB values are
@@ -49,6 +51,10 @@ public class BlobEncoder {
      * The reusable initial byte buffer for blob values, allocated only if needed.
      */
     private byte[] reusableByteBuffer;
+    /**
+     * Lock to control access to reusable buffer
+     */
+    private final Lock bufferLock = new ReentrantLock();
 
     /**
      * Create new encoder.
@@ -66,7 +72,7 @@ public class BlobEncoder {
      * @return The byte array representation of the object.
      * @throws IOException If the buffer is not enough to make the conversion.
      */
-    public final synchronized byte[] encode(Object val) throws IOException {
+    public final byte[] encode(Object val) throws IOException {
         if (val == null) {
             return null;
         }
@@ -80,11 +86,16 @@ public class BlobEncoder {
 
         } else {
             // All other types are encoded with standard java serialization
-            final ByteArrayOutputStream bos = new InitiallyReusableByteArrayOutputStream(getReusableByteBuffer());
-            final ObjectOutputStream oos = new ObjectOutputStream(bos);
-            oos.writeObject(val);
+            bufferLock.lock();
+            try {
+                final ByteArrayOutputStream bos = new InitiallyReusableByteArrayOutputStream(getReusableByteBuffer());
+                final ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeObject(val);
 
-            return bos.toByteArray();
+                return bos.toByteArray();
+            } finally {
+                bufferLock.unlock();
+            }
         }
     }
 
@@ -94,7 +105,7 @@ public class BlobEncoder {
      * @param is  InputStream with the blob value, typically obtained with jdbc Blob.getInputStream().
      * @return   The correspondent java object.
      */
-    public static Object decode(InputStream is) {
+    public final static Object decode(InputStream is) {
         try {
             // We need a buffered input stream because jdbc input streams may not support mark/reset
             is = new BufferedInputStream(is, 1);
