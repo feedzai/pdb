@@ -704,6 +704,32 @@ public final class SqlBuilder {
     }
 
     /**
+     * Alter column operator.
+     *
+     * @param table        The table to add the column to.
+     * @param column       The column of the table.
+     * @param dbColumnType The db column type.
+     * @param constraints  The constraints of the column.
+     * @return The add column operator.
+     */
+    public static AddColumn addColumn(Expression table, Name column, DbColumnType dbColumnType, DbColumnConstraint... constraints) {
+        return addColumn(
+                table,
+                dbColumn().name(column.getName()).type(dbColumnType).addConstraints(constraints).build());
+    }
+
+    /**
+     * Add column operator.
+     *
+     * @param table    The table containing the column.
+     * @param dbColumn The database column definition.
+     * @return The add column operator.
+     */
+    public static AddColumn addColumn(Expression table, DbColumn dbColumn) {
+        return new AddColumn(table, dbColumn);
+    }
+
+    /**
      * Creates a Database Foreign Key builder.
      *
      * @return A Database Foreign Key builder.

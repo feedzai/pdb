@@ -15,13 +15,11 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
-import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
-import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang.StringEscapeUtils;
@@ -339,12 +337,45 @@ public abstract class AbstractTranslator {
     public abstract String translateFalse();
 
     /**
-     * Translates {@link Name}.
+     * Translates {@link AlterColumn}.
      *
      * @param ac The object to translate.
      * @return The string representation of the given object.
      */
     public abstract String translate(AlterColumn ac);
+
+    /**
+     * Translates {@link AddColumn}.
+     *
+     * @param ac The object to translate.
+     * @return The string representation of the given object.
+     */
+    public String translate(AddColumn ac) {
+        final DbColumn column = ac.getColumn();
+        final Expression table = ac.getTable();
+        final Name name = new Name(column.getName());
+
+        inject(table, name);
+
+        StringBuilder sb = new StringBuilder("ALTER TABLE ")
+                .append(table.translate())
+                .append(" ADD ")
+                .append(name.translate())
+                .append(" ")
+                .append(translate(column))
+                .append(" ");
+
+        List<Object> trans = Lists.transform(column.getColumnConstraints(), new com.google.common.base.Function<DbColumnConstraint, Object>() {
+            @Override
+            public Object apply(DbColumnConstraint input) {
+                return input.translate();
+            }
+        });
+
+        sb.append(Joiner.on(" ").join(trans));
+
+        return sb.toString();
+    }
 
     /**
      * Translates {@link DropPrimaryKey}.
