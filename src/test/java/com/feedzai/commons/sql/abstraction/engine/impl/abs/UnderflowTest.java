@@ -99,6 +99,7 @@ public class UnderflowTest {
         dbEngine = DatabaseFactory.getConnection(dbProps);
 
         // Create table
+        dbEngine.beginTransaction();
         DbEntity testEntity = new DbEntity.Builder()
                 .name(TEST_TABLE)
                 .addColumn(PK_COL, DbColumnType.LONG)
@@ -107,6 +108,7 @@ public class UnderflowTest {
                 .pkFields(PK_COL)
                 .build();
         dbEngine.addEntity(testEntity);
+        dbEngine.commit();
     }
 
     /**
@@ -115,6 +117,7 @@ public class UnderflowTest {
     @Test
     public void testUnderflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
         EntityEntry.Builder entryBuilder = new EntityEntry.Builder();
+        dbEngine.beginTransaction();
         dbEngine.persist(TEST_TABLE, getTestEntry());
         dbEngine.commit();
         checkInsertedValue();
@@ -127,6 +130,7 @@ public class UnderflowTest {
     public void testUnderflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
         String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, NORMAL_VALUE);
@@ -142,6 +146,7 @@ public class UnderflowTest {
     public void testUnderflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
         String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameter(PS_NAME, 1, PK_VALUE);
@@ -158,6 +163,7 @@ public class UnderflowTest {
     @Test
     public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
         EntityEntry.Builder entryBuilder = new EntityEntry.Builder();
+        dbEngine.beginTransaction();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();

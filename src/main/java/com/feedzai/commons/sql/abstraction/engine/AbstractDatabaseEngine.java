@@ -1638,6 +1638,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             ps.ps.execute();
 
         } catch (SQLException e) {
+            logger.error("Error running prepared statement", e);
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException(String.format("Something went wrong executing the prepared statement '%s'", name), e);
             }
