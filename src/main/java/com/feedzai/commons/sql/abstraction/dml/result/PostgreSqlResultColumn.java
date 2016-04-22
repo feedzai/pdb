@@ -15,6 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.result;
 
+import org.postgresql.util.PGobject;
+
 /**
  * The PostgreSql column result implementation.
  *
@@ -31,5 +33,20 @@ public class PostgreSqlResultColumn extends ResultColumn {
      */
     public PostgreSqlResultColumn(final String name, final Object val) {
         super(name, val);
+    }
+
+    /**
+     * Overrides default behaviour for JSON values, that are converted to strings.
+     *
+     * @param o The object in need of some kind of processing before being set.
+     * @return
+     */
+    @Override
+    protected Object processObject(Object o) {
+        if (o != null  && o instanceof PGobject &&
+                        ((PGobject)o).getType().equals("jsonb")) {
+            return ((PGobject) o).getValue();
+        }
+        return super.processObject(o);
     }
 }

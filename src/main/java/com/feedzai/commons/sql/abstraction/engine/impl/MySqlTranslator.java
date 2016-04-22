@@ -276,7 +276,9 @@ public class MySqlTranslator extends AbstractTranslator {
                 return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
 
             case CLOB:
+            case JSON:
                 return "LONGTEXT";
+
             case BLOB:
                 //return format("VARBINARY(%s)", properties.getProperty(MAX_BLOB_SIZE));
                 return format("LONGBLOB");

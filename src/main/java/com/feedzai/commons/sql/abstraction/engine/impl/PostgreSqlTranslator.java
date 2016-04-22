@@ -307,6 +307,9 @@ public class PostgreSqlTranslator extends AbstractTranslator {
             case BLOB:
                 return format("BYTEA");
 
+            case JSON:
+                return "JSONB";
+
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }

@@ -418,6 +418,20 @@ public interface DatabaseEngine {
     void setParameter(final String name, final int index, final Object param) throws DatabaseEngineException, ConnectionResetException;
 
     /**
+     * Sets the parameter on the specified index given its type. This is for situations where the java type of the parameter
+     * alone is not enough to determine the correspondent database type.
+     *
+     * @param name  The prepared statement name.
+     * @param index The index to set.
+     * @param param The parameter to set.
+     * @param paramType The type of the parameter being set.
+     * @throws DatabaseEngineException  If something occurs setting the parameters.
+     * @throws ConnectionResetException If the connection was reset while trying to set the parameter.
+     * @since 2.1.6
+     */
+    void setParameter(final String name, final int index, final Object param, DbColumnType paramType) throws DatabaseEngineException, ConnectionResetException;
+
+    /**
      * Executes the specified prepared statement.
      *
      * @param name The prepared statement name.
