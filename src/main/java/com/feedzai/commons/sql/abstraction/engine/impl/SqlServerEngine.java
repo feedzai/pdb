@@ -106,6 +106,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
 
                         break;
 
+                    case JSON:
                     case CLOB:
                         if (val == null) {
                             ps.setNull(i, Types.CLOB);

@@ -109,6 +109,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     /*
                      * CLOB and BLOB are handled the same way in DB2 since CLOB is not supported.
                      */
+                    case JSON:
                     case CLOB:
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));

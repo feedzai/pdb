@@ -51,6 +51,11 @@ public enum DbColumnType {
      */
     CLOB,
     /**
+     * The json type
+     * @since 2.1.6
+     */
+    JSON,
+    /**
      * A type that is not mapped.
      */
     UNMAPPED;

@@ -24,6 +24,7 @@ import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import org.postgresql.util.PGobject;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -95,8 +96,8 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 switch (column.getDbColumnType()) {
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));
-
                         break;
+
                     case CLOB:
                         if (val == null) {
                             ps.setNull(i, Types.CLOB);
@@ -112,6 +113,11 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
                         break;
+
+                    case JSON:
+                        ps.setObject(i, getJSONValue((String)val));
+                        break;
+
                     default:
                         ps.setObject(i, val);
                 }
@@ -123,6 +129,25 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         }
 
         return i - 1;
+    }
+
+    @Override
+    public synchronized void setParameter(final String name, final int index, Object param, DbColumnType paramType) throws DatabaseEngineException, ConnectionResetException {
+        if (paramType == DbColumnType.JSON) {
+            param = getJSONValue((String)param);
+        }
+        super.setParameter(name, index, param);
+    }
+
+    private Object getJSONValue(String val) throws DatabaseEngineException {
+        try {
+            PGobject dataObject = new PGobject();
+            dataObject.setType("jsonb");
+            dataObject.setValue(val);
+            return dataObject;
+        } catch (SQLException ex) {
+            throw new DatabaseEngineException("Error while mapping variables to database", ex);
+        }
     }
 
     @Override
@@ -610,7 +635,8 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             DatabaseMetaData meta = conn.getMetaData();
             rsColumns = meta.getColumns(null, "public", name, null);
             while (rsColumns.next()) {
-                metaMap.put(rsColumns.getString("COLUMN_NAME"), toPdbType(rsColumns.getInt("DATA_TYPE")));
+                metaMap.put(rsColumns.getString("COLUMN_NAME"),
+                        toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME")));
             }
 
             return metaMap;
@@ -626,6 +652,15 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 logger.trace("Error closing result set.", a);
             }
         }
+    }
+
+    @Override
+    protected DbColumnType toPdbType(final int type, final String typeName) {
+        DbColumnType pdbType = super.toPdbType(type, typeName);
+        if (pdbType == DbColumnType.UNMAPPED && typeName.equals("jsonb")) {
+            pdbType = DbColumnType.JSON;
+        }
+        return pdbType;
     }
 
     @Override

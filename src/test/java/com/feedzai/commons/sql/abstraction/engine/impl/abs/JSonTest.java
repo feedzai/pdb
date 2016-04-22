@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -34,39 +35,36 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static org.hamcrest.core.AnyOf.anyOf;
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
 
 /**
- * Tests to ensure values less than 1.0e-131 are stored as 0. This is necessary because
- * values less than 1.0e-131 provoke an underflow error in the Oracle JDBC driver when
- * used in bind parameters. This is an oracle-specific issue but the test is applicable
- * to any database server.
+ * Tests for JSON columns.
  *
  * @author Paulo Leitao (paulo.leitao@feedzai.com)
- *
- * @since 2.1.4
+ * @since 2.1.6
  */
 @RunWith(Parameterized.class)
-public class UnderflowTest {
+public class JSonTest {
 
     /*
-     * Test table properties, a table with a PK and two double colums.
+     * Test table properties, a table with a PK and a json column.
      */
     private static String TEST_TABLE = "TEST_TBL";
     private static final String PK_COL = "PK_COL";
-    private static final String ERROR_COL = "ERROR_COL";
-    private static final String NORMAL_COL = "VALUE_COL";
+    private static final String JSON_COL = "JSON_COL";
 
-    /*
-     * Values for the test columns.
-     */
-    private static final long PK_VALUE = 10001234;
-    private static final double ERROR_VALUE = 1.0e-131;     // Causes underflow exception if not persisted as 0
-    private static final double NORMAL_VALUE = 15.0;        // Should be persisted as is
+    // The json value that will be used in most of the tests
+    private static final long PK_VALUE = 1;
+    private static final String JSON_PART_1 = "\"foo\": \"bar\"";
+    private static final String JSON_PART_2 = "\"baz\": 1";
+    private static final String JSON_PART_3 = "\"baz\": 2";
+    private static final String JSON_VALUE = "{" + JSON_PART_1 + ", " + JSON_PART_2 + "}";
 
     private DatabaseEngine dbEngine;
 
@@ -103,8 +101,7 @@ public class UnderflowTest {
         DbEntity testEntity = new DbEntity.Builder()
                 .name(TEST_TABLE)
                 .addColumn(PK_COL, DbColumnType.LONG)
-                .addColumn(ERROR_COL, DbColumnType.DOUBLE)
-                .addColumn(NORMAL_COL, DbColumnType.DOUBLE)
+                .addColumn(JSON_COL, DbColumnType.JSON)
                 .pkFields(PK_COL)
                 .build();
         dbEngine.addEntity(testEntity);
@@ -114,89 +111,73 @@ public class UnderflowTest {
      * Scenario for an insert using persist().
      */
     @Test
-    public void testUnderflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
+    public void normalInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
-        dbEngine.persist(TEST_TABLE, getTestEntry());
+        EntityEntry jsonTestEntry = getTestEntry();
+        dbEngine.persist(TEST_TABLE, jsonTestEntry, false);
         dbEngine.commit();
-        checkInsertedValue();
+        checkInsertedValue(JSON_PART_1, JSON_PART_2);
     }
 
     /**
-     * Scenario for an insert using prepared statements / setParameters().
+     * Scenario for inserts in batch updates.
      */
     @Test
-    public void testUnderflowPreparedStatement1() throws Exception {
-        String PS_NAME = "MyPS";
-        String insertQuery =
-            "INSERT INTO " + quotize("TEST_TBL")
-                    + "(" + quotize(PK_COL) + "," + quotize(ERROR_COL) + "," + quotize(NORMAL_COL) +") "
-                    + "VALUES (?,?,?)";
-        dbEngine.beginTransaction();
-        dbEngine.createPreparedStatement(PS_NAME, insertQuery);
-        dbEngine.clearParameters(PS_NAME);
-        dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, NORMAL_VALUE);
-        dbEngine.executePS(PS_NAME);
-        dbEngine.commit();
-        checkInsertedValue();
-    }
-
-    /**
-     * Scenario for an insert using prepared statements / setParameter().
-     */
-    @Test
-    public void testUnderflowPreparedStatement2() throws Exception {
-        String PS_NAME = "MyPS";
-        String insertQuery =
-                "INSERT INTO " + quotize("TEST_TBL")
-                        + "(" + quotize(PK_COL) + "," + quotize(ERROR_COL) + "," + quotize(NORMAL_COL) +") "
-                        + "VALUES (?,?,?)";
-        dbEngine.beginTransaction();
-        dbEngine.createPreparedStatement(PS_NAME, insertQuery);
-        dbEngine.clearParameters(PS_NAME);
-        dbEngine.setParameter(PS_NAME, 1, PK_VALUE);
-        dbEngine.setParameter(PS_NAME, 2, ERROR_VALUE);
-        dbEngine.setParameter(PS_NAME, 3, NORMAL_VALUE);
-        dbEngine.executePS(PS_NAME);
-        dbEngine.commit();
-        checkInsertedValue();
-    }
-
-    /**
-     * Scenario for an insert using batch updates.
-     */
-    @Test
-    public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
+    public void batchInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();
-        checkInsertedValue();
+        checkInsertedValue(JSON_PART_1, JSON_PART_2);
     }
 
     /**
-     * Creates the EntityEntry used in all tests.
+     * Scenario for an update of a JSON field using prepared statements
+     */
+    @Test
+    public void prepStmtUpdateTest() throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
+        // Insert entry first
+        normalInsertTest();
+
+        // Update JSON column
+        dbEngine.beginTransaction();
+        String PS_NAME = "MyPS";
+        Update upd = update(table(TEST_TABLE)).set(eq(column(JSON_COL), lit("?"))).where(eq(column(PK_COL), lit("?")));
+        dbEngine.createPreparedStatement(PS_NAME, upd);
+        dbEngine.clearParameters(PS_NAME);
+        dbEngine.setParameter(PS_NAME, 1, "{" + JSON_PART_1 + ", " + JSON_PART_3 + "}", DbColumnType.JSON);
+        dbEngine.setParameter(PS_NAME, 2, PK_VALUE);
+        dbEngine.executePS(PS_NAME);
+        dbEngine.commit();
+        checkInsertedValue(JSON_PART_1, JSON_PART_3);
+
+    }
+
+    /**
+     * Creates the test entry value used in most tests.
      *
-     * @return  The created EntityEntry.
+     * @return
      */
     private EntityEntry getTestEntry() {
-        return new EntityEntry.Builder()
+        return entry()
                 .set(PK_COL, PK_VALUE)
-                .set(ERROR_COL, ERROR_VALUE)
-                .set(NORMAL_COL, NORMAL_VALUE)
+                .set(JSON_COL, JSON_VALUE)
                 .build();
     }
 
     /**
      * Checks that the test table has a single entry and with the values as expected.
      */
-    private void checkInsertedValue() throws DatabaseEngineException {
+    private void checkInsertedValue(String jsonPart1, String jsonPart2) throws DatabaseEngineException {
         Expression query = select(all()).from(table(TEST_TABLE));
         List<Map<String, ResultColumn>> results = dbEngine.query(query);
-        assertEquals(1, results.size());
+        assertEquals("One value inserted", 1, results.size());
         Map<String, ResultColumn> firstRow = results.get(0);
-        assertNotNull(firstRow);
-        assertEquals(ERROR_VALUE, firstRow.get(ERROR_COL).toDouble(), 1.0e131);
-        assertEquals(NORMAL_VALUE, firstRow.get(NORMAL_COL).toDouble(), 0);
+        assertNotNull("Inserted row is not null", firstRow);
+        assertThat("JSon value is as expected", firstRow.get(JSON_COL).toString(), anyOf(
+                is("{" + jsonPart1 + ", " + jsonPart2 + "}"),
+                is("{" + jsonPart2 + ", " + jsonPart1 + "}")
+        ));
     }
 
     @After

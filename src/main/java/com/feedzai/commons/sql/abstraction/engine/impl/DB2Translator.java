@@ -328,6 +328,7 @@ public class DB2Translator extends AbstractTranslator {
                 return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
 
             /* DB2 does not support CLOB (or at least the Java driver is not implemented. */
+            case JSON:
             case CLOB:
             case BLOB:
                 if (properties.isMaxBlobSizeSet()) {

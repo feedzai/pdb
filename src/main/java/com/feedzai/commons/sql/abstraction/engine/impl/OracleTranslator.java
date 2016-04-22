@@ -283,6 +283,7 @@ public class OracleTranslator extends AbstractTranslator {
                 return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
 
             case CLOB:
+            case JSON:
                 return "CLOB";
 
             case BLOB:
