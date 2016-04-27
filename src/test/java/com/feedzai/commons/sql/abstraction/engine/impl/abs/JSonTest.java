@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -39,9 +40,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static org.hamcrest.core.AnyOf.anyOf;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Tests for JSON columns.
@@ -108,7 +107,7 @@ public class JSonTest {
     }
 
     /**
-     * Scenario for an insert using persist().
+     * Scenario for an insert of a correct json value using persist().
      */
     @Test
     public void normalInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
@@ -117,6 +116,30 @@ public class JSonTest {
         dbEngine.persist(TEST_TABLE, jsonTestEntry, false);
         dbEngine.commit();
         checkInsertedValue(JSON_PART_1, JSON_PART_2);
+    }
+
+    /**
+     * Scenario for an insert of an invalid json using persist(). If should fail on
+     * engines that support JSON natively.
+     */
+    @Test
+    public void badValueInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
+        boolean exceptionThrown = false;
+        try {
+            dbEngine.beginTransaction();
+            EntityEntry jsonTestEntry = entry()
+                    .set(PK_COL, PK_VALUE)
+                    .set(JSON_COL, "bad json")
+                    .build();
+            dbEngine.persist(TEST_TABLE, jsonTestEntry, false);
+            dbEngine.commit();
+        } catch (DatabaseEngineException e) {
+            dbEngine.rollback();
+            exceptionThrown = true;
+        }
+        if (dbEngine instanceof PostgreSqlEngine && !exceptionThrown) {
+            fail("An error is expected when inserting an incorrect json value in a db engine that supports this type");
+        }
     }
 
     /**
@@ -174,9 +197,9 @@ public class JSonTest {
         assertEquals("One value inserted", 1, results.size());
         Map<String, ResultColumn> firstRow = results.get(0);
         assertNotNull("Inserted row is not null", firstRow);
-        assertThat("JSon value is as expected", firstRow.get(JSON_COL).toString(), anyOf(
-                is("{" + jsonPart1 + ", " + jsonPart2 + "}"),
-                is("{" + jsonPart2 + ", " + jsonPart1 + "}")
+        assertThat("JSon value is as expected", firstRow.get(JSON_COL).toString().replaceAll("\\s+", ""), anyOf(
+                is(("{" + jsonPart1 + "," + jsonPart2 + "}").replaceAll("\\s+", "")),
+                is(("{" + jsonPart2 + "," + jsonPart1 + "}").replaceAll("\\s+",""))
         ));
     }
 

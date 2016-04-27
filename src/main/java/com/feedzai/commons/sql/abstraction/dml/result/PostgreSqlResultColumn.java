@@ -39,11 +39,12 @@ public class PostgreSqlResultColumn extends ResultColumn {
      * Overrides default behaviour for JSON values, that are converted to strings.
      *
      * @param o The object in need of some kind of processing before being set.
-     * @return
+     * @return  The processed object.
+     * @since 2.1.5
      */
     @Override
     protected Object processObject(Object o) {
-        if (o != null  && o instanceof PGobject &&
+        if (o instanceof PGobject &&
                         ((PGobject)o).getType().equals("jsonb")) {
             return ((PGobject) o).getValue();
         }

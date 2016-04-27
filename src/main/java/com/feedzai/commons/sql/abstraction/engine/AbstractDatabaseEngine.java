@@ -1360,6 +1360,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * Maps the database type to {@link DbColumnType}. If there's no mapping a {@link DbColumnType#UNMAPPED} is returned.
      *
      * @param type The SQL type from {@link java.sql.Types}.
+     * @param typeName  The native database type name.  It provides additional information for
+     *                  derived classes to resolve types unmapped here.
      * @return The {@link DbColumnType}.
      */
     protected DbColumnType toPdbType(final int type, final String typeName) {

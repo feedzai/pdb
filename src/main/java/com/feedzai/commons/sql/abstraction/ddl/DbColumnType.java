@@ -51,8 +51,9 @@ public enum DbColumnType {
      */
     CLOB,
     /**
-     * The json type
-     * @since 2.1.6
+     * The json type. This is not supported by all engines; engines not
+     * supporting it use the CLOB type.
+     * @since 2.1.5
      */
     JSON,
     /**

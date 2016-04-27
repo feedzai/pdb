@@ -29,10 +29,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
@@ -127,9 +124,10 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
+        String escapeChar = dbEngine.escapeCharacter();
         String insertQuery =
             "INSERT INTO " + quotize("TEST_TBL")
-                    + "(" + quotize(PK_COL) + "," + quotize(ERROR_COL) + "," + quotize(NORMAL_COL) +") "
+                    + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
                     + "VALUES (?,?,?)";
         dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
@@ -146,9 +144,10 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
+        String escapeChar = dbEngine.escapeCharacter();
         String insertQuery =
                 "INSERT INTO " + quotize("TEST_TBL")
-                        + "(" + quotize(PK_COL) + "," + quotize(ERROR_COL) + "," + quotize(NORMAL_COL) +") "
+                        + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
                         + "VALUES (?,?,?)";
         dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);

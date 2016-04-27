@@ -139,6 +139,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         super.setParameter(name, index, param);
     }
 
+    /**
+     * Converts a String value into a PG JSON value ready to be assigned to bind variables in Prepared Statements.
+     *
+     * @param val   The String representation of the JSON value.
+     * @return      The correspondent JSON value
+     * @throws DatabaseEngineException if there is an error creating the value. It should never be thrown.
+     * @since 2.1.5
+     */
     private Object getJSONValue(String val) throws DatabaseEngineException {
         try {
             PGobject dataObject = new PGobject();
@@ -146,7 +154,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             dataObject.setValue(val);
             return dataObject;
         } catch (SQLException ex) {
-            throw new DatabaseEngineException("Error while mapping variables to database", ex);
+            throw new DatabaseEngineException("Error while mapping variables to database, value = " + val, ex);
         }
     }
 
