@@ -210,6 +210,14 @@ public class BatchUpdateTest {
         assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
     }
 
+    @Test
+    public void flushFreesConnectionOnFailure() throws DatabaseEngineException {
+        final DefaultBatch batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);
+        batch.add("unknown_table", entry().build()); // This will only fail when flushing
+        batch.flush();
+        assertFalse("Flush failed but the transaction is still active", engine.isTransactionActive());
+    }
+
     /**
      * Create test table.
      */
