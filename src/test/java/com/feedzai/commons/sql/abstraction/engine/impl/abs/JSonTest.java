@@ -107,7 +107,11 @@ public class JSonTest {
     }
 
     /**
+<<<<<<< HEAD
      * Scenario for an insert of a correct json value using persist().
+=======
+     * Scenario for an insert using persist().
+>>>>>>> 51455aad63197a0b518e9740ef5fb74e6579982c
      */
     @Test
     public void normalInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
