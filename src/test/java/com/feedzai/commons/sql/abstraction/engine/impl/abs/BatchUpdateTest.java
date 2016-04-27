@@ -210,6 +210,11 @@ public class BatchUpdateTest {
         assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
     }
 
+    /**
+     * Ensures that the batch transaction is rolled back when the flush fails.
+     *
+     * @since 2.1.5
+     */
     @Test
     public void flushFreesConnectionOnFailure() throws DatabaseEngineException {
         final DefaultBatch batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);

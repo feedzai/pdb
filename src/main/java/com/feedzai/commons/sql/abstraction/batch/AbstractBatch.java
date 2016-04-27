@@ -223,7 +223,6 @@ public abstract class AbstractBatch implements Runnable {
             de.beginTransaction();
 
             try {
-                // This has to be separate because it accesses to the database.
                 for (BatchEntry entry : temp) {
                     de.addBatch(entry.getTableName(), entry.getEntityEntry());
                 }
