@@ -23,7 +23,6 @@ import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.base.Optional;
 
 import java.io.StringReader;
 import java.sql.*;
@@ -120,7 +119,7 @@ public class H2Engine extends AbstractDatabaseEngine {
 
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
+                        ps.setBytes(i, blobEncoder.encode(val));
 
                         break;
                     case CLOB:

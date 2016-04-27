@@ -78,6 +78,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected final static Marker dev = MarkerFactory.getMarker("DEV");
     /**
+     * Encoder object for blob columns
+     *
+     * @since 2.1.5
+     */
+    protected  BlobEncoder blobEncoder;
+    /**
      * Maximum number of tries.
      */
     private final int maximumNumberOfTries;
@@ -109,10 +115,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * The dialect.
      */
     protected final Dialect diaclect;
-    /**
-     * The reusable initial byte buffer for blobs.
-     */
-    private byte[] reusableByteBuffer;
     /**
      * The exception handler to control the flow when defining new entities.
      */
@@ -148,6 +150,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         maximumNumberOfTries = this.properties.getMaxRetries();
         retryInterval = this.properties.getRetryInterval();
+        this.blobEncoder = new BlobEncoder(this.properties.getBlobBufferSize());
 
         try {
             Class.forName(driver);
@@ -1635,6 +1638,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             ps.ps.execute();
 
         } catch (SQLException e) {
+            logger.error("Error running prepared statement", e);
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException(String.format("Something went wrong executing the prepared statement '%s'", name), e);
             }
@@ -1789,34 +1793,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         if (!eh.proceed(op, e)) {
             throw new DatabaseEngineException("An error occurred adding the entity.", e);
         }
-    }
-
-    /**
-     * Obtains the reusable byte buffer. The reusable byte buffer is allocated in the first call. Proper synchronization
-     * is required.
-     *
-     * @return A byte array shared amongst all threads.
-     */
-    private byte[] getReusableByteBuffer() {
-        if (reusableByteBuffer == null) {
-            reusableByteBuffer = new byte[properties.getBlobBufferSize()];
-        }
-        return reusableByteBuffer;
-    }
-
-    /**
-     * Converts an object to byte array.
-     *
-     * @param val The object to convert.
-     * @return The byte array representation of the object.
-     * @throws IOException If the buffer is not enough to make the conversion.
-     */
-    protected final synchronized byte[] objectToArray(Object val) throws IOException {
-        final ByteArrayOutputStream bos = new InitiallyReusableByteArrayOutputStream(getReusableByteBuffer());
-        final ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(val);
-
-        return bos.toByteArray();
     }
 
     /**

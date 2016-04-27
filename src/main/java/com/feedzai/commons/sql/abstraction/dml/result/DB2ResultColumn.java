@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.result;
 
+import com.feedzai.commons.sql.abstraction.engine.BlobEncoder;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 
 import java.io.ObjectInputStream;
@@ -44,7 +45,8 @@ public class DB2ResultColumn extends ResultColumn {
     protected Object processObject(Object o) {
         if (o instanceof Blob) {
             try {
-                return new ObjectInputStream(((Blob) o).getBinaryStream()).readObject();
+                return BlobEncoder.decode(((Blob) o).getBinaryStream());
+
             } catch (Exception e) {
                 throw new DatabaseEngineRuntimeException("Error eagerly converting blob to object", e);
             }

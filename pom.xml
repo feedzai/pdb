@@ -61,7 +61,7 @@
       <dependency>
         <groupId>com.oracle</groupId>
         <artifactId>ojdbc6</artifactId>
-        <version>11.2.0.2.0</version>
+        <version>11.2.0.3.0</version>
       </dependency>
       <dependency>
         <groupId>com.h2database</groupId>
@@ -328,5 +328,355 @@
       </snapshots>
     </repository>
   </repositories>
+
+  <profiles>
+  <!-- Profile for MySQL 5.5. -->
+  <profile>
+    <id>mysql55</id>
+    <activation>
+      <property>
+        <name>mysql55</name>
+      </property>
+    </activation>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>mysql55</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+  <!-- Profile for MySQL 5.6. -->
+  <profile>
+    <id>mysql56</id>
+    <activation>
+      <property>
+        <name>mysql56</name>
+      </property>
+    </activation>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>mysql56</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+
+  <!-- Profile for Oracle 12g. -->
+  <profile>
+    <id>oracle12</id>
+    <activation>
+      <property>
+        <name>oracle12</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.oracle</groupId>
+          <artifactId>ojdbc6</artifactId>
+          <version>12.1.0.1</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>oracle12</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+
+  <!-- Profile for Oracle 11g. -->
+  <profile>
+    <id>oracle11</id>
+    <activation>
+      <property>
+        <name>oracle11</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.oracle</groupId>
+          <artifactId>ojdbc6</artifactId>
+          <version>11.2.0.3.0</version>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>oracle11</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+
+  <!-- Profile for Postgres 8. -->
+  <profile>
+    <id>postgresql849</id>
+    <activation>
+      <property>
+        <name>postgresql849</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+          <version>8.4-702.jdbc4</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>postgresql849</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+  <!-- Profile for Postgres 9. -->
+  <profile>
+    <id>postgresql931</id>
+    <activation>
+      <property>
+        <name>postgresql931</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+          <version>9.3-1100.jdbc4</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>postgresql931</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+  <!-- Profile for SQLServer 2008. -->
+  <profile>
+    <id>sqlserver2008</id>
+    <activation>
+      <property>
+        <name>sqlserver2008</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
+          <version>3.0.1301.101</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.microsoft.sqlserver</groupId>
+        <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>sqlserver2008</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+
+  <!-- Profile for SQLServer 2012. -->
+  <profile>
+    <id>sqlserver2012</id>
+    <activation>
+      <property>
+        <name>sqlserver2012</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
+          <version>4.0.2206.100</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.microsoft.sqlserver</groupId>
+        <artifactId>com.microsoft.sqlserver.jdbc</artifactId>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>sqlserver2012</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+
+  <!-- Profile for DB2 10.2. -->
+  <profile>
+    <id>db2102</id>
+    <activation>
+      <property>
+        <name>db2102</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.ibm</groupId>
+          <artifactId>com.ibm.db2jcc</artifactId>
+          <version>10.1fp2</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.ibm</groupId>
+        <artifactId>com.ibm.db2jcc</artifactId>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>db2102</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+  <!-- Profile for DB2 10.5. -->
+  <profile>
+    <id>db2105</id>
+    <activation>
+      <property>
+        <name>db2105</name>
+      </property>
+    </activation>
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.ibm</groupId>
+          <artifactId>com.ibm.db2jcc</artifactId>
+          <version>10.5fp2</version>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>com.ibm</groupId>
+        <artifactId>com.ibm.db2jcc</artifactId>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+    <build>
+      <plugins>
+        <!-- maven-surefire-plugin -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration combine.self="override">
+            <skipTests>false</skipTests>
+            <systemProperties>
+              <instances>db2105</instances>
+            </systemProperties>
+          </configuration>
+        </plugin>
+      </plugins>
+    </build>
+  </profile>
+</profiles>
 
 </project>

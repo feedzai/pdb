@@ -15,10 +15,9 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.result;
 
+import com.feedzai.commons.sql.abstraction.engine.BlobEncoder;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import oracle.sql.BLOB;
-
-import java.io.ObjectInputStream;
 
 /**
  * The Oracle column result implementation.
@@ -67,9 +66,8 @@ public class OracleResultColumn extends ResultColumn {
             throw new DatabaseEngineRuntimeException("Column is not a BLOB type");
         }
         try {
-            ObjectInputStream ois = new ObjectInputStream(((BLOB) val).getBinaryStream());
+            return (T) BlobEncoder.decode(((BLOB) val).getBinaryStream());
 
-            return (T) ois.readObject();
         } catch (Exception e) {
             throw new DatabaseEngineRuntimeException("Error converting blob to object", e);
         }

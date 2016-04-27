@@ -94,7 +94,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
+                        ps.setBytes(i, blobEncoder.encode(val));
 
                         break;
                     case CLOB:

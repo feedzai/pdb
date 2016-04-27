@@ -2144,6 +2144,25 @@ public class EngineGeneralTest {
     }
 
     @Test
+    public void testInsertNullBLOB() throws Exception {
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", STRING)
+                .addColumn("COL2", BLOB)
+                .build();
+        engine.addEntity(entity);
+
+        EntityEntry entry = entry().set("COL1", "CENINHAS")
+                .build();
+
+        engine.persist("TEST", entry);
+
+        List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")));
+        assertEquals("CENINHAS", result.get(0).get("COL1").toString());
+        assertNull(result.get(0).get("COL2").toBlob());
+    }
+
+    @Test
     public void testBlobString() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("TEST")
