@@ -170,7 +170,7 @@ public class BatchUpdateTest {
         MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
+        new NonStrictExpectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
@@ -195,7 +195,7 @@ public class BatchUpdateTest {
         MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
+        new NonStrictExpectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
