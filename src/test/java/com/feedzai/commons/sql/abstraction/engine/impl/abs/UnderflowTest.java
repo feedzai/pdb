@@ -29,13 +29,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -114,7 +112,7 @@ public class UnderflowTest {
      */
     @Test
     public void testUnderflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
-        EntityEntry.Builder entryBuilder = new EntityEntry.Builder();
+        dbEngine.beginTransaction();
         dbEngine.persist(TEST_TABLE, getTestEntry());
         dbEngine.commit();
         checkInsertedValue();
@@ -126,7 +124,12 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        String escapeChar = dbEngine.escapeCharacter();
+        String insertQuery =
+            "INSERT INTO " + quotize("TEST_TBL")
+                    + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
+                    + "VALUES (?,?,?)";
+        dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, NORMAL_VALUE);
@@ -141,7 +144,12 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        String escapeChar = dbEngine.escapeCharacter();
+        String insertQuery =
+                "INSERT INTO " + quotize("TEST_TBL")
+                        + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
+                        + "VALUES (?,?,?)";
+        dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameter(PS_NAME, 1, PK_VALUE);
@@ -157,7 +165,7 @@ public class UnderflowTest {
      */
     @Test
     public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
-        EntityEntry.Builder entryBuilder = new EntityEntry.Builder();
+        dbEngine.beginTransaction();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();

@@ -107,8 +107,9 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 }
                 switch (column.getDbColumnType()) {
                     /*
-                     * CLOB and BLOB are handled the same way in DB2 since CLOB is not supported.
+                     * CLOB, BLOB and and JSON are handled the same way in DB2 since neither CLOB nor JSON are supported.
                      */
+                    case JSON:
                     case CLOB:
                     case BLOB:
                         ps.setBytes(i, objectToArray(val));

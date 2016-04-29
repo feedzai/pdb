@@ -1275,7 +1275,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             final DatabaseMetaData meta = conn.getMetaData();
             rsColumns = meta.getColumns(null, getSchema(), name, null);
             while (rsColumns.next()) {
-                metaMap.put(rsColumns.getString("COLUMN_NAME"), toPdbType(rsColumns.getInt("DATA_TYPE")));
+                metaMap.put(rsColumns.getString("COLUMN_NAME"),
+                        toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME")));
             }
 
             return metaMap;
@@ -1328,7 +1329,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
             ResultSetMetaData meta = rs.getMetaData();
             for (int i = 1; i <= meta.getColumnCount(); i++) {
-                metaMap.put(meta.getColumnName(i), toPdbType(meta.getColumnType(i)));
+                metaMap.put(meta.getColumnName(i), toPdbType(meta.getColumnType(i), meta.getColumnTypeName(i)));
             }
 
             stmt.close();
@@ -1359,9 +1360,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * Maps the database type to {@link DbColumnType}. If there's no mapping a {@link DbColumnType#UNMAPPED} is returned.
      *
      * @param type The SQL type from {@link java.sql.Types}.
+     * @param typeName  The native database type name.  It provides additional information for
+     *                  derived classes to resolve types unmapped here.
      * @return The {@link DbColumnType}.
      */
-    protected DbColumnType toPdbType(final int type) {
+    protected DbColumnType toPdbType(final int type, final String typeName) {
         switch (type) {
             case Types.ARRAY:
                 return DbColumnType.UNMAPPED;
@@ -1616,6 +1619,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
     }
 
+    @Override
+    public synchronized void setParameter(final String name, final int index, final Object param, DbColumnType paramType) throws DatabaseEngineException, ConnectionResetException {
+        setParameter(name, index, param);
+    }
+
     /**
      * Executes the specified prepared statement.
      *
@@ -1635,6 +1643,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             ps.ps.execute();
 
         } catch (SQLException e) {
+            logger.error("Error executing prepared statement", e);
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException(String.format("Something went wrong executing the prepared statement '%s'", name), e);
             }

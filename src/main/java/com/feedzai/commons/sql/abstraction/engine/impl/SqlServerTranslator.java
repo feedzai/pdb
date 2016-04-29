@@ -319,6 +319,7 @@ public class SqlServerTranslator extends AbstractTranslator {
             case STRING:
                 return format("NVARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
 
+            case JSON:
             case CLOB:
                 return "NVARCHAR(MAX)";
 

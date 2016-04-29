@@ -113,6 +113,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                         ps.setBytes(i, objectToArray(val));
 
                         break;
+                    case JSON:
                     case CLOB:
                         if (val == null) {
                             ps.setNull(i, Types.CLOB);

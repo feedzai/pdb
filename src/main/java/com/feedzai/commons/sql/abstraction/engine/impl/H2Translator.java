@@ -294,7 +294,9 @@ public class H2Translator extends AbstractTranslator {
                 return "BLOB";
 
             case CLOB:
+            case JSON:
                 return "CLOB";
+
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }
