@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -58,11 +57,23 @@ public abstract class AbstractBatch implements Runnable {
     protected static final int salt = 100;
 
     /**
-     * Lock used for concurrent access to the flush buffer
+     * Lock used for concurrent access to the flush buffer.
      *
      * @since 2.1.4
      */
-    private final Lock flushLock = new ReentrantLock();
+    private final Lock bufferLock = new ReentrantLock();
+
+    /**
+     * Lock used for concurrent access to the flush transaction.
+     * <p>
+     * We are not using the {@link #bufferLock} because the
+     * {@link #add(BatchEntry)} calls would block while a flush
+     * transaction is in progress.
+     *
+     * @since 2.1.5
+     */
+    private final Lock flushTransactionLock = new ReentrantLock();
+
     /**
      * The database engine.
      */
@@ -163,12 +174,12 @@ public abstract class AbstractBatch implements Runnable {
      * @throws DatabaseEngineException If an error with the database occurs.
      */
     public void add(BatchEntry batchEntry) throws DatabaseEngineException {
-        flushLock.lock();
+        bufferLock.lock();
         try {
             buffer.add(batchEntry);
             batch--;
         } finally {
-            flushLock.unlock();
+            bufferLock.unlock();
         }
         if (batch <= 0) {
             flush();
@@ -192,7 +203,7 @@ public abstract class AbstractBatch implements Runnable {
     public void flush() {
         List<BatchEntry> temp;
 
-        flushLock.lock();
+        bufferLock.lock();
         try {
             // Reset the last flush timestamp, even if the batch is empty or flush fails
             lastFlush = System.currentTimeMillis();
@@ -211,10 +222,11 @@ public abstract class AbstractBatch implements Runnable {
             buffer = new LinkedList<>();
 
         } finally {
-            flushLock.unlock();
+            bufferLock.unlock();
         }
 
         try {
+            flushTransactionLock.lock();
             final long start = System.currentTimeMillis();
 
             // begin the transaction before the addBatch calls in order to force the retry
@@ -222,20 +234,13 @@ public abstract class AbstractBatch implements Runnable {
             // the addBatch call that uses a prepared statement will fail
             de.beginTransaction();
 
-            // This has to be separate because it accesses to the database.
             for (BatchEntry entry : temp) {
                 de.addBatch(entry.getTableName(), entry.getEntityEntry());
             }
 
-            try {
-                de.flush();
-                de.commit();
-                logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
-            } finally {
-                if (de.isTransactionActive()) {
-                    de.rollback();
-                }
-            }
+            de.flush();
+            de.commit();
+            logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (Exception e) {
             logger.error(dev, "[{}] Error occurred while flushing.", name, e);
             /*
@@ -248,6 +253,15 @@ public abstract class AbstractBatch implements Runnable {
              * and buffer will have the events right after the failure.
              */
             onFlushFailure(temp.toArray(new BatchEntry[temp.size()]));
+        } finally {
+            try {
+                if (de.isTransactionActive()) {
+                    de.rollback();
+                }
+            } catch (Exception e) {
+                logger.trace("[{}] Batch failed to check the flush transaction state", name);
+            }
+            flushTransactionLock.unlock();
         }
 
     }

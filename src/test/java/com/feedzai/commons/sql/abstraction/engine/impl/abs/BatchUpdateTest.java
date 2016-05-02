@@ -170,7 +170,7 @@ public class BatchUpdateTest {
         MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
+        new NonStrictExpectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
@@ -195,7 +195,7 @@ public class BatchUpdateTest {
         MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
+        new NonStrictExpectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
@@ -208,6 +208,19 @@ public class BatchUpdateTest {
 
         // Check that entries were added to onFlushFailure()
         assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
+    }
+
+    /**
+     * Ensures that the batch transaction is rolled back when the flush fails.
+     *
+     * @since 2.1.5
+     */
+    @Test
+    public void flushFreesConnectionOnFailure() throws DatabaseEngineException {
+        final DefaultBatch batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);
+        batch.add("unknown_table", entry().build()); // This will only fail when flushing
+        batch.flush();
+        assertFalse("Flush failed but the transaction is still active", engine.isTransactionActive());
     }
 
     /**
