@@ -165,6 +165,7 @@ public class UnderflowTest {
      */
     @Test
     public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
+        EntityEntry.Builder entryBuilder = new EntityEntry.Builder();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();
