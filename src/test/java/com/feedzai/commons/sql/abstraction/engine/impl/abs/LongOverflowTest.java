@@ -19,7 +19,10 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -34,38 +37,52 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * Tests to ensure values less than 1.0e-131 are stored as 0. This is necessary because
- * values less than 1.0e-131 provoke an underflow error in the Oracle JDBC driver when
- * used in bind parameters. This is an oracle-specific issue but the test is applicable
- * to any database server.
+ * Tests persistence of long values. This is a regression test for https://github.com/feedzai/pdb/issues/27,
+ * where long values such as 876534351009985545l are not read as they were stored due to the intermediate
+ * use of a double when reading from a ResultSet.
  *
  * @author Paulo Leitao (paulo.leitao@feedzai.com)
  *
- * @since 2.1.4
+ * @since 2.1.5
  */
 @RunWith(Parameterized.class)
-public class UnderflowTest {
+public class LongOverflowTest {
 
     /*
-     * Test table properties, a table with a PK and two double colums.
+     * Test table name and columns.
      */
-    private static String TEST_TABLE = "TEST_TBL";
+    private static String TEST_TABLE = "TEST_OVFL_TBL";
     private static final String PK_COL = "PK_COL";
-    private static final String ERROR_COL = "ERROR_COL";
-    private static final String NORMAL_COL = "VALUE_COL";
+    private static final String LONG_COL = "LONG_COL";
+    private static final String DBL_COL_1 = "DBL_COL_1";
+    private static final String DBL_COL_2 = "DBL_COL_2";
 
     /*
      * Values for the test columns.
      */
-    private static final long PK_VALUE = 10001234;
-    private static final double ERROR_VALUE = 1.0e-131;     // Causes underflow exception if not persisted as 0
-    private static final double NORMAL_VALUE = 15.0;        // Should be persisted as is
+    private static final long PK_VALUE = 1;
+
+    /**
+     * A long that was causing an overflow prior to the fix.
+     */
+    private static final long ERROR_VALUE = 876534351009985545l;
+
+    /**
+     * A double with no decimal digits.
+     */
+    private static final double DBL_INT_VALUE = 13.0d;
+
+    /**
+     * A double with decimal digits, when read with toLong() the value (long) 13.6 must be read.
+     */
+    private static final double DBL_FRAC_VALUE = 13.6d;
+
 
     private DatabaseEngine dbEngine;
 
@@ -102,8 +119,9 @@ public class UnderflowTest {
         DbEntity testEntity = new DbEntity.Builder()
                 .name(TEST_TABLE)
                 .addColumn(PK_COL, DbColumnType.LONG)
-                .addColumn(ERROR_COL, DbColumnType.DOUBLE)
-                .addColumn(NORMAL_COL, DbColumnType.DOUBLE)
+                .addColumn(LONG_COL, DbColumnType.LONG)
+                .addColumn(DBL_COL_1, DbColumnType.DOUBLE)
+                .addColumn(DBL_COL_2, DbColumnType.DOUBLE)
                 .pkFields(PK_COL)
                 .build();
         dbEngine.addEntity(testEntity);
@@ -113,7 +131,7 @@ public class UnderflowTest {
      * Scenario for an insert using persist().
      */
     @Test
-    public void testUnderflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
+    public void testLongOverflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.persist(TEST_TABLE, getTestEntry());
         dbEngine.commit();
         checkInsertedValue();
@@ -123,12 +141,12 @@ public class UnderflowTest {
      * Scenario for an insert using prepared statements / setParameters().
      */
     @Test
-    public void testUnderflowPreparedStatement1() throws Exception {
+    public void testLongOverflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
-        dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, NORMAL_VALUE);
+        dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, DBL_INT_VALUE, DBL_FRAC_VALUE);
         dbEngine.executePS(PS_NAME);
         dbEngine.commit();
         checkInsertedValue();
@@ -138,14 +156,15 @@ public class UnderflowTest {
      * Scenario for an insert using prepared statements / setParameter().
      */
     @Test
-    public void testUnderflowPreparedStatement2() throws Exception {
+    public void testLongOverflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_TBL(PK_COL,ERROR_COL,VALUE_COL) values (?,?,?)";
+        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameter(PS_NAME, 1, PK_VALUE);
         dbEngine.setParameter(PS_NAME, 2, ERROR_VALUE);
-        dbEngine.setParameter(PS_NAME, 3, NORMAL_VALUE);
+        dbEngine.setParameter(PS_NAME, 3, DBL_INT_VALUE);
+        dbEngine.setParameter(PS_NAME, 4, DBL_FRAC_VALUE);
         dbEngine.executePS(PS_NAME);
         dbEngine.commit();
         checkInsertedValue();
@@ -155,7 +174,7 @@ public class UnderflowTest {
      * Scenario for an insert using batch updates.
      */
     @Test
-    public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
+    public void testLongOverflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();
@@ -170,8 +189,9 @@ public class UnderflowTest {
     private EntityEntry getTestEntry() {
         return new EntityEntry.Builder()
                 .set(PK_COL, PK_VALUE)
-                .set(ERROR_COL, ERROR_VALUE)
-                .set(NORMAL_COL, NORMAL_VALUE)
+                .set(LONG_COL, ERROR_VALUE)
+                .set(DBL_COL_1, DBL_INT_VALUE)
+                .set(DBL_COL_2, DBL_FRAC_VALUE)
                 .build();
     }
 
@@ -184,8 +204,9 @@ public class UnderflowTest {
         assertEquals(1, results.size());
         Map<String, ResultColumn> firstRow = results.get(0);
         assertNotNull(firstRow);
-        assertEquals(ERROR_VALUE, firstRow.get(ERROR_COL).toDouble(), 1.0e131);
-        assertEquals(NORMAL_VALUE, firstRow.get(NORMAL_COL).toDouble(), 0);
+        assertEquals(ERROR_VALUE, firstRow.get(LONG_COL).toLong().longValue());
+        assertEquals((long) DBL_INT_VALUE, firstRow.get(DBL_COL_1).toLong().longValue());
+        assertEquals((long) DBL_FRAC_VALUE, firstRow.get(DBL_COL_2).toLong().longValue());
     }
 
     @After

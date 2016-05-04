@@ -133,7 +133,17 @@ public abstract class ResultColumn implements Serializable {
             return null;
         }
 
-        return (long) Double.parseDouble(val.toString());
+        try {
+            // In most cases the value either doesn't have decimals or they
+            // are zero (e.g., 13.0), and in this case Long.parseLong() is ok.
+            return Long.parseLong(val.toString());
+
+        } catch (NumberFormatException e) {
+            // We get here if the double has decimal digits (e.g, 13.5) and in this
+            // case there is no precision overflow on using an intermediate Double
+            // before because it means the value was not stored as a long.
+            return (long) Double.parseDouble(val.toString());
+        }
     }
 
     /**
