@@ -641,7 +641,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
 
             DatabaseMetaData meta = conn.getMetaData();
-            rsColumns = meta.getColumns(null, "public", name, null);
+            rsColumns = meta.getColumns(null, getSchema(), name, null);
             while (rsColumns.next()) {
                 metaMap.put(rsColumns.getString("COLUMN_NAME"),
                         toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME")));
