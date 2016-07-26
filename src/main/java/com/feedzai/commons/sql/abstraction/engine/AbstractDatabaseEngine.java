@@ -213,7 +213,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         String jdbc = getFinalJdbcConnection(this.properties.getProperty(JDBC));
-System.out.println("CONN STRING: " + jdbc);
+
         conn = DriverManager.getConnection(
                 jdbc,
                 username,
