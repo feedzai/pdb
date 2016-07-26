@@ -122,6 +122,7 @@ public final class DatabaseConfiguration {
         private String vendor;
         /**
          * the schema
+         * @since 2.1.6
          */
         private String schema;
 
@@ -191,6 +192,7 @@ public final class DatabaseConfiguration {
          * Sets the schema.
          * @param schema The schema.
          * @return This builder.
+         * @since 2.1.6
          */
         public Builder schema(String schema) {
             this.schema = schema;
