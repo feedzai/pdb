@@ -179,6 +179,17 @@ public class OracleEngine extends AbstractDatabaseEngine {
         return val;
     }
 
+    @Override
+    public void connect() throws Exception {
+        super.connect();
+        if (properties.getSchema() != null && !properties.getUsername().equals(properties.getSchema())) {
+            // Set connection schema if one is defined and not the same as the user name
+            Statement stmt = conn.createStatement();
+            stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
+            stmt.close();
+        }
+    }
+
     /**
      * Overrides {@link com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine#setTransactionIsolation()} This is because
      * Oracle does not support READ_UNCOMMITTED e REPEATABLE_READ.
