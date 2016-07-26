@@ -7,8 +7,8 @@
     </layout>
   </appender>
 
-  <logger name="com.feedzai.commons.sql.abstraction" level="trace"/>
-  <logger name="com.feedzai.commons.sql.abstraction.engine.impl" level="trace"/>
+  <logger name="com.feedzai.commons.sql.abstraction" level="info"/>
+  <logger name="com.feedzai.commons.sql.abstraction.engine.impl" level="info"/>
 
   <root level="DEBUG">
     <appender-ref ref="STDOUT" />

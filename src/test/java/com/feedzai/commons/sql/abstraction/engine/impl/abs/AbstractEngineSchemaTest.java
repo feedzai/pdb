@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
+import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
@@ -59,7 +60,8 @@ public abstract class AbstractEngineSchemaTest {
         engine = DatabaseFactory.getConnection(properties);
         defineUDFGetOne(engine);
 
-        List<Map<String, ResultColumn>> query = engine.query(select(udf("GetOne").alias("ONE")));
+        Expression qry = select(udf("GetOne").alias("ONE"));
+        List<Map<String, ResultColumn>> query = engine.query(qry);
         assertEquals("result ok?", 1, (int) query.get(0).get("ONE").toInt());
     }
 

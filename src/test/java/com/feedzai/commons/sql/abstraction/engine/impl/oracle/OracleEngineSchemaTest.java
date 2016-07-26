@@ -44,7 +44,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
     @Parameterized.Parameters
     public static Collection<Object[]> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("oracle");
+        return DatabaseTestUtil.loadConfigurations("orcl");
     }
 
     @Parameterized.Parameter
@@ -93,7 +93,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
                     .pkFields("COL1")
                     .build();
             engine.addEntity(entity);
-
+System.out.println("XXXXXXX");
             assertFalse("The simulated system generated column should not appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("SYS_COL1"));
             assertTrue("The regular column should appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("COL1"));
         } finally {
