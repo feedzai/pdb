@@ -182,7 +182,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
     @Override
     public void connect() throws Exception {
         super.connect();
-        if (properties.getSchema() != null && !properties.getUsername().equals(properties.getSchema())) {
+        if (properties.getSchema() != null && properties.getSchema().length() > 0 &&
+                        !properties.getUsername().equals(properties.getSchema())) {
             // Set connection schema if one is defined and not the same as the user name
             Statement stmt = conn.createStatement();
             stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
