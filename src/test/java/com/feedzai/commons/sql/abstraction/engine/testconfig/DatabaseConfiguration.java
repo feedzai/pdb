@@ -57,6 +57,7 @@ public final class DatabaseConfiguration {
      * @param username The username.
      * @param password The password.
      * @param vendor   The vendor.
+     * @param schema   The schema.
      */
     public DatabaseConfiguration(String engine, String jdbc, String username, String password, String vendor, String schema) {
         this.engine = engine;
