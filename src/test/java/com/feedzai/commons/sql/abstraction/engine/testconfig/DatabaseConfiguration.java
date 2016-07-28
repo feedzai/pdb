@@ -44,6 +44,10 @@ public final class DatabaseConfiguration {
      * the vendor of the database
      */
     public final String vendor;
+    /**
+     * the schema
+     */
+    public final String schema;
 
     /**
      * Creates a new instance of {@link DatabaseConfiguration}.
@@ -53,13 +57,15 @@ public final class DatabaseConfiguration {
      * @param username The username.
      * @param password The password.
      * @param vendor   The vendor.
+     * @param schema   The schema.
      */
-    public DatabaseConfiguration(String engine, String jdbc, String username, String password, String vendor) {
+    public DatabaseConfiguration(String engine, String jdbc, String username, String password, String vendor, String schema) {
         this.engine = engine;
         this.jdbc = jdbc;
         this.username = username;
         this.password = password;
         this.vendor = vendor;
+        this.schema = schema;
     }
 
     @Override
@@ -70,6 +76,7 @@ public final class DatabaseConfiguration {
                 .add("username", username)
                 .add("password", password)
                 .add("vendor", vendor)
+                .add("schema", schema)
                 .toString();
     }
 
@@ -114,6 +121,11 @@ public final class DatabaseConfiguration {
          * the vendor
          */
         private String vendor;
+        /**
+         * the schema
+         * @since 2.1.6
+         */
+        private String schema;
 
         /**
          * Creates a new instance of {@link Builder},
@@ -177,9 +189,21 @@ public final class DatabaseConfiguration {
             return this;
         }
 
+        /**
+         * Sets the schema.
+         * @param schema The schema.
+         * @return This builder.
+         * @since 2.1.6
+         */
+        public Builder schema(String schema) {
+            this.schema = schema;
+
+            return this;
+        }
+
         @Override
         public DatabaseConfiguration build() {
-            return new DatabaseConfiguration(engine, jdbc, username, password, vendor);
+            return new DatabaseConfiguration(engine, jdbc, username, password, vendor, schema);
         }
     }
 }

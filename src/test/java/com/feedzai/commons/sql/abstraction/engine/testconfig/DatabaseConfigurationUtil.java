@@ -185,6 +185,9 @@ public class DatabaseConfigurationUtil {
                 case "password":
                     builder.password(prop);
                     break;
+                case "schema":
+                    builder.schema(prop);
+                    break;
                 default:
                     logger.warn("Unknown property '{}' in '{}'", split, v);
 
