@@ -199,9 +199,31 @@ public abstract class AbstractBatch implements Runnable {
 
     /**
      * Flushes the pending batches.
+     *
+     * @implSpec Same as {@link #flush(boolean)} with {@link false}.
      */
     public void flush() {
+        flush(false);
+    }
+
+    /**
+     * Flushes the pending messages.
+     * <p>
+     * If {@param sync} is {@literal true} it waits for other pending flush operations.
+     * <p>
+     * If {@param sync} is {@literal false} it can return directly if the buffer if the batch is empty.
+     *
+     * @param sync {@literal true} if it should wait for other {@link #flush()} operations.
+     * @implSpec It is possible that two threads might execute in competing order and sync execution acquires the flushTransactionLock before a non synchronous one leading
+     * to a non serial execution.
+     * @since 2.1.6
+     */
+    public void flush(boolean sync) {
         List<BatchEntry> temp;
+
+        if (sync) {
+            flushTransactionLock.lock();
+        }
 
         bufferLock.lock();
         try {

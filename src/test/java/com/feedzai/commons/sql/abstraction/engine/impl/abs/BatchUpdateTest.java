@@ -20,12 +20,13 @@ import ch.qos.logback.classic.Logger;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.util.concurrent.Uninterruptibles;
 import mockit.*;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +37,10 @@ import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
@@ -222,6 +227,66 @@ public class BatchUpdateTest {
         batch.flush();
         assertFalse("Flush failed but the transaction is still active", engine.isTransactionActive());
     }
+
+    /**
+     * Tests that {@link AbstractBatch#flush(boolean)} can be synchronous and waits for previous flush calls.
+     *
+     * @throws DatabaseEngineException
+     * @since 2.1.6
+     */
+    @Test
+    public void testFlushBashSync() throws DatabaseEngineException, InterruptedException {
+        final AtomicInteger transactions = new AtomicInteger();
+        // mock the begin transaction to force waiting to cause flushes to wait for others.
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            void beginTransaction(Invocation inv) throws DatabaseEngineRuntimeException {
+                Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+                inv.proceed();
+                transactions.incrementAndGet();
+            }
+        };
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING).build();
+
+        engine.addEntity(entity);
+
+        DefaultBatch batch = DefaultBatch.create(engine, "test", 5, 1000000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
+        batch.add("TEST", entry().set("COL1", 1).build());
+
+        final ArrayList<String> resultOrder = new ArrayList<>();
+
+        ExecutorService pool = Executors.newCachedThreadPool();
+
+        // the first flush should collect the data to flush. will be the second to finish because third will not be blocking and will not have data.
+        pool.submit(() -> {
+            batch.flush();
+            resultOrder.add("first");
+        });
+        // make sure that second flush doesn't start before the first. Should not start a transaction because the data was cleaned up by first flush.
+        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        pool.submit(() -> {
+            batch.flush(true);
+            resultOrder.add("second");
+        });
+        // this should be in fact the first to finish because is not blocking and there is no data to flush. Should not even start a transaction.
+        pool.submit(() -> {
+            batch.flush(false);
+            resultOrder.add("third");
+        });
+
+        pool.shutdown();
+        pool.awaitTermination(1, TimeUnit.MINUTES);
+
+        assertEquals("check that execution order was ok.", Arrays.asList("third", "first", "second"), resultOrder);
+        assertEquals("check that only 1 transaction was really executed", 1, transactions.get());
+    }
+
 
     /**
      * Create test table.
