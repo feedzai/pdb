@@ -924,6 +924,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 return DbColumnType.BOOLEAN;
             case "FLOAT":
             case "FLOAT126":
+            case "BINARY_DOUBLE":
                 return DbColumnType.DOUBLE;
             case "LONG":
             case "NUMBER19":
