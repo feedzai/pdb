@@ -107,16 +107,27 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         }
     }
 
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'NaN' should be inserted into the database without any error.
+     */
     @Test
     public void testInsertNan() throws Exception {
         testInsertSpecialValues("NaN");
     }
 
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
     @Test
     public void testInsertInfinity() throws Exception {
         testInsertSpecialValues("Infinity");
     }
 
+    /**
+     * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
+     */
     @Test
     public void testRandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
         try {
@@ -129,6 +140,12 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         fail("Should have thrown an exception");
     }
 
+    /**
+     * Auxiliary method to insert a provided special value for the BINARY_DOUBLE oracle datatype.
+     *
+     * @param columnValue The column value.
+     * @throws Exception If something goes wrong storing data into the database.
+     */
     private void testInsertSpecialValues(final String columnValue) throws Exception {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         try {
