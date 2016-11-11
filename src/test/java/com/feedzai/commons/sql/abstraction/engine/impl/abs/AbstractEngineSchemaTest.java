@@ -102,8 +102,26 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
+    public void testPersisttNanDouble() throws Exception {
+        testPersistSpecialValues(Double.NaN);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'NaN' should be inserted into the database without any error.
+     */
+    @Test
     public void testInsertPStNan() throws Exception {
         testInsertSpecialValuesByPS("NaN");
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'NaN' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertPStNanDouble() throws Exception {
+        testInsertSpecialValuesByPS(Double.NaN);
     }
 
     /**
@@ -120,8 +138,26 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
+    public void testInsertPS2tNanDouble() throws Exception {
+        testInsertSpecialValuesByPS2(Double.NaN);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'NaN' should be inserted into the database without any error.
+     */
+    @Test
     public void testInsertBatchtNan() throws Exception {
         testInsertSpecialValuesByBatch("NaN");
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'NaN' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertBatchtNanDouble() throws Exception {
+        testInsertSpecialValuesByBatch(Double.NaN);
     }
 
     /**
@@ -133,6 +169,23 @@ public abstract class AbstractEngineSchemaTest {
         testPersistSpecialValues("Infinity");
     }
 
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testPersistInfinityDouble() throws Exception {
+        testPersistSpecialValues(Double.POSITIVE_INFINITY);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testPersistInfinityDoubleNegative() throws Exception {
+        testPersistSpecialValues(Double.NEGATIVE_INFINITY);
+    }
 
     /**
      * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
@@ -141,6 +194,25 @@ public abstract class AbstractEngineSchemaTest {
     @Test
     public void testInsertPSInfinity() throws Exception {
         testInsertSpecialValuesByPS("Infinity");
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertPSInfinityDouble() throws Exception {
+        testInsertSpecialValuesByPS(Double.POSITIVE_INFINITY);
+    }
+
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertPSInfinityDoubleNegative() throws Exception {
+        testInsertSpecialValuesByPS(Double.NEGATIVE_INFINITY);
     }
 
     /**
@@ -157,8 +229,44 @@ public abstract class AbstractEngineSchemaTest {
      * value 'Infinity' should be inserted into the database without any error.
      */
     @Test
+    public void testInsertPS2InfinityDouble() throws Exception {
+        testInsertSpecialValuesByPS2(Double.POSITIVE_INFINITY);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertPS2InfinityDoubleNegative() throws Exception {
+        testInsertSpecialValuesByPS2(Double.NEGATIVE_INFINITY);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
     public void testInsertBatchInfinity() throws Exception {
         testInsertSpecialValuesByBatch("Infinity");
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertBatchInfinityDouble() throws Exception {
+        testInsertSpecialValuesByBatch(Double.POSITIVE_INFINITY);
+    }
+
+    /**
+     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
+     * value 'Infinity' should be inserted into the database without any error.
+     */
+    @Test
+    public void testInsertBatchInfinityDoubleNegative() throws Exception {
+        testInsertSpecialValuesByBatch(Double.NEGATIVE_INFINITY);
     }
 
     /**
@@ -194,21 +302,11 @@ public abstract class AbstractEngineSchemaTest {
     }
 
     /**
-     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
-     * value 'NaN' should be inserted into the database without any error.
-     */
-    @Test
-    public void testInsertPSNan() throws Exception {
-        testPersistSpecialValues("NaN");
-    }
-
-
-    /**
      * Auxiliary method to persist a provided special value.
      *
      * @param columnValue The column value.
      */
-    protected void testPersistSpecialValues(final String columnValue) throws DatabaseEngineException, DatabaseFactoryException {
+    protected void testPersistSpecialValues(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         try {
             final DbEntity entity = createSpecialValuesEntity();
@@ -226,7 +324,7 @@ public abstract class AbstractEngineSchemaTest {
      *
      * @param columnValue The column value.
      */
-    protected void testInsertSpecialValuesByPS(final String columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
+    protected void testInsertSpecialValuesByPS(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         final String PSName = "PS_DUMMY";
         final String preparedStatementQuery = "insert into TEST_DOUBLE_COLUMN(ID, DBL_COL) values (?,?)";
@@ -242,7 +340,6 @@ public abstract class AbstractEngineSchemaTest {
         } finally {
             engine.close();
         }
-
     }
 
     /**
@@ -250,7 +347,7 @@ public abstract class AbstractEngineSchemaTest {
      *
      * @param columnValue The column value.
      */
-    protected void testInsertSpecialValuesByPS2(final String columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
+    protected void testInsertSpecialValuesByPS2(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         final String PSName = "PS_DUMMY";
         final String preparedStatementQuery = "insert into TEST_DOUBLE_COLUMN(ID, DBL_COL) values (?,?)";
@@ -275,7 +372,7 @@ public abstract class AbstractEngineSchemaTest {
      *
      * @param columnValue The column value.
      */
-    protected void testInsertSpecialValuesByBatch(final String columnValue) throws DatabaseFactoryException, DatabaseEngineException {
+    protected void testInsertSpecialValuesByBatch(final Object columnValue) throws DatabaseFactoryException, DatabaseEngineException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         try {
             final DbEntity entity = createSpecialValuesEntity();
@@ -296,10 +393,27 @@ public abstract class AbstractEngineSchemaTest {
      * @param entityName  The entity name to check.
      * @param columnValue The column value persisted in storage.
      */
-    protected void checkResult(final DatabaseEngine engine, final String entityName, final String columnValue) throws DatabaseEngineException {
+    protected void checkResult(final DatabaseEngine engine, final String entityName, final Object columnValue) throws DatabaseEngineException {
+        if (columnValue instanceof Double) {
+            checkResultDouble(engine, entityName, (double) columnValue);
+            return;
+        }
         final List<Map<String, ResultColumn>> dbl = engine.query(select(column(DBL_COL)).from(table(entityName)));
         final ResultColumn result = dbl.get(0).get(DBL_COL);
         assertTrue("Should be equal to '"+ columnValue +"'. But was: " + result.toString(), result.toString().equals(columnValue));
+    }
+
+    /**
+     * Auxiliary method that checks that the inserted value is indeed the provided column value.
+     *
+     * @param engine      The database engine.
+     * @param entityName  The entity name to check.
+     * @param columnValue The column value persisted in storage.
+     */
+    protected void checkResultDouble(final DatabaseEngine engine, final String entityName, final double columnValue) throws DatabaseEngineException {
+        final List<Map<String, ResultColumn>> dbl = engine.query(select(column(DBL_COL)).from(table(entityName)));
+        final ResultColumn result = dbl.get(0).get(DBL_COL);
+        assertTrue("Should be equal to '"+ columnValue +"'. But was: " + result.toString(), result.toDouble().equals(columnValue));
     }
 
     /**
@@ -322,7 +436,7 @@ public abstract class AbstractEngineSchemaTest {
      * @param columnValue The value to insert.
      * @return The {@link EntityEntry} to insert in storage.
      */
-    protected EntityEntry createSpecialValueEntry(final String columnValue) {
+    protected EntityEntry createSpecialValueEntry(final Object columnValue) {
         return entry()
                 .set(ID_COL, 1)
                 .set(DBL_COL, columnValue)
