@@ -17,28 +17,23 @@ package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rafael Marmelo (rafael.marmelo@feedzai.com)
@@ -102,70 +97,6 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
             assertFalse("The simulated system generated column should not appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("SYS_COL1"));
             assertTrue("The regular column should appear in the table metadata", engine.getMetadata("TEST_SYS_COL").containsKey("COL1"));
-        } finally {
-            engine.close();
-        }
-    }
-
-    /**
-     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
-     * value 'NaN' should be inserted into the database without any error.
-     */
-    @Test
-    public void testInsertNan() throws Exception {
-        testInsertSpecialValues("NaN");
-    }
-
-    /**
-     * After changing the oracle double data type from DOUBLE PRECISION to BINARY_DOUBLE the special
-     * value 'Infinity' should be inserted into the database without any error.
-     */
-    @Test
-    public void testInsertInfinity() throws Exception {
-        testInsertSpecialValues("Infinity");
-    }
-
-    /**
-     * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
-     */
-    @Test
-    public void testRandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
-        try {
-            testInsertSpecialValues("randomString");
-        } catch (DatabaseEngineException e) {
-            // It is supposed to.
-            return;
-        }
-
-        fail("Should have thrown an exception");
-    }
-
-    /**
-     * Auxiliary method to insert a provided special value for the BINARY_DOUBLE oracle datatype.
-     *
-     * @param columnValue The column value.
-     * @throws Exception If something goes wrong storing data into the database.
-     */
-    private void testInsertSpecialValues(final String columnValue) throws Exception {
-        final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
-        try {
-            final DbEntity entity = dbEntity()
-                    .name("TEST_DOUBLE_COLUMN")
-                    .addColumn("id", INT)
-                    .addColumn("DBL", DOUBLE)
-                    .pkFields("id")
-                    .build();
-            engine.addEntity(entity);
-
-            final EntityEntry entry = entry()
-                    .set("id", 1)
-                    .set("DBL", columnValue)
-                    .build();
-
-            engine.persist(entity.getName(), entry);
-            final List<Map<String, ResultColumn>> dbl = engine.query(select(column("DBL")).from(table(entity.getName())));
-            final ResultColumn result = dbl.get(0).get("DBL");
-            assertTrue("Should be equal to '"+ columnValue +"'. But was: " + result.toString(), result.toString().equals(columnValue));
         } finally {
             engine.close();
         }
