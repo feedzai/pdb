@@ -710,7 +710,7 @@ results = engine.query(
 	.from(table("streams"))
 	.where(eq(column("provider_id"), k(4)))
 	.groupby(column("data_type_id"))
-	.orderby(column("data_type_id")).asc());
+	.orderby(column("data_type_id").asc());
 ```
 |Function|Description|
 |:---|:---|
