@@ -1567,11 +1567,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         int i = 1;
         for (Object o : params) {
             try {
-                if (o instanceof byte[]) {
-                    ps.ps.setBytes(i, (byte[]) o);
-                } else {
-                    ps.ps.setObject(i, o);
-                }
+                setParameterValues(ps.ps, i, o);
             } catch (SQLException ex) {
                 if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                     throw new DatabaseEngineException("Could not set parameters", ex);
@@ -1598,11 +1594,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         try {
-            if (param instanceof byte[]) {
-                ps.ps.setBytes(index, (byte[]) param);
-            } else {
-                ps.ps.setObject(index, param);
-            }
+            setParameterValues(ps.ps, index, param);
         } catch (SQLException ex) {
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException("Could not set parameter", ex);
@@ -1850,6 +1842,22 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             injector.injectMembers(o);
+        }
+    }
+
+    /**
+     * Sets the value of a parameter in {@code index} to the value provided in {@code param}.
+     *
+     * @param ps    The {@link PreparedStatement} to insert the association between index and the param.
+     * @param index The index to set the value to.
+     * @param param The value to be set at the provided index.
+     * @throws SQLException If something goes wrong accessing the database.
+     */
+    protected void setParameterValues(final PreparedStatement ps, final int index, final Object param) throws SQLException {
+        if (param instanceof byte[]) {
+            ps.setBytes(index, (byte[]) param);
+        } else {
+            ps.setObject(index, param);
         }
     }
 }

@@ -271,7 +271,7 @@ public class OracleTranslator extends AbstractTranslator {
                         quotize(c.getName()));
 
             case DOUBLE:
-                return "DOUBLE PRECISION";
+                return "BINARY_DOUBLE";
 
             case INT:
                 return "INT";

@@ -23,6 +23,7 @@ import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -147,6 +148,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
                         }
 
                         break;
+                    case DOUBLE:
+                        setParameterValues(ps, i, val);
+                        break;
                     default:
                         ps.setObject(i, ensureNoUnderflow(val));
                 }
@@ -158,6 +162,38 @@ public class OracleEngine extends AbstractDatabaseEngine {
         }
 
         return i - 1;
+    }
+
+    @Override
+    protected void setParameterValues(final PreparedStatement ps, final int index, final Object param) throws SQLException {
+        if (param instanceof byte[]) {
+            ps.setBytes(index, (byte[]) param);
+        } else {
+            if (!(param instanceof Double)) {
+                /**
+                 * If it is not a double it may be:
+                 *  - A String with the special values such as infinity or NaN
+                 *  - A String with some invalid value
+                 *  - An integer/long
+                 *  - Some other invalid type
+                 *
+                 *  In these cases we will invoke the setObject.
+                 */
+                ps.setObject(index, param);
+            } else {
+                /**
+                 * Only Double typed values will execute here.
+                 * They may be:
+                 *  - Regular double number
+                 *  - Double.NaN
+                 *  - Double.{POSITIVE|NEGATIVE}_INFINITY
+                 *
+                 *  In these cases we use the setBinaryDouble specific to the oracle prepared statement.
+                 */
+                final OraclePreparedStatement orclPs = (OraclePreparedStatement) ps;
+                orclPs.setBinaryDouble(index, (Double) ensureNoUnderflow(param));
+            }
+        }
     }
 
     /**
@@ -924,6 +960,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 return DbColumnType.BOOLEAN;
             case "FLOAT":
             case "FLOAT126":
+            case "BINARY_DOUBLE":
                 return DbColumnType.DOUBLE;
             case "LONG":
             case "NUMBER19":

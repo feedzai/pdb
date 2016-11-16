@@ -29,10 +29,11 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Rafael Marmelo (rafael.marmelo@feedzai.com)
