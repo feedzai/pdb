@@ -398,12 +398,16 @@ public abstract class AbstractEngineSchemaTest {
         Properties defaultAllowColumnDropProperties = new Properties();
         defaultAllowColumnDropProperties.putAll(properties);
         defaultAllowColumnDropProperties.remove(PdbProperties.ALLOW_COLUMN_DROP);
+        // use only a create to avoid dropping the table when adding.
         defaultAllowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
 
         //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is not dropped.
         DatabaseEngine engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
         try {
             final DbEntity entity = createSpecialValuesEntity();
+            engine.updateEntity(entity);
+            // guarantee that is deleted and doesn't come from previous tests.
+            engine.dropEntity(TABLE_NAME);
             engine.updateEntity(entity);
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
             engine.flush();
