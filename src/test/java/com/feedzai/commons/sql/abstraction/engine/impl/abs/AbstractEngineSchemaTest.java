@@ -18,7 +18,9 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -32,7 +34,6 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 
 /**
@@ -381,6 +382,63 @@ public abstract class AbstractEngineSchemaTest {
             engine.flush();
             engine.commit();
             checkResult(engine, TABLE_NAME, columnValue);
+        } finally {
+            engine.close();
+        }
+    }
+
+    /**
+     * Tests that the default option for the ALLOW_COLUMN_DROP option is false.
+     *
+     * @since 2.1.8
+     */
+    @Test
+    public void testDefaultAllowColumnDrop() throws DatabaseFactoryException, DatabaseEngineException {
+        // copy to make sure we don't have an allow column drop defined
+        Properties defaultAllowColumnDropProperties = new Properties();
+        defaultAllowColumnDropProperties.putAll(properties);
+        defaultAllowColumnDropProperties.remove(PdbProperties.ALLOW_COLUMN_DROP);
+        defaultAllowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
+
+        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is not dropped.
+        DatabaseEngine engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
+        try {
+            final DbEntity entity = createSpecialValuesEntity();
+            engine.updateEntity(entity);
+            engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
+            engine.flush();
+            engine.commit();
+            checkResult(engine, TABLE_NAME, 10d);
+
+            engine.removeEntity(TABLE_NAME);
+            engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
+            assertEquals("Check that a select star query returns both columns", Sets.newHashSet(ID_COL, DBL_COL),
+                    engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
+            checkResult(engine, TABLE_NAME, 10d);
+
+            // drop the entity to prepare for the rest of the test.
+            engine.dropEntity(TABLE_NAME);
+        } finally {
+            engine.close();
+        }
+
+        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that column is dropped because ALLOW_COLUMN_DROP is true.
+        defaultAllowColumnDropProperties.put(PdbProperties.ALLOW_COLUMN_DROP, true);
+        engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
+        try {
+            final DbEntity entity = createSpecialValuesEntity();
+            engine.updateEntity(entity);
+            engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
+            engine.flush();
+            engine.commit();
+            checkResult(engine, TABLE_NAME, 10d);
+
+            engine.removeEntity(TABLE_NAME);
+            engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
+
+            assertEquals("Check that a select star query returns only ID_COL columns", Sets.newHashSet(ID_COL),
+                    engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
+
         } finally {
             engine.close();
         }
