@@ -64,10 +64,8 @@ public final class Constants {
     public static final String DEFAULT_SECRET_LOCATION = "secret.key";
     /**
      * By default allow column drops.
-     *
-     * @implNote Changed to {@code false} since 2.1.8
      */
-    public static final boolean DEFAULT_ALLOW_COLUMN_DROP = false;
+    public static final boolean DEFAULT_ALLOW_COLUMN_DROP = true;
     /**
      * The default fetch size.
      */

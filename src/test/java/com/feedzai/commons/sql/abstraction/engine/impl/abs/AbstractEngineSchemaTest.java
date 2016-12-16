@@ -388,7 +388,7 @@ public abstract class AbstractEngineSchemaTest {
     }
 
     /**
-     * Tests that the default option for the ALLOW_COLUMN_DROP option is false.
+     * Tests that the default option for the ALLOW_COLUMN_DROP option is true.
      *
      * @since 2.1.8
      */
@@ -401,7 +401,7 @@ public abstract class AbstractEngineSchemaTest {
         // use only a create to avoid dropping the table when adding.
         defaultAllowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
 
-        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is not dropped.
+        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is dropped.
         DatabaseEngine engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
         try {
             final DbEntity entity = createSpecialValuesEntity();
@@ -416,18 +416,16 @@ public abstract class AbstractEngineSchemaTest {
 
             engine.removeEntity(TABLE_NAME);
             engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
-            assertEquals("Check that a select star query returns both columns", Sets.newHashSet(ID_COL, DBL_COL),
+            assertEquals("Check that a select star query returns only ID_COL columns", Sets.newHashSet(ID_COL),
                     engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
-            checkResult(engine, TABLE_NAME, 10d);
-
             // drop the entity to prepare for the rest of the test.
             engine.dropEntity(TABLE_NAME);
         } finally {
             engine.close();
         }
 
-        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that column is dropped because ALLOW_COLUMN_DROP is true.
-        defaultAllowColumnDropProperties.put(PdbProperties.ALLOW_COLUMN_DROP, true);
+        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that column is not dropped because ALLOW_COLUMN_DROP is false.
+        defaultAllowColumnDropProperties.put(PdbProperties.ALLOW_COLUMN_DROP, false);
         engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
         try {
             final DbEntity entity = createSpecialValuesEntity();
@@ -439,9 +437,9 @@ public abstract class AbstractEngineSchemaTest {
 
             engine.removeEntity(TABLE_NAME);
             engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
-
-            assertEquals("Check that a select star query returns only ID_COL columns", Sets.newHashSet(ID_COL),
+            assertEquals("Check that a select star query returns both columns", Sets.newHashSet(ID_COL, DBL_COL),
                     engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
+            checkResult(engine, TABLE_NAME, 10d);
 
         } finally {
             engine.close();
