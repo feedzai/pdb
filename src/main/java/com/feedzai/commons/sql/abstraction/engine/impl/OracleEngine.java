@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import oracle.jdbc.OraclePreparedStatement;
 import oracle.jdbc.OracleTypes;
 
-import java.io.StringReader;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,8 +130,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                         }
 
                         if (val instanceof String) {
-                            StringReader sr = new StringReader((String) val);
-                            ps.setClob(i, sr);
+                            ((OraclePreparedStatement) ps).setStringForClob(i, (String) val);
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
