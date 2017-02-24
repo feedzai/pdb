@@ -21,6 +21,8 @@ import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import static org.apache.commons.lang3.StringUtils.replace;
+
 /**
  * String Utilities.
  *
@@ -59,7 +61,7 @@ public class StringUtils {
     }
 
     /**
-     * Generates de MD5 checksum for the specified message.
+     * Generates the MD5 checksum for the specified message.
      *
      * @param message The message.
      * @return The hexadecimal checksum.
@@ -129,5 +131,38 @@ public class StringUtils {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Apache Commons-Lang 2.X contained StringEscapeUtils#escapeSql, but this method was removed in 3.X as discussed
+     * here: https://commons.apache.org/proper/commons-lang/article3_0.html#StringEscapeUtils.escapeSql
+     *
+     * For this reason, the source code has been copied from 2.X to here so that we can continue to use the logic and
+     * possibly build on it in the future.
+     *
+     * ***************** Copied from commons-lang:commons-lang:2.6 ****************
+     *
+     * <p>Escapes the characters in a <code>String</code> to be suitable to pass to
+     * an SQL query.</p>
+     *
+     * <p>For example,
+     * <pre>statement.executeQuery("SELECT * FROM MOVIES WHERE TITLE='" +
+     *   StringEscapeUtils.escapeSql("McHale's Navy") +
+     *   "'");</pre>
+     * </p>
+     *
+     * <p>At present, this method only turns single-quotes into doubled single-quotes
+     * (<code>"McHale's Navy"</code> => <code>"McHale''s Navy"</code>). It does not
+     * handle the cases of percent (%) or underscore (_) for use in LIKE clauses.</p>
+     *
+     * see http://www.jguru.com/faq/view.jsp?EID=8881
+     * @param str  the string to escape, may be null
+     * @return a new String, escaped for SQL, <code>null</code> if null string input
+     */
+    public static String escapeSql(String str) {
+        if (str == null) {
+            return null;
+        }
+        return replace(str, "'", "''");
     }
 }

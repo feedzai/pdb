@@ -126,9 +126,9 @@ public class OracleTranslator extends AbstractTranslator {
         });
 
         if (rd.isEnclosed()) {
-            return "(" + org.apache.commons.lang.StringUtils.join(all, delimiter) + ")";
+            return "(" + org.apache.commons.lang3.StringUtils.join(all, delimiter) + ")";
         } else {
-            return org.apache.commons.lang.StringUtils.join(all, delimiter);
+            return org.apache.commons.lang3.StringUtils.join(all, delimiter);
         }
     }
 

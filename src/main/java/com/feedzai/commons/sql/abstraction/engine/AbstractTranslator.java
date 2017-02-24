@@ -38,13 +38,13 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.singleQuotize;
 
@@ -252,7 +252,7 @@ public abstract class AbstractTranslator {
             if (!k.isQuote()) {
                 result = o.toString();
             } else if (o instanceof String) {
-                result = singleQuotize(StringEscapeUtils.escapeSql((String) o));
+                result = singleQuotize(escapeSql((String) o));
             } else if (o instanceof Boolean) {
                 result = (Boolean) o ? translateTrue() : translateFalse();
             } else {

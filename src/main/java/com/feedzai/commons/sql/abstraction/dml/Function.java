@@ -15,8 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
+import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.StringEscapeUtils;
 
 import java.util.Set;
 
@@ -102,7 +102,7 @@ public class Function extends Expression {
      * @param exp      The expression.
      */
     public Function(final String function, final Expression exp) {
-        this.function = StringEscapeUtils.escapeSql(function);
+        this.function = StringUtils.escapeSql(function);
         this.exp = exp;
     }
 
