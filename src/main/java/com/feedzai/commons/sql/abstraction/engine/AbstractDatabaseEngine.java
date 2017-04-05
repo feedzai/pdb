@@ -466,7 +466,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
         }
 
-        if (!this.properties.isSchemaPolicyNone()) {
+        if (this.properties.isSchemaPolicyNone()) {
+            logger.warn("Schema policy set to none, skipping create '{}' entity.", entity.getName());
+        } else {
             createTable(entity);
             addPrimaryKey(entity);
             addFks(entity);
@@ -500,7 +502,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     @Override
     public synchronized void updateEntity(DbEntity entity) throws DatabaseEngineException {
         // Only mutate the schema in the DB (i.e. add schema, drop/add columns, if the schema policy allows it.
-        if (!properties.isSchemaPolicyNone()) {
+        if (properties.isSchemaPolicyNone()) {
+            logger.warn("Schema policy set to none, skipping update '{}' entity.", entity.getName());
+        } else {
             final Map<String, DbColumnType> tableMetadata = getMetadata(entity.getName());
             if (tableMetadata.size() == 0) { // the table does not exist
                 addEntity(entity);
@@ -535,15 +539,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
                 addFks(entity);
             }
+            // We still want to create prepared statements for the entity, regardless the schema policy
+            MappedEntity me = createPreparedStatementForInserts(entity);
+
+            me = me.setEntity(entity);
+
+            entities.put(entity.getName(), me);
+            logger.trace("Entity '{}' updated", entity.getName());
         }
 
-        // We still want to create prepared statements for the entity, regardless the schema policy
-        MappedEntity me = createPreparedStatementForInserts(entity);
-
-        me = me.setEntity(entity);
-
-        entities.put(entity.getName(), me);
-        logger.trace("Entity '{}' updated", entity.getName());
     }
 
     @Override
