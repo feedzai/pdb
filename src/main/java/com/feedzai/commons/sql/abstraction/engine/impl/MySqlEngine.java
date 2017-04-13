@@ -284,14 +284,11 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
         }
     }
-
     @Override
-    protected void addIndexes(final DbEntity entity) throws DatabaseEngineException {
+    protected void addIndexes(final DbEntity entity, final List<DbIndex> indexes) throws DatabaseEngineException {
         if (entity.getIndexes().isEmpty()) {
             return;
         }
-
-        List<DbIndex> indexes = entity.getIndexes();
 
         for (DbIndex index : indexes) {
 

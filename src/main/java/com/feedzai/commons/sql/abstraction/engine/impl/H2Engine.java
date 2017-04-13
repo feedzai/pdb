@@ -288,9 +288,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addIndexes(final DbEntity entity) throws DatabaseEngineException {
-        List<DbIndex> indexes = entity.getIndexes();
-
+    protected void addIndexes(final DbEntity entity, final List<DbIndex> indexes) throws DatabaseEngineException {
         for (DbIndex index : indexes) {
 
             List<String> createIndex = new ArrayList<String>();

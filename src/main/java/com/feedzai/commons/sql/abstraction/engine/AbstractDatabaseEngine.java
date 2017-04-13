@@ -31,6 +31,7 @@ import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutput
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -519,6 +520,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 if (!toRemove.isEmpty()) {
                     if (properties.allowColumnDrop()) {
                         dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
+                        // TODO: drop indexes
                     } else {
                         logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.", StringUtils.join(toRemove, ","), entity.getName());
                     }
@@ -531,7 +533,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     }
                 }
                 if (!columns.isEmpty()) {
-                    addColumn(entity, columns.toArray(new DbColumn[columns.size()]));
+                    final DbColumn[] dbColumns = columns.toArray(new DbColumn[columns.size()]);
+                    addColumn(entity, dbColumns);
+                    addIndexes(entity, dbColumns);
                 }
                 addFks(entity);
             }
@@ -544,6 +548,35 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         entities.put(entity.getName(), me);
         logger.trace("Entity '{}' updated", entity.getName());
+    }
+
+    /**
+     * Given a {@link DbEntity}, returns the defined indexes that include the given {@link DbColumn}.
+     *
+     * @param entity The owner {@link DbEntity}.
+     * @param column The {@link DbColumn} to search in indexes.
+     * @return The list of {@link DbIndex}s.
+     * @since 2.1.9
+     */
+    private List<DbIndex> getIndexesForColumn(final DbEntity entity, final DbColumn column) {
+        return entity.getIndexes()
+                .stream()
+                .filter(dbIndex -> dbIndex.getColumns().contains(column.getName()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Gathers all the indexes of the {@link DbEntity} that target the given {@link DbColumn}s and creates them.
+     *
+     * @param entity The owner {@link DbEntity}.
+     * @param columns The {@link DbColumn}s to consider.
+     * @throws DatabaseEngineException
+     * @since 2.1.9
+     */
+    private void addIndexes(final DbEntity entity, final DbColumn[] columns) throws DatabaseEngineException {
+        for (final DbColumn dbColumn : columns) {
+            addIndexes(entity, getIndexesForColumn(entity, dbColumn));
+        }
     }
 
     @Override
@@ -1052,12 +1085,23 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     protected abstract void addPrimaryKey(final DbEntity entity) throws DatabaseEngineException;
 
     /**
-     * Add the desired indexes.
+     * Add all the defined indexes for the given entity.
      *
      * @param entity The entity.
      * @throws DatabaseEngineException If something goes wrong while creating the table.
      */
-    protected abstract void addIndexes(final DbEntity entity) throws DatabaseEngineException;
+    protected void addIndexes(final DbEntity entity) throws DatabaseEngineException {
+        addIndexes(entity, entity.getIndexes());
+    }
+
+    /**
+     * Add the given indexes.
+     *
+     * @param entity The entity.
+     * @param indexes The indexes to add.
+     * @throws DatabaseEngineException If something goes wrong while creating the table.
+     */
+    protected abstract void addIndexes(final DbEntity entity, final List<DbIndex> indexes) throws DatabaseEngineException;
 
     /**
      * Adds the necessary sequences.
