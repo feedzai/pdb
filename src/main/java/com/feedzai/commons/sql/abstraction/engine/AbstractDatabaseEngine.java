@@ -330,7 +330,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         final Map<String, MappedEntity> niw = new HashMap<String, MappedEntity>(entities);
         // clear the entities
         entities.clear();
-        for (MappedEntity me : niw.values()) {
+        for (final MappedEntity me : niw.values()) {
+            try {
+                me.close();
+            } catch (final Exception e) {
+                logger.trace("Could not close prepared statement.", e);
+            }
             loadEntity(me.getEntity());
         }
 

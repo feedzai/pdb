@@ -17,8 +17,11 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * Mapped entity contains information about an entity that has been mapped using the engine.
@@ -26,7 +29,11 @@ import java.sql.PreparedStatement;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public class MappedEntity {
+public class MappedEntity implements AutoCloseable {
+    /**
+     * The logger.
+     */
+    private static Logger logger = LoggerFactory.getLogger(MappedEntity.class);
     /**
      * The entity object.
      */
@@ -77,6 +84,7 @@ public class MappedEntity {
      * @return This mapped entity
      */
     public MappedEntity setInsert(final PreparedStatement insert) {
+        closeQuietly(this.insert);
         this.insert = insert;
 
         return this;
@@ -116,7 +124,8 @@ public class MappedEntity {
      * @param insertReturning The insert statement that allows returning the generated keys
      * @return This mapped entity
      */
-    public MappedEntity setInsertReturning(PreparedStatement insertReturning) {
+    public MappedEntity setInsertReturning(final PreparedStatement insertReturning) {
+        closeQuietly(this.insertReturning);
         this.insertReturning = insertReturning;
 
         return this;
@@ -139,7 +148,8 @@ public class MappedEntity {
      * @return This mapped entity; 
      * @see DatabaseEngine#persist(String, EntityEntry, boolean)
      */
-    public MappedEntity setInsertWithAutoInc(PreparedStatement insertWithAutoInc) {
+    public MappedEntity setInsertWithAutoInc(final PreparedStatement insertWithAutoInc) {
+        closeQuietly(this.insertWithAutoInc);
         this.insertWithAutoInc = insertWithAutoInc;
         
         return this;
@@ -182,5 +192,28 @@ public class MappedEntity {
      */
     public void setSequenceDirty(boolean sequenceDirty) {
         this.sequenceDirty = sequenceDirty;
+    }
+
+    /**
+     * Closes a {@link PreparedStatement}, logging a warning if {@link SQLException} is thrown.
+     *
+     * @param preparedStatement The prepared statement to close.
+     * @since 2.1.8
+     */
+    private void closeQuietly(final PreparedStatement preparedStatement) {
+        if (preparedStatement != null) {
+            try {
+                preparedStatement.close();
+            } catch (final SQLException e) {
+                logger.trace("Could not close prepared statement.", e);
+            }
+        }
+    }
+
+    @Override
+    public void close() throws Exception {
+        closeQuietly(this.insert);
+        closeQuietly(this.insertWithAutoInc);
+        closeQuietly(this.insertReturning);
     }
 }
