@@ -151,7 +151,7 @@ public abstract class AbstractBatch implements Runnable {
     /**
      * Destroys this batch.
      */
-    public synchronized void destroy() {
+    public void destroy() {
         logger.trace("{} - Destroy called on Batch", name);
         scheduler.shutdownNow();
 
@@ -302,7 +302,7 @@ public abstract class AbstractBatch implements Runnable {
     }
 
     @Override
-    public synchronized void run() {
+    public void run() {
         if (System.currentTimeMillis() - lastFlush >= batchTimeout) {
             logger.trace("[{}] Flush timeout occurred", name);
             flush();

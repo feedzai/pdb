@@ -235,7 +235,7 @@ public class BatchUpdateTest {
      * @since 2.1.6
      */
     @Test
-    public void testFlushBashSync() throws DatabaseEngineException, InterruptedException {
+    public void testFlushBatchSync() throws DatabaseEngineException, InterruptedException {
         final AtomicInteger transactions = new AtomicInteger();
         // mock the begin transaction to force waiting to cause flushes to wait for others.
         new MockUp<AbstractDatabaseEngine>() {
@@ -287,6 +287,39 @@ public class BatchUpdateTest {
         assertEquals("check that only 1 transaction was really executed", 1, transactions.get());
     }
 
+    /**
+     * Tests that there is no race condition between the {@link AbstractBatch#destroy()} and {@link AbstractBatch#run()}
+     * methods.
+     * This is a regression test for PULSEDEV-18139, where a race condition was causing the scheduler to attempt to
+     * call run while it another thread was already inside `destroy` but had not yet called shutdown on the scheduler.
+     * Since those two methods were synchronized, the `run` would not finish while destroy was waiting for all tasks in
+     * the Executor to finish.
+     *
+     *
+     * @since 2.1.10
+     * @throws DatabaseEngineException If the operations on the engine fail.
+     */
+    @Test(timeout = 30000)
+    public void testBatchRunDestroyRace() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING).build();
+
+        engine.addEntity(entity);
+
+
+        for (int i = 0; i < 40; i++) {
+            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000);
+            batch.add("TEST", entry().set("COL1", 1).build());
+
+            // Call `destroy` which will wait, if the data race occurs, for more than the test timeout
+            batch.destroy();
+        }
+    }
 
     /**
      * Create test table.
@@ -361,6 +394,11 @@ public class BatchUpdateTest {
      */
     private static class MockedBatch extends AbstractBatch {
 
+        /**
+         * Duration of the sleep in the beginning of the destroy method.
+         */
+        static final long PRE_DESTROY_SLEEP_DURATION = 500L;
+
         private List<BatchEntry> failedEntries = new ArrayList<>();
 
         private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown) {
@@ -381,6 +419,12 @@ public class BatchUpdateTest {
 
         public List<BatchEntry> getFailedEntries() {
             return failedEntries;
+        }
+
+        @Override
+        public synchronized void destroy() {
+            Uninterruptibles.sleepUninterruptibly(PRE_DESTROY_SLEEP_DURATION, TimeUnit.MILLISECONDS);
+            super.destroy();
         }
     }
 
