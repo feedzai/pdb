@@ -153,13 +153,21 @@ public abstract class AbstractBatch implements Runnable {
      */
     public void destroy() {
         logger.trace("{} - Destroy called on Batch", name);
-        scheduler.shutdownNow();
+        scheduler.shutdown();
 
         try {
             if (!scheduler.awaitTermination(maxAwaitTimeShutdown, TimeUnit.MILLISECONDS)) {
-                logger.warn("Could not terminate batch within {}", DurationFormatUtils.formatDurationWords(maxAwaitTimeShutdown, true, true));
+                logger.warn(
+                        "Could not terminate batch within {}. Forcing shutdown.",
+                        DurationFormatUtils.formatDurationWords(
+                                maxAwaitTimeShutdown,
+                                true,
+                                true
+                        )
+                );
+                scheduler.shutdownNow();
             }
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.debug("Interrupted while waiting.", e);
         }
