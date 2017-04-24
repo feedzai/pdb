@@ -294,7 +294,8 @@ public class BatchUpdateTest {
      * call run while it another thread was already inside `destroy` but had not yet called shutdown on the scheduler.
      * Since those two methods were synchronized, the `run` would not finish while destroy was waiting for all tasks in
      * the Executor to finish.
-     *
+     * For this test to properly work it is critical that the batch is configured to wait more for the scheduler termination
+     * than the test timeout.
      *
      * @since 2.1.10
      * @throws DatabaseEngineException If the operations on the engine fail.
@@ -313,6 +314,7 @@ public class BatchUpdateTest {
 
 
         for (int i = 0; i < 40; i++) {
+            // The maxAwaitTimeShutdown parameter must be larger than the test timeout.
             final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000);
             batch.add("TEST", entry().set("COL1", 1).build());
 

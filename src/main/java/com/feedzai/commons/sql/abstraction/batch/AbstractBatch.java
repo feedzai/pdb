@@ -101,7 +101,7 @@ public abstract class AbstractBatch implements Runnable {
     /**
      * Timestamp of the last flush.
      */
-    protected long lastFlush;
+    protected volatile long lastFlush;
     /**
      * EntityEntry buffer.
      */
