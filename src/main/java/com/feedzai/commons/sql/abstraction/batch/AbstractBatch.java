@@ -101,7 +101,7 @@ public abstract class AbstractBatch implements Runnable {
     /**
      * Timestamp of the last flush.
      */
-    protected long lastFlush;
+    protected volatile long lastFlush;
     /**
      * EntityEntry buffer.
      */
@@ -151,15 +151,23 @@ public abstract class AbstractBatch implements Runnable {
     /**
      * Destroys this batch.
      */
-    public synchronized void destroy() {
+    public void destroy() {
         logger.trace("{} - Destroy called on Batch", name);
-        scheduler.shutdownNow();
+        scheduler.shutdown();
 
         try {
             if (!scheduler.awaitTermination(maxAwaitTimeShutdown, TimeUnit.MILLISECONDS)) {
-                logger.warn("Could not terminate batch within {}", DurationFormatUtils.formatDurationWords(maxAwaitTimeShutdown, true, true));
+                logger.warn(
+                        "Could not terminate batch within {}. Forcing shutdown.",
+                        DurationFormatUtils.formatDurationWords(
+                                maxAwaitTimeShutdown,
+                                true,
+                                true
+                        )
+                );
+                scheduler.shutdownNow();
             }
-        } catch (InterruptedException e) {
+        } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             logger.debug("Interrupted while waiting.", e);
         }
@@ -302,7 +310,7 @@ public abstract class AbstractBatch implements Runnable {
     }
 
     @Override
-    public synchronized void run() {
+    public void run() {
         if (System.currentTimeMillis() - lastFlush >= batchTimeout) {
             logger.trace("[{}] Flush timeout occurred", name);
             flush();
