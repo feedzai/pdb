@@ -47,8 +47,20 @@ public final class DatabaseFactory {
      * @return A reference of the specified database engine.
      * @throws DatabaseFactoryException If the class specified does not exist or its not well implemented.
      */
-    public static DatabaseEngine getConnection(Properties p) throws DatabaseFactoryException {
-        PdbProperties pdbProperties = new PdbProperties(p, true);
+    public static DatabaseEngine getConnection(final Properties p) throws DatabaseFactoryException {
+        final PdbProperties pdbProperties = new PdbProperties(p, true);
+        return getConnection(pdbProperties);
+    }
+
+    /**
+     * Gets a database connection from the specified properties.
+     *
+     * @param pdbProperties The database properties.
+     * @return A reference of the specified database engine.
+     * @throws DatabaseFactoryException If the class specified does not exist or its not well implemented.
+     * @since 2.1.9
+     */
+    public static DatabaseEngine getConnection(final PdbProperties pdbProperties) throws DatabaseFactoryException {
         AbstractDatabaseEngine de = null;
 
         final String engine = pdbProperties.getEngine();
