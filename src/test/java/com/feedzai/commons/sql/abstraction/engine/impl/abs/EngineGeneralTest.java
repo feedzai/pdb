@@ -3175,6 +3175,23 @@ public class EngineGeneralTest {
     }
 
     @Test
+    public void addColumnTest() throws DatabaseEngineException {
+        DbEntity entity =
+                dbEntity()
+                        .name("TEST")
+                        .addColumn("COL1", INT)
+                        .addColumn("COL2", BOOLEAN)
+                        .addColumn("COL3", DOUBLE)
+                        .addColumn("COL4", LONG)
+                        .addColumn("COL5", STRING)
+                        .build();
+
+        engine.addEntity(entity);
+
+        engine.executeUpdate(addColumn(table("TEST"), dbColumn().name("COL6").type(DbColumnType.INT).build()));
+    }
+
+    @Test
     public void createTableWithDefaultsTest() throws DatabaseEngineException, DatabaseFactoryException {
         DbEntity.Builder entity =
                 dbEntity()
