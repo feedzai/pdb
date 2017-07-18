@@ -15,9 +15,11 @@
  */
 package com.feedzai.commons.sql.abstraction.batch;
 
+import com.feedzai.commons.sql.abstraction.OnFailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.commons.lang.time.DurationFormatUtils;
 import org.slf4j.Logger;
@@ -110,6 +112,12 @@ public abstract class AbstractBatch implements Runnable {
      * The name of the batch.
      */
     protected String name;
+    /**
+     * The failure listener for customized behavior.
+     * <p>
+     * The default value is a NO-OP.
+     */
+    protected OnFailureListener failureListener = m -> { };
 
     /**
      * Creates a new instance of {@link AbstractBatch}.
@@ -128,6 +136,23 @@ public abstract class AbstractBatch implements Runnable {
         this.lastFlush = System.currentTimeMillis();
         this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
         this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
+    }
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with an failureListener.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
+     */
+    protected AbstractBatch(final DatabaseEngine de, String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown, final OnFailureListener failureListener) {
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
+
+        Preconditions.checkArgument(failureListener != null);
+        this.failureListener = failureListener;
     }
 
     /**

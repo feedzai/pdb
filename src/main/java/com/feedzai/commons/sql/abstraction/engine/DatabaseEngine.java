@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
+import com.feedzai.commons.sql.abstraction.OnFailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
@@ -242,6 +243,20 @@ public interface DatabaseEngine {
      * @return The batch.
      */
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName);
+
+    /**
+     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
+     * statements in the batch is reached.
+     * <p/>
+     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     *
+     * @param batchSize       The batch size.
+     * @param batchTimeout    If inserts do not occur after the specified time, a flush will be performed.
+     * @param batchName       The batch name.
+     * @param failureListener Failure listener to execute custom behavior when the batch fails to persist. It may be null.
+     * @return The batch.
+     */
+    AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final OnFailureListener failureListener);
 
     /**
      * Checks if the connection is alive.
