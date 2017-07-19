@@ -22,15 +22,12 @@ import java.util.Set;
 /**
  * Listener interface to add behavior when there is some failure executing batch
  * operations on databases (e.g. write rows to file).
- * <p>
- * Custom batch classes should extend {@link com.feedzai.commons.sql.abstraction.batch.FailureHandlerBatch}
- * to make use of this listener.
  *
  * @author Helder Martins (helder.martins@feedzai.com).
  * @since 2.1.11
  */
 @FunctionalInterface
-public interface OnFailureListener {
+public interface FailureListener {
 
     /**
      * Callback indicating that one or more rows have failed to be persisted.
