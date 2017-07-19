@@ -257,7 +257,7 @@ public interface DatabaseEngine {
      * @param batchSize       The batch size.
      * @param batchTimeout    If inserts do not occur after the specified time, a flush will be performed.
      * @param batchName       The batch name.
-     * @param failureListener Failure listener to execute custom behavior when the batch fails to persist. It may be null.
+     * @param failureListener Failure listener to execute custom behavior when the batch fails to persist.
      * @return The batch.
      */
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final Optional<FailureListener> failureListener);

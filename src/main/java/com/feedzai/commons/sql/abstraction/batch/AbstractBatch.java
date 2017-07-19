@@ -19,7 +19,6 @@ import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang.time.DurationFormatUtils;
@@ -119,14 +118,12 @@ public abstract class AbstractBatch implements Runnable {
      */
     protected String name;
     /**
-     * The failure listener for customized behavior.
-     * <p>
-     * The default value is a NO-OP.
+     * The failure listener for customized behavior when this batch fails to persist data.
      */
     protected Optional<FailureListener> failureListener = Optional.empty();
 
     /**
-     * Creates a new instance of {@link AbstractBatch} with an failureListener.
+     * Creates a new instance of {@link AbstractBatch} with a {@link FailureListener}.
      *
      * @param de                   The database engine.
      * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
