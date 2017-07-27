@@ -55,7 +55,7 @@ public class DefaultBatch extends AbstractBatch {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
      */
-    protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown, final Optional<FailureListener> listener) {
+    protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown, final FailureListener listener) {
         super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
     }
 
@@ -89,9 +89,11 @@ public class DefaultBatch extends AbstractBatch {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
      * @return The Batch.
+     *
+     * @since 2.1.11
      */
     public static DefaultBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                                      final long maxAwaitTimeShutdown, final Optional<FailureListener> listener) {
+                                      final long maxAwaitTimeShutdown, final FailureListener listener) {
         final DefaultBatch b = new DefaultBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
         b.start();
 

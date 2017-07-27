@@ -15,9 +15,11 @@
  */
 package com.feedzai.commons.sql.abstraction;
 
+import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
+
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Listener interface to add behavior when there is some failure executing batch
@@ -31,10 +33,8 @@ public interface FailureListener {
 
     /**
      * Callback indicating that one or more rows have failed to be persisted.
-     * <p>
-     * Each set entry represent a row in which the map keys are the column name.
      *
-     * @param rowsFailed Set with the row or rows that failed to be persisted.
+     * @param rowsFailed An array of {@link BatchEntry entries} with the row or rows that failed to be persisted.
      */
-    void onFailure(Set<Map<String, Serializable>> rowsFailed);
+    void onFailure(BatchEntry[] rowsFailed);
 }

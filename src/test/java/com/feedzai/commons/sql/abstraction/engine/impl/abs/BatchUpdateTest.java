@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
@@ -171,8 +172,16 @@ public class BatchUpdateTest {
     public void batchInsertFlushBySizeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
         final int numTestEntries = 5;
 
+        final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
+        MockedBatch batch = MockedBatch.create(
+                engine,
+                "batchInsertWithDBConnDownTest",
+                numTestEntries,
+                100000,
+                1000000,
+                failedEvents -> Collections.addAll(failedEntries, failedEvents)
+        );
 
         // Simulate failures in beginTransaction() for flush to fail
         new NonStrictExpectations() {{
@@ -185,7 +194,7 @@ public class BatchUpdateTest {
         }
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
+        assertEquals("Entries were added to failed", failedEntries.size(), numTestEntries);
     }
 
     /**
@@ -196,8 +205,16 @@ public class BatchUpdateTest {
         final int numTestEntries = 5;
         final long batchTimeout = 1000;     // Flush after 1 sec
 
+        final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        MockedBatch batch = MockedBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
+        MockedBatch batch = MockedBatch.create(
+                engine,
+                "batchInsertWithDBConnDownTest",
+                numTestEntries + 1,
+                batchTimeout,
+                1000000,
+                failedEvents -> Collections.addAll(failedEntries, failedEvents)
+        );
 
         // Simulate failures in beginTransaction() for flush to fail
         new NonStrictExpectations() {{
@@ -212,7 +229,7 @@ public class BatchUpdateTest {
         Thread.sleep(batchTimeout + 1000);
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", batch.getFailedEntries().size(), numTestEntries);
+        assertEquals("Entries were added to failed", failedEntries.size(), numTestEntries);
     }
 
     /**
@@ -315,7 +332,7 @@ public class BatchUpdateTest {
 
         for (int i = 0; i < 40; i++) {
             // The maxAwaitTimeShutdown parameter must be larger than the test timeout.
-            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000);
+            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000, rowsFailed -> {});
             batch.add("TEST", entry().set("COL1", 1).build());
 
             // Call `destroy` which will wait, if the data race occurs, for more than the test timeout
@@ -401,26 +418,15 @@ public class BatchUpdateTest {
          */
         static final long PRE_DESTROY_SLEEP_DURATION = 500L;
 
-        private List<BatchEntry> failedEntries = new ArrayList<>();
-
-        private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown) {
-            super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
+        private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown, FailureListener listener) {
+            super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
         }
 
         public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                                         final long maxAwaitTimeShutdown) {
-            final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
+                                         final long maxAwaitTimeShutdown, final FailureListener listener) {
+            final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
             b.start();
             return b;
-        }
-
-        @Override
-        public void onFlushFailure(BatchEntry[] entries) {
-            Collections.addAll(failedEntries, entries);
-        }
-
-        public List<BatchEntry> getFailedEntries() {
-            return failedEntries;
         }
 
         @Override
