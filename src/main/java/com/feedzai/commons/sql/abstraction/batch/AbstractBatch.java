@@ -56,6 +56,12 @@ public abstract class AbstractBatch implements Runnable {
      * The logger.
      */
     protected final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
+
+    /**
+     * Constant {@link FailureListener} representing the NO OP operation.
+     */
+    public final static FailureListener NO_OP = rowsFailed -> {};
+
     /**
      * The dev Marker.
      */
@@ -166,7 +172,7 @@ public abstract class AbstractBatch implements Runnable {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      */
     protected AbstractBatch(final DatabaseEngine de, String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
-        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, rowsFailed -> {});
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, NO_OP);
     }
 
     /**

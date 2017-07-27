@@ -24,6 +24,7 @@ import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -135,6 +136,27 @@ public class BatchUpdateTest {
         addTestEntity();
         DefaultBatch batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
 
+        // Add entries to batch, no flush needed because #inserted entries = batch size
+        for(int i = 0 ; i < numTestEntries; i++) {
+            batch.add("TEST", getTestEntry(i));
+        }
+
+        // Check entries are in DB
+        checkTestEntriesInDB(numTestEntries);
+    }
+
+    /**
+     * Checks that batch entries are inserted in the DB after the buffer fills up.
+     * <p>
+     * This test creates the necessary batch using the database engine.
+     */
+    @Test
+    public void engineBatchInsertFlushBySizeTest() throws Exception {
+        final int numTestEntries = 5;
+
+        addTestEntity();
+        engine.getProperties().setProperty(PdbProperties.MAXIMUM_TIME_BATCH_SHUTDOWN, "1000000");
+        AbstractBatch batch = engine.createBatch(numTestEntries, 100000, "batchInsertWithDBConnDownTest");
         // Add entries to batch, no flush needed because #inserted entries = batch size
         for(int i = 0 ; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
@@ -332,7 +354,7 @@ public class BatchUpdateTest {
 
         for (int i = 0; i < 40; i++) {
             // The maxAwaitTimeShutdown parameter must be larger than the test timeout.
-            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000, rowsFailed -> {});
+            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000);
             batch.add("TEST", entry().set("COL1", 1).build());
 
             // Call `destroy` which will wait, if the data race occurs, for more than the test timeout
@@ -422,9 +444,20 @@ public class BatchUpdateTest {
             super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
         }
 
+        private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown) {
+            super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
+        }
+
         public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
                                          final long maxAwaitTimeShutdown, final FailureListener listener) {
             final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
+            b.start();
+            return b;
+        }
+
+        public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
+                                         final long maxAwaitTimeShutdown) {
+            final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
             b.start();
             return b;
         }

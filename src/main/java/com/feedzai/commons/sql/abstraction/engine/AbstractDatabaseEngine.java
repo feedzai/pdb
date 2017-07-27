@@ -797,7 +797,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName) {
-        return createBatch(batchSize, batchTimeout, batchName, null);
+        return createBatch(batchSize, batchTimeout, batchName, AbstractBatch.NO_OP);
     }
 
     @Override
