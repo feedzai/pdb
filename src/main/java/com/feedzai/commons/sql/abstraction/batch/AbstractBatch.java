@@ -15,18 +15,27 @@
  */
 package com.feedzai.commons.sql.abstraction.batch;
 
+import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +56,12 @@ public abstract class AbstractBatch implements Runnable {
      * The logger.
      */
     protected final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
+
+    /**
+     * Constant {@link FailureListener} representing the NO OP operation.
+     */
+    public final static FailureListener NO_OP = rowsFailed -> {};
+
     /**
      * The dev Marker.
      */
@@ -110,6 +125,42 @@ public abstract class AbstractBatch implements Runnable {
      * The name of the batch.
      */
     protected String name;
+    /**
+     * The failure listener for customized behavior when this batch fails to persist data.
+     */
+    protected Optional<FailureListener> failureListener = Optional.empty();
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with a {@link FailureListener}.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
+     *
+     * @since 2.1.11
+     */
+    protected AbstractBatch(
+            final DatabaseEngine de,
+            final String name,
+            final int batchSize,
+            final long batchTimeout,
+            final long maxAwaitTimeShutdown,
+            final FailureListener failureListener) {
+        Preconditions.checkNotNull(de, "The provided database engine is null.");
+        Preconditions.checkNotNull(failureListener, "The provided failure listener is null");
+
+        this.de = de;
+        this.batchSize = batchSize;
+        this.batch = batchSize;
+        this.batchTimeout = batchTimeout;
+        this.lastFlush = System.currentTimeMillis();
+        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
+        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
+        this.failureListener = Optional.of(failureListener);
+    }
 
     /**
      * Creates a new instance of {@link AbstractBatch}.
@@ -121,13 +172,7 @@ public abstract class AbstractBatch implements Runnable {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      */
     protected AbstractBatch(final DatabaseEngine de, String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
-        this.de = de;
-        this.batchSize = batchSize;
-        this.batch = batchSize;
-        this.batchTimeout = batchTimeout;
-        this.lastFlush = System.currentTimeMillis();
-        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
-        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, NO_OP);
     }
 
     /**
@@ -140,6 +185,7 @@ public abstract class AbstractBatch implements Runnable {
     protected AbstractBatch(final DatabaseEngine de, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
         this(de, null, batchSize, batchTimeout, maxAwaitTimeShutdown);
     }
+
 
     /**
      * Starts the timer task.
@@ -305,8 +351,12 @@ public abstract class AbstractBatch implements Runnable {
      *
      * @param entries The entries that are pending to be persisted.
      */
-    public abstract void onFlushFailure(BatchEntry[] entries); {
-        // NO-OP.
+    public void onFlushFailure(BatchEntry[] entries) {
+        if (!this.failureListener.isPresent()) {
+            return;
+        }
+
+        this.failureListener.get().onFailure(entries);
     }
 
     @Override

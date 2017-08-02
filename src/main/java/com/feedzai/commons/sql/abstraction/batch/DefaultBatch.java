@@ -15,7 +15,10 @@
  */
 package com.feedzai.commons.sql.abstraction.batch;
 
+import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+
+import java.util.Optional;
 
 /**
  * The default batch implementation.
@@ -32,19 +35,28 @@ public class DefaultBatch extends AbstractBatch {
     /**
      * Creates a new instance of {@link DefaultBatch}.
      *
-     * @param de           The database engine reference.
-     * @param name         The batch name.
-     * @param batchSize    The batch size.
-     * @param batchTimeout The timeout.
+     * @param de                   The database engine reference.
+     * @param name                 The batch name.
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The timeout.
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      */
-    protected DefaultBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown) {
+    protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
         super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
     }
 
-    @Override
-    public void onFlushFailure(BatchEntry[] entries) {
-        // ignored
+    /**
+     * Creates a new instance of {@link DefaultBatch}.
+     *
+     * @param de                   The database engine reference.
+     * @param name                 The batch name.
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
+     */
+    protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown, final FailureListener listener) {
+        super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
     }
 
     /**
@@ -61,6 +73,28 @@ public class DefaultBatch extends AbstractBatch {
     public static DefaultBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
                                       final long maxAwaitTimeShutdown) {
         final DefaultBatch b = new DefaultBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
+        b.start();
+
+        return b;
+    }
+
+    /**
+     * <p>Creates a new instance of {@link DefaultBatch} with a {@link FailureListener}.</p>
+     * <p>Starts the timertask.</p>
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name.
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
+     * @return The Batch.
+     *
+     * @since 2.1.11
+     */
+    public static DefaultBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
+                                      final long maxAwaitTimeShutdown, final FailureListener listener) {
+        final DefaultBatch b = new DefaultBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
         b.start();
 
         return b;

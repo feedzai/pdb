@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
+import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.*;
@@ -796,7 +797,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName) {
-        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown());
+        return createBatch(batchSize, batchTimeout, batchName, AbstractBatch.NO_OP);
+    }
+
+    @Override
+    public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, final FailureListener failureListener) {
+        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), failureListener);
     }
 
     /**
