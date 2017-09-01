@@ -59,5 +59,5 @@ public enum DbColumnType {
     /**
      * A type that is not mapped.
      */
-    UNMAPPED;
+    UNMAPPED
 }

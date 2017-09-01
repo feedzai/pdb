@@ -60,7 +60,7 @@ public abstract class Expression implements Serializable {
     /**
      * The list of joins, if applicable.
      */
-    protected final List<Join> joins = new ArrayList<Join>();
+    protected final List<Join> joins = new ArrayList<>();
     /**
      * The SQL Server's no lock keyword.
      */

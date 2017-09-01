@@ -18,7 +18,12 @@ package com.feedzai.commons.sql.abstraction.engine;
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
+import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -38,12 +43,34 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
-import java.io.*;
-import java.sql.*;
-import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_USERNAME;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SECRET_LOCATION;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 
@@ -101,7 +128,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Map of prepared statements.
      */
-    protected final Map<String, PreparedStatementCapsule> stmts = new HashMap<String, PreparedStatementCapsule>();
+    protected final Map<String, PreparedStatementCapsule> stmts = new HashMap<>();
     /**
      * The configuration.
      */
@@ -109,7 +136,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * The dialect.
      */
-    protected final Dialect diaclect;
+    protected final Dialect dialect;
     /**
      * The reusable initial byte buffer for blobs.
      */
@@ -139,7 +166,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         logger = LoggerFactory.getLogger(this.getClass());
         notificationLogger = LoggerFactory.getLogger("admin-notifications");
 
-        this.diaclect = dialect;
+        this.dialect = dialect;
 
         final String jdbc = this.properties.getJdbc();
 
@@ -190,8 +217,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws Exception If connection is not possible, or failed to decrypt username/password if encryption was provided.
      */
     protected void connect() throws Exception {
-        String username = this.properties.getProperty(USERNAME);
-        String password = this.properties.getProperty(PASSWORD);
+        String username = this.properties.getUsername();
+        String password = this.properties.getPassword();
 
         if (this.properties.isEncryptedPassword() || this.properties.isEncryptedUsername()) {
             String privateKey = getPrivateKey();
@@ -289,7 +316,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                         logger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
                         notificationLogger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
                     } else {
-                        logger.debug("Retrying ({}/{}) in {} seconds...", new Object[]{retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval)});
+                        logger.debug("Retrying ({}/{}) in {} seconds...", retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
                     }
                 } else {
                     logger.debug("Retry number {} in {} seconds...", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
@@ -328,7 +355,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     private synchronized void recover() throws DatabaseEngineException, NameAlreadyExistsException {
         // Recover entities.
-        final Map<String, MappedEntity> niw = new HashMap<String, MappedEntity>(entities);
+        final Map<String, MappedEntity> niw = new HashMap<>(entities);
         // clear the entities
         entities.clear();
         for (final MappedEntity me : niw.values()) {
@@ -341,7 +368,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         // Recover prepared statements.
-        final Map<String, PreparedStatementCapsule> niwStmts = new HashMap<String, PreparedStatementCapsule>(stmts);
+        final Map<String, PreparedStatementCapsule> niwStmts = new HashMap<>(stmts);
         for (Map.Entry<String, PreparedStatementCapsule> e : niwStmts.entrySet()) {
             createPreparedStatement(e.getKey(), e.getValue().query, e.getValue().timeout, true);
         }
@@ -405,7 +432,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Starts a transaction. Doing this will set auto commit to false ({@link Connection#getAutoCommit()}).
      *
-     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     * @throws DatabaseEngineRuntimeException If something goes wrong while beginning transaction.
      */
     @Override
     public synchronized void beginTransaction() throws DatabaseEngineRuntimeException {
@@ -500,8 +527,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * </p>
      *
      * @param entity The entity to update.
-     * @throws com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException
-     * @since 12.1.0
+     * @throws DatabaseEngineException If something goes wrong while updating the entity.
+     * @since 2.0.0
      */
     @Override
     public synchronized void updateEntity(DbEntity entity) throws DatabaseEngineException {
@@ -516,7 +543,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             } else {
                 validateEntity(entity);
                 dropFks(entity.getName());
-                List<String> toRemove = new ArrayList<String>();
+                List<String> toRemove = new ArrayList<>();
                 for (String dbColumn : tableMetadata.keySet()) {
                     if (!entity.containsColumn(dbColumn)) {
                         toRemove.add(dbColumn);
@@ -526,10 +553,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     if (properties.allowColumnDrop()) {
                         dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
                     } else {
-                        logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.", StringUtils.join(toRemove, ","), entity.getName());
+                        logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.",
+                            StringUtils.join(toRemove, ","), entity.getName());
                     }
                 }
-                List<DbColumn> columns = new ArrayList<DbColumn>();
+                List<DbColumn> columns = new ArrayList<>();
                 for (DbColumn localColumn : entity.getColumns()) {
                     if (!tableMetadata.containsKey(localColumn.getName())) {
                         columns.add(localColumn);
@@ -588,7 +616,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * Drops an entity.
      *
      * @param entity The entity name.
-     * @throws com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException
+     * @throws DatabaseEngineException If something goes wrong while dropping the entity.
      */
     @Override
     public synchronized void dropEntity(String entity) throws DatabaseEngineException {
@@ -666,7 +694,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Commits the current transaction. You should only call this method if you've previously called {@link AbstractDatabaseEngine#beginTransaction()}.
      *
-     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     * @throws DatabaseEngineRuntimeException If something goes wrong while persisting data.
      */
     @Override
     public synchronized void commit() throws DatabaseEngineRuntimeException {
@@ -778,7 +806,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public Dialect getDialect() {
-        return diaclect;
+        return dialect;
     }
 
     /**
@@ -1100,7 +1128,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entity  The entity.
      * @param columns The column name to drop.
      * @throws DatabaseEngineException If something goes wrong dropping the sequences.
-     * @since 12.1.0
+     * @since 2.0.0
      */
     protected abstract void dropColumn(final DbEntity entity, final String... columns) throws DatabaseEngineException;
 
@@ -1109,8 +1137,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      *
      * @param entity  The entity that represents the table.
      * @param columns The db column to add.
-     * @throws DatabaseEngineException
-     * @since 12.1.0
+     * @throws DatabaseEngineException If something goes wrong adding columns.
+     * @since 2.0.0
      */
     protected abstract void addColumn(final DbEntity entity, final DbColumn... columns) throws DatabaseEngineException;
 
@@ -1153,7 +1181,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * Drops this table foreign keys.
      *
      * @param table The table name.
-     * @throws Exception
+     * @throws DatabaseEngineException If something goes wrong dropping the FKs.
      */
     protected void dropFks(final String table) throws DatabaseEngineException {
         String schema = StringUtils.stripToNull(properties.getSchema());
@@ -1161,7 +1189,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             getConnection();
             rs = conn.getMetaData().getImportedKeys(null, schema, table);
-            Set<String> fks = new HashSet<String>();
+            Set<String> fks = new HashSet<>();
             while (rs.next()) {
                 fks.add(rs.getString("FK_NAME"));
             }
@@ -1194,7 +1222,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized Map<String, DbEntityType> getEntities() throws DatabaseEngineException {
-        final Map<String, DbEntityType> entities = new LinkedHashMap<String, DbEntityType>();
+        final Map<String, DbEntityType> entities = new LinkedHashMap<>();
         ResultSet rs = null;
 
         try {
@@ -1327,7 +1355,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public Map<String, DbColumnType> getQueryMetadata(String query) throws DatabaseEngineException {
-        final Map<String, DbColumnType> metaMap = new LinkedHashMap<String, DbColumnType>();
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
         ResultSet rs = null;
         Statement stmt = null;
 

@@ -30,9 +30,23 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -45,7 +59,7 @@ public class SqlServerEngineGeneralTest {
     protected Properties properties;
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("sqlserver");
     }
 
@@ -71,88 +85,100 @@ public class SqlServerEngineGeneralTest {
     @Test
     public void selectFromWithNoLockTest() throws DatabaseEngineException {
         DbEntity entity =
-                dbEntity()
-                        .name("TEST")
-                        .addColumn("COL1", INT)
-                        .addColumn("COL2", BOOLEAN)
-                        .addColumn("COL3", DOUBLE)
-                        .addColumn("COL4", LONG)
-                        .addColumn("COL5", STRING).build();
+            dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING).build();
 
         engine.addEntity(entity);
 
         engine.query(
-                select(all()).from(table("TEST").withNoLock()));
+            select(all()).from(table("TEST").withNoLock()));
     }
 
     @Test
     public void selectFromWithNoLockQWithAliasTest() throws DatabaseEngineException {
         DbEntity entity =
-                dbEntity()
-                        .name("TEST")
-                        .addColumn("COL1", INT)
-                        .addColumn("COL2", BOOLEAN)
-                        .addColumn("COL3", DOUBLE)
-                        .addColumn("COL4", LONG)
-                        .addColumn("COL5", STRING).build();
+            dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING).build();
 
         engine.addEntity(entity);
 
         engine.query(
-                select(all()).from(table("TEST").alias("ALIAS").withNoLock()));
+            select(all()).from(table("TEST").alias("ALIAS").withNoLock()));
     }
 
     @Test
     public void joinsWithNoLocksTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
-                .name("USER")
-                .addColumn("COL1", INT, true)
-                .pkFields("COL1").build();
+            .name("USER")
+            .addColumn("COL1", INT, true)
+            .pkFields("COL1").build();
 
         engine.addEntity(entity);
 
         entity = dbEntity()
-                .name("ROLE")
-                .addColumn("COL1", INT, true)
-                .pkFields("COL1").build();
+            .name("ROLE")
+            .addColumn("COL1", INT, true)
+            .pkFields("COL1").build();
 
         engine.addEntity(entity);
 
         entity = dbEntity()
-                .name("USER_ROLE")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", INT)
-                .addFk(
-                        dbFk()
-                                .addColumn("COL1")
-                                .foreignTable("USER")
-                                .addForeignColumn("COL1")
-                                .build(),
-                        dbFk()
-                                .addColumn("COL2")
-                                .foreignTable("ROLE")
-                                .addForeignColumn("COL1")
-                                .build()
-                )
-                .pkFields("COL1", "COL2").build();
+            .name("USER_ROLE")
+            .addColumn("COL1", INT)
+            .addColumn("COL2", INT)
+            .addFk(
+                dbFk()
+                    .addColumn("COL1")
+                    .foreignTable("USER")
+                    .addForeignColumn("COL1")
+                    .build(),
+                dbFk()
+                    .addColumn("COL2")
+                    .foreignTable("ROLE")
+                    .addForeignColumn("COL1")
+                    .build()
+            )
+            .pkFields("COL1", "COL2").build();
 
         engine.addEntity(entity);
 
         engine.query(
-                select(all()).from(
-                        table("USER").alias("a").withNoLock().innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))));
+            select(all()).from(
+                table("USER").alias("a").withNoLock()
+                    .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
+            )
+        );
 
         engine.query(
-                select(all()).from(
-                        table("USER").alias("a").withNoLock().innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1"))).innerJoin(table("ROLE").alias("c"), eq(column("b", "COL2"), column("c", "COL1")))));
+            select(all()).from(
+                table("USER").alias("a").withNoLock()
+                    .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
+                    .innerJoin(table("ROLE").alias("c"), eq(column("b", "COL2"), column("c", "COL1")))
+            )
+        );
 
         engine.query(
-                select(all()).from(
-                        table("USER").alias("a").withNoLock().rightOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))));
+            select(all()).from(
+                table("USER").alias("a").withNoLock()
+                    .rightOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
+            )
+        );
 
         engine.query(
-                select(all()).from(
-                        table("USER").alias("a").withNoLock().leftOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))));
-
+            select(all()).from(
+                table("USER").alias("a").withNoLock()
+                    .leftOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
+            )
+        );
     }
 }

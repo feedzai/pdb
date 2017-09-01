@@ -78,7 +78,7 @@ public class LongOverflowTest {
     /**
      * A long that was causing an overflow prior to the fix.
      */
-    private static final long ERROR_VALUE = 876534351009985545l;
+    private static final long ERROR_VALUE = 876534351009985545L;
 
     /**
      * A double with no decimal digits.
@@ -100,7 +100,7 @@ public class LongOverflowTest {
      * @return  The configurations under which the test runs.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 

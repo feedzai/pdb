@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.feedzai.commons.sql.abstraction.engine.impl.postgresql;
 
 
@@ -43,7 +42,7 @@ public class PostgreSqlEngineSchemaTest extends AbstractEngineSchemaTest {
 
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("postgresql");
     }
 

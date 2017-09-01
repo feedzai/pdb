@@ -18,7 +18,13 @@ package com.feedzai.commons.sql.abstraction.engine.impl.h2;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import mockit.Mock;
@@ -32,10 +38,18 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -48,7 +62,7 @@ public class NotifyOnFailureTest {
      * Run only for h2.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("h2");
     }
 
@@ -103,7 +117,7 @@ public class NotifyOnFailureTest {
         assertEquals("", 5, failureResults.length);
         for (int i = 0; i < 5; i++) {
             assertEquals("table name ok?", "TEST", failureResults[i].getTableName());
-            assertEquals("COL1 value ok?", new Integer(i), failureResults[i].getEntityEntry().get("COL1"));
+            assertEquals("COL1 value ok?", i, failureResults[i].getEntityEntry().get("COL1"));
         }
 
     }

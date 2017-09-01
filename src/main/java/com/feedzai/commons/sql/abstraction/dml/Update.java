@@ -36,7 +36,7 @@ public class Update extends Expression {
     /**
      * The set expression.
      */
-    private final List<Expression> columns = new ArrayList<Expression>();
+    private final List<Expression> columns = new ArrayList<>();
     /**
      * The where clause.
      */

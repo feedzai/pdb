@@ -128,7 +128,7 @@ public class EngineGeneralTest {
     protected Properties properties;
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -356,7 +356,7 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table("TEST")));
 
         assertTrue("COL1 exists", query.get(0).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 2, (int) query.get(0).get("COL1").toInt());
+        assertEquals("COL1 ok?", 2, (int) query.get(0).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(0).containsKey("COL2"));
         assertFalse("COL2 ok?", query.get(0).get("COL2").toBoolean());
@@ -392,7 +392,7 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table("TEST")));
 
         assertTrue("COL1 exists", query.get(0).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 2, (int) query.get(0).get("COL1").toInt());
+        assertEquals("COL1 ok?", 2, (int) query.get(0).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(0).containsKey("COL2"));
         assertFalse("COL2 ok?", query.get(0).get("COL2").toBoolean());
@@ -437,7 +437,7 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table("TEST")));
 
         assertTrue("COL1 exists", query.get(0).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 1, (int) query.get(0).get("COL1").toInt());
+        assertEquals("COL1 ok?", 1, (int) query.get(0).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(0).containsKey("COL2"));
         assertFalse("COL2 ok?", query.get(0).get("COL2").toBoolean());
@@ -466,7 +466,7 @@ public class EngineGeneralTest {
         res = it.next();
         assertNotNull("result is not null", res);
         assertTrue("COL1 exists", res.containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 1, (int) res.get("COL1").toInt());
+        assertEquals("COL1 ok?", 1, (int) res.get("COL1").toInt());
 
         assertTrue("COL2 exists", res.containsKey("COL2"));
         assertFalse("COL2 ok?", res.get("COL2").toBoolean());
@@ -545,7 +545,7 @@ public class EngineGeneralTest {
 
         // 1st
         assertTrue("COL1 exists", query.get(0).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 2, (int) query.get(0).get("COL1").toInt());
+        assertEquals("COL1 ok?", 2, (int) query.get(0).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(0).containsKey("COL2"));
         assertFalse("COL2 ok?", query.get(0).get("COL2").toBoolean());
@@ -562,7 +562,7 @@ public class EngineGeneralTest {
         // 2nd
 
         assertTrue("COL1 exists", query.get(1).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 3, (int) query.get(1).get("COL1").toInt());
+        assertEquals("COL1 ok?", 3, (int) query.get(1).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(1).containsKey("COL2"));
         assertTrue("COL2 ok?", query.get(1).get("COL2").toBoolean());
@@ -608,7 +608,7 @@ public class EngineGeneralTest {
 
         // 1st
         assertTrue("COL1 exists", query.get(0).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 2, (int) query.get(0).get("COL1").toInt());
+        assertEquals("COL1 ok?", 2, (int) query.get(0).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(0).containsKey("COL2"));
         assertFalse("COL2 ok?", query.get(0).get("COL2").toBoolean());
@@ -625,7 +625,7 @@ public class EngineGeneralTest {
         // 2nd
 
         assertTrue("COL1 exists", query.get(1).containsKey("COL1"));
-        assertEquals("COL1 ok?", (int) 3, (int) query.get(1).get("COL1").toInt());
+        assertEquals("COL1 ok?", 3, (int) query.get(1).get("COL1").toInt());
 
         assertTrue("COL2 exists", query.get(1).containsKey("COL2"));
         assertTrue("COL2 ok?", query.get(1).get("COL2").toBoolean());
@@ -1900,7 +1900,7 @@ public class EngineGeneralTest {
         assertEquals("result ok?", 1000, (long) query.get(0).get("timestamp").toLong());
         assertEquals("result ok?", 1, (int) query.get(0).get("first").toInt());
         assertEquals("result ok?", 2L, (long) query.get(0).get("second").toLong());
-        assertEquals("result ok?", 3.0, (double) query.get(0).get("third").toDouble(), 0.0);
+        assertEquals("result ok?", 3.0, query.get(0).get("third").toDouble(), 0.0);
     }
 
     @Test
@@ -2060,7 +2060,7 @@ public class EngineGeneralTest {
 
         engine.addEntity(entity);
 
-        final Map<String, DbColumnType> metaMap = new LinkedHashMap<String, DbColumnType>();
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
         metaMap.put("COL1", INT);
         metaMap.put("COL2", BOOLEAN);
         metaMap.put("COL3", DOUBLE);
@@ -2191,7 +2191,7 @@ public class EngineGeneralTest {
 
         List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")));
         assertEquals("CENINHAS", result.get(0).get("COL1").toString());
-        assertArrayEquals(bb, result.get(0).get("COL2").<byte[]>toBlob());
+        assertArrayEquals(bb, result.get(0).get("COL2").toBlob());
 
 
         Update upd = update(table("TEST")).set(eq(column("COL2"), lit("?"))).where(eq(column("COL1"), k("CENINHAS")));
@@ -2208,7 +2208,7 @@ public class EngineGeneralTest {
 
         result = engine.query(select(all()).from(table("TEST")));
         assertEquals("CENINHAS", result.get(0).get("COL1").toString());
-        assertArrayEquals(bb2, result.get(0).get("COL2").<byte[]>toBlob());
+        assertArrayEquals(bb2, result.get(0).get("COL2").toBlob());
 
     }
 
@@ -2222,7 +2222,7 @@ public class EngineGeneralTest {
 
         engine.addEntity(entity);
 
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 4000; i++) {
             sb.append("a");
         }
@@ -2278,7 +2278,7 @@ public class EngineGeneralTest {
         assertEquals(LONG, test.get("COL4"));
         assertEquals(STRING, test.get("COL5"));
 
-        EntityEntry entry = entry().set("COL1", 1).set("COL2", true).set("USER", 2d).set("COL4", 1l).set("COL5", "c")
+        EntityEntry entry = entry().set("COL1", 1).set("COL2", true).set("USER", 2d).set("COL4", 1L).set("COL5", "c")
                 .build();
         engine.persist("TEST", entry);
 
@@ -2288,7 +2288,7 @@ public class EngineGeneralTest {
                 .build());
 
         // as the fields were removed the entity mapping ignores the fields.
-        entry = entry().set("COL1", 2).set("COL2", true).set("COL3", 2d).set("COL4", 1l).set("COL5", "c")
+        entry = entry().set("COL1", 2).set("COL2", true).set("COL3", 2d).set("COL4", 1L).set("COL5", "c")
                 .build();
         engine.persist("TEST", entry);
 
@@ -2302,7 +2302,7 @@ public class EngineGeneralTest {
         engine.updateEntity(entity
                 .build());
 
-        entry = entry().set("COL1", 3).set("COL2", true).set("USER", 2d).set("COL4", 1l).set("COL5", "c").set("COL6", new BlobTest(1, "")).set("COL7", 2d)
+        entry = entry().set("COL1", 3).set("COL2", true).set("USER", 2d).set("COL4", 1L).set("COL5", "c").set("COL6", new BlobTest(1, "")).set("COL7", 2d)
                 .build();
         engine.persist("TEST", entry);
 
@@ -2341,7 +2341,7 @@ public class EngineGeneralTest {
             }
         }, true);
 
-        EntityEntry entry = entry().set("COL1", 1).set("COL2", true).set("USER", 2d).set("COL4", 1l).set("COL5", "c")
+        EntityEntry entry = entry().set("COL1", 1).set("COL2", true).set("USER", 2d).set("COL4", 1L).set("COL5", "c")
                 .build();
         engine2.persist("TEST", entry);
 
@@ -2351,7 +2351,7 @@ public class EngineGeneralTest {
 
         // as the fields were removed the entity mapping ignores the fields.
         System.out.println("> " + engine2.getMetadata("TEST"));
-        entry = entry().set("COL1", 2).set("COL2", true).set("COL3", 2d).set("COL4", 1l).set("COL5", "c")
+        entry = entry().set("COL1", 2).set("COL2", true).set("COL3", 2d).set("COL4", 1L).set("COL5", "c")
                 .build();
         engine2.persist("TEST", entry);
 
@@ -2364,7 +2364,7 @@ public class EngineGeneralTest {
         entity.addColumn("COL6", BLOB).addColumn("COL7", DOUBLE);
         engine2.updateEntity(entity.build());
 
-        entry = entry().set("COL1", 3).set("COL2", true).set("USER", 2d).set("COL4", 1l).set("COL5", "c").set("COL6", new BlobTest(1, "")).set("COL7", 2d)
+        entry = entry().set("COL1", 3).set("COL2", true).set("USER", 2d).set("COL4", 1L).set("COL5", "c").set("COL6", new BlobTest(1, "")).set("COL7", 2d)
                 .build();
         engine2.persist("TEST", entry);
 
@@ -2405,7 +2405,7 @@ public class EngineGeneralTest {
                 .set("COL1", 1)
                 .set("COL2", true)
                 .set("COL3", 1d)
-                .set("COL4", 1l)
+                .set("COL4", 1L)
                 .set("COL5", "1")
                 .build();
 
@@ -2413,7 +2413,7 @@ public class EngineGeneralTest {
 
         try {
             schemaNoneEngine.persist(entity.getName(), entry);
-            fail("Should thrown an exception if trying to persist an entity before calling addEntity/updateEntity a firs time");
+            fail("Should throw an exception if trying to persist an entity before calling addEntity/updateEntity a firs time");
         } catch (DatabaseEngineException e) {
             assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance", e.getCause().getMessage().contains("Unknown entity"));
             threwExpected = true;
@@ -2435,8 +2435,8 @@ public class EngineGeneralTest {
 
         assertEquals("COL1 was successfully inserted", 1, resultEntry.get("COL1").toInt().intValue());
         assertEquals("COL2 was successfully inserted", true, resultEntry.get("COL2").toBoolean());
-        assertEquals("COL3 was successfully inserted", 1d, resultEntry.get("COL3").toDouble().doubleValue(), 0);
-        assertEquals("COL4 was successfully inserted", 1l, resultEntry.get("COL4").toLong().longValue());
+        assertEquals("COL3 was successfully inserted", 1.0, resultEntry.get("COL3").toDouble(), 0);
+        assertEquals("COL4 was successfully inserted", 1L, resultEntry.get("COL4").toLong().longValue());
         assertEquals("COL5 was successfully inserted", "1", resultEntry.get("COL5").toString());
     }
 
@@ -2677,7 +2677,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void testPersistOverideAutoIncrement() throws Exception {
+    public void testPersistOverrideAutoIncrement() throws Exception {
         DbEntity entity = dbEntity()
                 .name("MYTEST")
                 .addColumn("COL1", INT, true)
@@ -2719,7 +2719,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void testPersistOverideAutoIncrement2() throws Exception {
+    public void testPersistOverrideAutoIncrement2() throws Exception {
         String APP_ID = "APP_ID";
         DbColumn APP_ID_COLUMN = new DbColumn.Builder().name(APP_ID).type(INT).build();
         String STM_TABLE = "FDZ_APP_STREAM";
@@ -2767,7 +2767,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void testPersistOverideAutoIncrement3() throws Exception {
+    public void testPersistOverrideAutoIncrement3() throws Exception {
         DbEntity entity = dbEntity()
                 .name("MYTEST")
                 .addColumn("COL1", INT, true)
@@ -2840,7 +2840,7 @@ public class EngineGeneralTest {
         engine.executeUpdate(rename);
 
         // Check whether the schema matches
-        final Map<String, DbColumnType> metaMap = new LinkedHashMap<String, DbColumnType>();
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
         metaMap.put("timestamp", INT);
         assertEquals("Metamap ok?", metaMap, engine.getMetadata(newName));
 
@@ -3262,8 +3262,8 @@ public class EngineGeneralTest {
         assertEquals("Check size of records", 1, test.size());
         Map<String, ResultColumn> record = test.get(0);
         assertEquals("Check COL1", 10, record.get("COL1").toInt().intValue());
-        assertEquals("Check COL2", false, record.get("COL2").toBoolean().booleanValue());
-        assertEquals("Check COL3", 2.2d, record.get("COL3").toDouble().doubleValue(), 0);
+        assertEquals("Check COL2", false, record.get("COL2").toBoolean());
+        assertEquals("Check COL3", 2.2d, record.get("COL3").toDouble(), 0);
         assertEquals("Check COL4", 3L, record.get("COL4").toLong().longValue());
 
 
@@ -3284,11 +3284,11 @@ public class EngineGeneralTest {
         assertEquals("Check size of records", 1, test.size());
         record = test.get(0);
         assertEquals("Check COL1", 10, record.get("COL1").toInt().intValue());
-        assertEquals("Check COL2", false, record.get("COL2").toBoolean().booleanValue());
-        assertEquals("Check COL3", 2.2d, record.get("COL3").toDouble().doubleValue(), 1e-9);
+        assertEquals("Check COL2", false, record.get("COL2").toBoolean());
+        assertEquals("Check COL3", 2.2d, record.get("COL3").toDouble(), 1e-9);
         assertEquals("Check COL4", 3L, record.get("COL4").toLong().longValue());
         assertEquals("Check COL5", "mantorras", record.get("COL5").toString());
-        assertEquals("Check COL6", true, record.get("COL6").toBoolean().booleanValue());
+        assertEquals("Check COL6", true, record.get("COL6").toBoolean());
         assertEquals("Check COL7", 7, record.get("COL7").toInt().intValue());
         connection2.close();
     }
@@ -3311,7 +3311,7 @@ public class EngineGeneralTest {
 
         assertEquals("", 1, row.get("COL1").toInt().intValue());
         assertFalse("", row.get("COL2").toBoolean());
-        assertEquals("", 2.2d, row.get("COL3").toDouble().doubleValue(), 0D);
+        assertEquals("", 2.2d, row.get("COL3").toDouble(), 0D);
         assertEquals("", 3L, row.get("COL4").toLong().longValue());
     }
 

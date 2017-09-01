@@ -51,7 +51,7 @@ public interface DatabaseEngine {
     /**
      * Starts a transaction. Doing this will set auto commit to false ({@link Connection#getAutoCommit()}).
      *
-     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     * @throws DatabaseEngineRuntimeException If something goes wrong while beginning transaction.
      */
     void beginTransaction() throws DatabaseEngineRuntimeException;
 
@@ -70,7 +70,7 @@ public interface DatabaseEngine {
      * data into the entities.
      *
      * @param entity The entity to load into the connection.
-     * @throws DatabaseEngineException If something goes wront while loading the entity.
+     * @throws DatabaseEngineException If something goes wrong while loading the entity.
      * @implSpec The invocation of this method multiple times is allowed. If the entity already exists, the invocation is a no-op.
      * @implNote The implementation is similar to the {@link #addEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity) addEntity} that configured with
      * {@link com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties#SCHEMA_POLICY SCHEMA_POLICY} of none.
@@ -94,8 +94,8 @@ public interface DatabaseEngine {
      * </p>
      *
      * @param entity The entity to update.
-     * @throws DatabaseEngineException
-     * @since 12.1.0
+     * @throws DatabaseEngineException If something goes wrong while updating the entity.
+     * @since 2.0.0
      */
     void updateEntity(DbEntity entity) throws DatabaseEngineException;
 
@@ -119,7 +119,7 @@ public interface DatabaseEngine {
      * Drops an entity.
      *
      * @param entity The entity name.
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If something goes wrong while dropping the entity.
      */
     void dropEntity(final String entity) throws DatabaseEngineException;
 
@@ -168,7 +168,7 @@ public interface DatabaseEngine {
      * Commits the current transaction. You should only call this method if you've previously called
      * {@link DatabaseEngine#beginTransaction()}.
      *
-     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     * @throws DatabaseEngineRuntimeException If something goes wrong while committing transaction.
      */
     void commit() throws DatabaseEngineRuntimeException;
 
@@ -554,7 +554,7 @@ public interface DatabaseEngine {
      *
      * @param name The name of the prepared statement.
      * @return An iterator for the results of the prepared statement of the given name.
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If a database access error occurs.
      */
     ResultIterator getPSIterator(final String name) throws DatabaseEngineException;
 
@@ -564,7 +564,7 @@ public interface DatabaseEngine {
      * @param name      The name of the prepared statement.
      * @param fetchSize The number of rows to fetch each time.
      * @return An iterator for the results of the prepared statement of the given name.
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If a database access error occurs.
      */
     ResultIterator getPSIterator(final String name, final int fetchSize) throws DatabaseEngineException;
 

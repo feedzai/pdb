@@ -404,7 +404,7 @@ try {
 |:---|:---|
 |[beginTransaction]|Starts a transaction.|
 |[addBatch]|Adds an entry to the current batch.|
-|[flush]|Executes all entries registred in the batch.|
+|[flush]|Executes all entries registered in the batch.|
 |[commit]|Commits the current transaction transaction.|
 |[isTransactionActive]|Tests if the transaction is active.|
 |[rollback]|Rolls back the transaction.|

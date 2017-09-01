@@ -15,7 +15,9 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
+
+import java.util.Objects;
 
 /**
  * A database configuration to be used in PDB with: engine, jdbc, username and password.
@@ -70,7 +72,7 @@ public final class DatabaseConfiguration {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("engine", engine)
                 .add("jdbc", jdbc)
                 .add("username", username)
@@ -82,7 +84,7 @@ public final class DatabaseConfiguration {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(engine, jdbc, username, password, vendor);
+        return Objects.hash(engine, jdbc, username, password, vendor);
     }
 
     @Override
@@ -94,7 +96,11 @@ public final class DatabaseConfiguration {
             return false;
         }
         final DatabaseConfiguration other = (DatabaseConfiguration) obj;
-        return Objects.equal(this.engine, other.engine) && Objects.equal(this.jdbc, other.jdbc) && Objects.equal(this.username, other.username) && Objects.equal(this.password, other.password) && Objects.equal(this.vendor, other.vendor);
+        return Objects.equals(this.engine, other.engine)
+            && Objects.equals(this.jdbc, other.jdbc)
+            && Objects.equals(this.username, other.username)
+            && Objects.equals(this.password, other.password)
+            && Objects.equals(this.vendor, other.vendor);
     }
 
     /**

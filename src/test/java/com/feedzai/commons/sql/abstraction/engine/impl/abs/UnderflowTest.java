@@ -19,7 +19,10 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -29,10 +32,19 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -51,7 +63,7 @@ import static org.junit.Assert.assertNotNull;
 public class UnderflowTest {
 
     /*
-     * Test table properties, a table with a PK and two double colums.
+     * Test table properties, a table with a PK and two double columns.
      */
     private static String TEST_TABLE = "TEST_TBL";
     private static final String PK_COL = "PK_COL";
@@ -74,7 +86,7 @@ public class UnderflowTest {
      * @return  The configurations under which the test runs.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -124,11 +136,10 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
-        String escapeChar = dbEngine.escapeCharacter();
-        String insertQuery =
-            "INSERT INTO " + quotize("TEST_TBL")
-                    + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
-                    + "VALUES (?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec)
+            + "(" + quotize(PK_COL, ec) + ", " + quotize(ERROR_COL, ec) + ", " + quotize(NORMAL_COL, ec) + ") VALUES (?,?,?)";
+
         dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
@@ -144,11 +155,10 @@ public class UnderflowTest {
     @Test
     public void testUnderflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
-        String escapeChar = dbEngine.escapeCharacter();
-        String insertQuery =
-                "INSERT INTO " + quotize("TEST_TBL")
-                        + "(" + quotize(PK_COL, escapeChar) + "," + quotize(ERROR_COL, escapeChar) + "," + quotize(NORMAL_COL, escapeChar) +") "
-                        + "VALUES (?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec)
+            + "(" + quotize(PK_COL, ec) + ", " + quotize(ERROR_COL, ec) + ", " + quotize(NORMAL_COL, ec) + ") VALUES (?,?,?)";
+
         dbEngine.beginTransaction();
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);

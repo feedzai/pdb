@@ -17,15 +17,16 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.DuplicateEngineException;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import org.hamcrest.Matcher;
 import org.hamcrest.core.AnyOf;
 import org.hamcrest.core.IsEqual;
 import org.junit.Before;
@@ -40,15 +41,22 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.RETRY_INTERVAL;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.TRANSLATOR;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
 
@@ -66,7 +74,7 @@ public class EngineCreateTest {
     protected Properties properties;
 
     @Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -180,13 +188,7 @@ public class EngineCreateTest {
         final DatabaseEngine conn = DatabaseFactory.getConnection(properties);
         DatabaseEngine conn2 = conn.duplicate(new Properties(), false);
 
-        conn2.setExceptionHandler((op, e) -> {
-            if (OperationFault.Type.TABLE_ALREADY_EXISTS.equals(op.getType())) {
-                return false;
-            }
-
-            return true;
-        });
+        conn2.setExceptionHandler((op, e) -> OperationFault.Type.TABLE_ALREADY_EXISTS != op.getType());
 
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -200,7 +202,7 @@ public class EngineCreateTest {
     /**
      * Tests the error thrown when an entity is loaded and it doesn't exist in the database.
      *
-     * @throws Exception
+     * @throws Exception If something goes wrong with the test.
      * @since 2.1.2
      */
     @Test
@@ -235,7 +237,7 @@ public class EngineCreateTest {
      * <p>
      * Also validates that calling loadEntity multiple times is allowed.
      *
-     * @throws Exception
+     * @throws Exception If something goes wrong with the test.
      * @since 2.1.2
      */
     @Test
@@ -282,7 +284,7 @@ public class EngineCreateTest {
     /**
      * Tests that loadEntity method validates the entities.
      *
-     * @throws Exception
+     * @throws Exception If something goes wrong with the test.
      * @since 2.1.2
      */
     @Test
@@ -308,7 +310,7 @@ public class EngineCreateTest {
     /**
      * Tests that an entity that was loaded ny loadEntity is recovered with success on a database connection failure.
      *
-     * @throws Exception
+     * @throws Exception If something goes wrong with the test.
      * @since 2.1.2
      */
     @Test

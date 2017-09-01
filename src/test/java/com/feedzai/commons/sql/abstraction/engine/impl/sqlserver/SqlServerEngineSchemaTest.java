@@ -35,7 +35,7 @@ public class SqlServerEngineSchemaTest extends AbstractEngineSchemaTest {
 
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("sqlserver");
     }
 

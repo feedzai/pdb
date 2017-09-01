@@ -18,8 +18,6 @@ package com.feedzai.commons.sql.abstraction.batch;
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 
-import java.util.Optional;
-
 /**
  * The default batch implementation.
  * <p/>

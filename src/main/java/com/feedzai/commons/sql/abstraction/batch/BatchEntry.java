@@ -16,7 +16,9 @@
 package com.feedzai.commons.sql.abstraction.batch;
 
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
+
+import java.util.Objects;
 
 /**
  * Represents a batch entry that contains the data of the entry and the table name.
@@ -83,7 +85,7 @@ public class BatchEntry {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(tableName, entityEntry);
+        return Objects.hash(tableName, entityEntry);
     }
 
     @Override
@@ -95,12 +97,12 @@ public class BatchEntry {
             return false;
         }
         final BatchEntry other = (BatchEntry) obj;
-        return Objects.equal(this.tableName, other.tableName) && Objects.equal(this.entityEntry, other.entityEntry);
+        return Objects.equals(this.tableName, other.tableName) && Objects.equals(this.entityEntry, other.entityEntry);
     }
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("tableName", tableName)
                 .add("entityEntry", entityEntry)
                 .toString();

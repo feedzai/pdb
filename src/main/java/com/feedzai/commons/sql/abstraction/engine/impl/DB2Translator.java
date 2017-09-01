@@ -63,12 +63,7 @@ public class DB2Translator extends AbstractTranslator {
                     .append(name.translate())
                     .append(" SET ");
 
-            List<Object> trans = Lists.transform(column.getColumnConstraints(), new com.google.common.base.Function<DbColumnConstraint, Object>() {
-                @Override
-                public Object apply(DbColumnConstraint input) {
-                    return input.translate();
-                }
-            });
+            List<Object> trans = Lists.transform(column.getColumnConstraints(), DbColumnConstraint::translate);
 
             sb.append(Joiner.on(" ").join(trans))
                     .append(Constants.UNIT_SEPARATOR_CHARACTER);
@@ -145,12 +140,9 @@ public class DB2Translator extends AbstractTranslator {
     public String translate(RepeatDelimiter rd) {
         final String delimiter = rd.getDelimiter();
 
-        final List<Object> all = Lists.transform(rd.getExpressions(), new com.google.common.base.Function<Expression, Object>() {
-            @Override
-            public Object apply(Expression input) {
-                inject(input);
-                return input.translate();
-            }
+        final List<Object> all = Lists.transform(rd.getExpressions(), input -> {
+            inject(input);
+            return input.translate();
         });
 
         if (RepeatDelimiter.DIV.equals(delimiter)) {

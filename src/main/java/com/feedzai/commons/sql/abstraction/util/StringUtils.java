@@ -77,10 +77,9 @@ public class StringUtils {
             throw new RuntimeException(ex);
         }
 
-        StringBuffer hexString = new StringBuffer();
-        for (int i = 0; i < res.length; i++) {
-            hexString.append(Integer.toString((res[i] & 0xff) + 0x100, 16).substring(1));
-
+        StringBuilder hexString = new StringBuilder();
+        for (byte resByte : res) {
+            hexString.append(Integer.toString((resByte & 0xff) + 0x100, 16).substring(1));
         }
 
         return hexString.toString();

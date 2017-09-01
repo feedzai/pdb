@@ -54,12 +54,7 @@ public class H2Translator extends AbstractTranslator {
                 .append(translate(column))
                 .append(" ");
 
-        List<Object> trans = Lists.transform(column.getColumnConstraints(), new com.google.common.base.Function<DbColumnConstraint, Object>() {
-            @Override
-            public Object apply(DbColumnConstraint input) {
-                return input.translate();
-            }
-        });
+        List<Object> trans = Lists.transform(column.getColumnConstraints(), DbColumnConstraint::translate);
 
         sb.append(Joiner.on(" ").join(trans));
 
@@ -250,7 +245,7 @@ public class H2Translator extends AbstractTranslator {
         final String name = v.getName();
         inject(as);
 
-        final List<String> res = new ArrayList<String>();
+        final List<String> res = new ArrayList<>();
         res.add("CREATE");
 
         if (v.isReplace()) {
