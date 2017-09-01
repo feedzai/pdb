@@ -37,8 +37,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -114,6 +121,7 @@ public class LongOverflowTest {
             }
         };
         dbEngine = DatabaseFactory.getConnection(dbProps);
+        dbEngine.beginTransaction();
 
         // Create table
         DbEntity testEntity = new DbEntity.Builder()
@@ -143,7 +151,11 @@ public class LongOverflowTest {
     @Test
     public void testLongOverflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec) +
+            "(" + quotize(PK_COL, ec) + ", " + quotize(LONG_COL, ec) + ", " + quotize(DBL_COL_1, ec) + ", " + quotize(DBL_COL_2, ec) +
+            ") VALUES (?,?,?,?)";
+
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, DBL_INT_VALUE, DBL_FRAC_VALUE);
@@ -158,7 +170,11 @@ public class LongOverflowTest {
     @Test
     public void testLongOverflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec) +
+            "(" + quotize(PK_COL, ec) + ", " + quotize(LONG_COL, ec) + ", " + quotize(DBL_COL_1, ec) + ", " + quotize(DBL_COL_2, ec) +
+            ") VALUES (?,?,?,?)";
+
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameter(PS_NAME, 1, PK_VALUE);

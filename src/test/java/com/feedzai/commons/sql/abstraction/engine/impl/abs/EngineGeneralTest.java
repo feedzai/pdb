@@ -17,18 +17,31 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.RecoveryException;
+import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,14 +53,69 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static org.junit.Assert.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.CLOB;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.createView;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbColumn;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.delete;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.div;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lower;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.min;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -1559,7 +1627,7 @@ public class EngineGeneralTest {
         test5Columns();
 
         try {
-            engine.executeUpdate("DROP VIEW " + StringUtils.quotize("VN", engine.escapeCharacter()));
+            engine.executeUpdate("DROP VIEW " + quotize("VN", engine.escapeCharacter()));
         } catch (Throwable a) {
         }
 
@@ -1946,8 +2014,9 @@ public class EngineGeneralTest {
 
         engine.persist("TEST", ee);
 
-        engine.createPreparedStatement("test", "SELECT * FROM " + StringUtils.quotize("TEST", engine.escapeCharacter()) + " WHERE " + StringUtils.quotize("COL1", engine.escapeCharacter()) + " = ?");
-        engine.setParameters("test", new Object[]{1});
+        String ec = engine.escapeCharacter();
+        engine.createPreparedStatement("test", "SELECT * FROM " + quotize("TEST", ec) + " WHERE " + quotize("COL1", ec) + " = ?");
+        engine.setParameters("test", 1);
         engine.executePS("test");
         List<Map<String, ResultColumn>> res = engine.getPSResultSet("test");
 
@@ -1970,7 +2039,7 @@ public class EngineGeneralTest {
         engine.setParameters("test", 2);
         engine.executePSUpdate("test");
 
-        List<Map<String, ResultColumn>> res = engine.query("SELECT * FROM " + StringUtils.quotize("TEST", engine.escapeCharacter()));
+        List<Map<String, ResultColumn>> res = engine.query("SELECT * FROM " + quotize("TEST", engine.escapeCharacter()));
 
         assertEquals("col1 ok?", 2, (int) res.get(0).get("COL1").toInt());
         assertTrue("col2 ok?", res.get(0).get("COL2").toBoolean());
@@ -2642,9 +2711,8 @@ public class EngineGeneralTest {
                 .build();
         engine.persist("MYTEST", ent);
 
-        final List<Map<String, ResultColumn>> query = engine.query("SELECT * FROM " + StringUtils.quotize("MYTEST", engine.escapeCharacter()));
+        final List<Map<String, ResultColumn>> query = engine.query("SELECT * FROM " + quotize("MYTEST", engine.escapeCharacter()));
         for (Map<String, ResultColumn> stringResultColumnMap : query) {
-//            System.out.println(stringResultColumnMap);
             assertTrue(stringResultColumnMap.get("COL2").toString().endsWith(stringResultColumnMap.get("COL1").toString()));
         }
         engine.close();
@@ -2726,7 +2794,7 @@ public class EngineGeneralTest {
                 .build();
         engine.persist("MYTEST", ent);
 
-        final List<Map<String, ResultColumn>> query = engine.query("SELECT * FROM " + StringUtils.quotize("MYTEST", engine.escapeCharacter()));
+        final List<Map<String, ResultColumn>> query = engine.query("SELECT * FROM " + quotize("MYTEST", engine.escapeCharacter()));
         for (Map<String, ResultColumn> stringResultColumnMap : query) {
             System.out.println(stringResultColumnMap);
             assertTrue(stringResultColumnMap.get("COL2").toString().endsWith(stringResultColumnMap.get("COL1").toString()));
@@ -3187,7 +3255,8 @@ public class EngineGeneralTest {
 
         engine.addEntity(entity.build());
 
-        engine.executeUpdate("INSERT INTO " + StringUtils.quotize("TEST", engine.escapeCharacter()) + " (" + StringUtils.quotize("COL1", engine.escapeCharacter()) + ") VALUES(10)");
+        final String ec = engine.escapeCharacter();
+        engine.executeUpdate("INSERT INTO " + quotize("TEST", ec) + " (" + quotize("COL1", ec) + ") VALUES (10)");
 
         List<Map<String, ResultColumn>> test = engine.query(select(all()).from(table("TEST")));
         assertEquals("Check size of records", 1, test.size());
