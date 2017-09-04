@@ -121,7 +121,6 @@ public class LongOverflowTest {
             }
         };
         dbEngine = DatabaseFactory.getConnection(dbProps);
-        dbEngine.beginTransaction();
 
         // Create table
         DbEntity testEntity = new DbEntity.Builder()
@@ -133,6 +132,8 @@ public class LongOverflowTest {
                 .pkFields(PK_COL)
                 .build();
         dbEngine.addEntity(testEntity);
+
+        dbEngine.beginTransaction();
     }
 
     /**

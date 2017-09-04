@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -27,16 +28,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -54,26 +48,33 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         return DatabaseTestUtil.loadConfigurations("oracle");
     }
 
-    @Parameterized.Parameter
-    public DatabaseConfiguration config;
-
-    @Override
-    public void init() throws Exception {
-        properties = new Properties() {
-            {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
-                setProperty(SCHEMA_POLICY, "drop-create");
-                setProperty(SCHEMA, getDefaultSchema());
-            }
-        };
-    }
-
     @Override
     protected Ieee754Support getIeee754Support() {
         return SUPPORTED_STRINGS;
+    }
+
+    @Override
+    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate(
+            "CREATE OR REPLACE FUNCTION GetOne\n" +
+                "    RETURN INTEGER\n" +
+                "    AS\n" +
+                "        BEGIN\n" +
+                "    RETURN 1;\n" +
+                "    END GetOne;"
+        );
+    }
+
+    @Override
+    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate(
+            "    CREATE OR REPLACE FUNCTION TimesTwo (n IN INTEGER)\n" +
+                "    RETURN INTEGER\n" +
+                "    AS\n" +
+                "        BEGIN\n" +
+                "    RETURN n * 2;\n" +
+                "    END TimesTwo;\n"
+        );
     }
 
     /**

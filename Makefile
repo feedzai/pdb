@@ -3,7 +3,7 @@
 MVN=mvn
 
 all:
-	mvn clean install -DskipTests
+	$(MVN) clean install -DskipTests
 
 licensecheck:
 	$(MVN) license:check -Dlicense.header=header.txt

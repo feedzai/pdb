@@ -16,9 +16,9 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
-import oracle.sql.BLOB;
 
 import java.io.ObjectInputStream;
+import java.sql.Blob;
 
 /**
  * The Oracle column result implementation.
@@ -63,11 +63,11 @@ public class OracleResultColumn extends ResultColumn {
             return null;
         }
 
-        if (!(val instanceof BLOB)) {
+        if (!(val instanceof Blob)) {
             throw new DatabaseEngineRuntimeException("Column is not a BLOB type");
         }
         try {
-            ObjectInputStream ois = new ObjectInputStream(((BLOB) val).getBinaryStream());
+            ObjectInputStream ois = new ObjectInputStream(((Blob) val).getBinaryStream());
 
             return (T) ois.readObject();
         } catch (Exception e) {

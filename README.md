@@ -33,14 +33,30 @@ Add the following dependency to your Maven pom.
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.
-The current version assumes Oracle Driver version 11.2.0.2.0. Please download the driver [here] and
+The current version assumes Oracle Driver version 11.2.0.2.0. Please download the driver from the respective
+ [Oracle driver page](http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html) and
 run the following to install the driver in your local maven repository.
-[here]:http://www.oracle.com/technetwork/database/enterprise-edition/jdbc-112010-090769.html
 ```bash
 mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 \
 -Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6-11.2.0.2.0.jar
 ```
 
+## Running PDB tests
+
+To test PDB with different database engines there are several Maven profiles that can be used,
+one for each vendor (check list of supported vendors below, under [Establishing connection](#establishing-connection)).
+
+Run the following to run the tests for the chosen vendor **specified in lowercase**:
+```bash
+mvn test -P<vendor>
+```
+This will start a docker container running the chosen vendor's database server, and run the tests.
+The container will be stopped at the end if all tests pass, otherwise will be kept running.
+
+**Note**: the containers will be started assuming the respective vendor's license agreements have been read and accepted.
+More info:  
+Microsoft SQL Server: https://hub.docker.com/r/microsoft/mssql-server-linux/  
+IBM DB2: https://hub.docker.com/r/ibmcom/db2express-c/
 
 ## Getting  started
 

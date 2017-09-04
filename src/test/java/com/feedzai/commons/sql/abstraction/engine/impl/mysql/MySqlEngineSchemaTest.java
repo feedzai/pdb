@@ -15,6 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.mysql;
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -22,14 +24,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.Properties;
-
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 
 /**
  * @author Rafael Marmelo (rafael.marmelo@feedzai.com)
@@ -43,25 +37,31 @@ public class MySqlEngineSchemaTest extends AbstractEngineSchemaTest {
         return DatabaseTestUtil.loadConfigurations("mysql");
     }
 
-    @Parameterized.Parameter
-    public DatabaseConfiguration config;
-
-    @Override
-    public void init() throws Exception {
-        properties = new Properties() {
-            {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
-                setProperty(SCHEMA_POLICY, "drop-create");
-                setProperty(SCHEMA, getDefaultSchema());
-            }
-        };
-    }
-
     @Override
     protected String getSchema() {
         return "myschema";
+    }
+
+    @Override
+    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("DROP FUNCTION IF EXISTS GetOne");
+        engine.executeUpdate(
+            "CREATE FUNCTION GetOne()\n" +
+                "   RETURNS INTEGER\n" +
+                "   RETURN 1;"
+        );
+    }
+
+    @Override
+    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("DROP SCHEMA IF EXISTS myschema");
+        engine.executeUpdate("CREATE SCHEMA myschema");
+
+        engine.executeUpdate("DROP FUNCTION IF EXISTS myschema.TimesTwo");
+        engine.executeUpdate(
+            "CREATE FUNCTION myschema.TimesTwo(number INT)\n" +
+                "   RETURNS INTEGER\n" +
+                "   RETURN number * 2;"
+        );
     }
 }

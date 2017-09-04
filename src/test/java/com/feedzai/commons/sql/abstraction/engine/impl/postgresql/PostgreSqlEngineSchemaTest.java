@@ -16,6 +16,8 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.postgresql;
 
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -23,14 +25,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED;
 
 /**
@@ -46,23 +41,6 @@ public class PostgreSqlEngineSchemaTest extends AbstractEngineSchemaTest {
         return DatabaseTestUtil.loadConfigurations("postgresql");
     }
 
-    @Parameterized.Parameter
-    public DatabaseConfiguration config;
-
-    @Override
-    public void init() throws Exception {
-        properties = new Properties() {
-            {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
-                setProperty(SCHEMA_POLICY, "drop-create");
-                setProperty(SCHEMA, getDefaultSchema());
-            }
-        };
-    }
-
     @Override
     protected String getSchema() {
         return "myschema";
@@ -71,5 +49,28 @@ public class PostgreSqlEngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected Ieee754Support getIeee754Support() {
         return SUPPORTED;
+    }
+
+    @Override
+    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate(
+            "CREATE OR REPLACE FUNCTION GetOne()\n" +
+                "    RETURNS INTEGER\n" +
+                "    AS 'SELECT 1;'\n" +
+                "    LANGUAGE SQL;"
+        );
+    }
+
+    @Override
+    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("DROP SCHEMA IF EXISTS myschema CASCADE");
+        engine.executeUpdate("CREATE SCHEMA myschema");
+
+        engine.executeUpdate(
+            "    CREATE OR REPLACE FUNCTION myschema.TimesTwo(INTEGER)\n" +
+                "    RETURNS INTEGER\n" +
+                "    AS 'SELECT $1 * 2;'\n" +
+                "    LANGUAGE SQL;\n"
+        );
     }
 }

@@ -24,10 +24,12 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
 import java.util.List;
 import java.util.Map;
@@ -43,7 +45,12 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.UNSUPPORTED;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -88,13 +95,27 @@ public abstract class AbstractEngineSchemaTest {
     protected DatabaseEngine engine;
     protected Properties properties;
 
+    @Parameterized.Parameter
+    public DatabaseConfiguration config;
+
     private static String TABLE_NAME = "TEST_DOUBLE_COLUMN";
     private static String ID_COL = "ID";
     private static String DBL_COL = "DBL_COL";
     private static int PK_VALUE = 1;
 
     @Before
-    public abstract void init() throws Exception;
+    public void init() throws Exception {
+        properties = new Properties() {
+            {
+                setProperty(JDBC, config.jdbc);
+                setProperty(USERNAME, config.username);
+                setProperty(PASSWORD, config.password);
+                setProperty(ENGINE, config.engine);
+                setProperty(SCHEMA_POLICY, "drop-create");
+                setProperty(SCHEMA, getDefaultSchema());
+            }
+        };
+    }
 
     protected String getDefaultSchema() {
         return "";
@@ -416,8 +437,8 @@ public abstract class AbstractEngineSchemaTest {
 
         try {
             final DbEntity entity = createSpecialValuesEntity();
-            engine.beginTransaction();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.createPreparedStatement(PSName, preparedStatementQuery);
             engine.clearParameters(PSName);
             engine.setParameters(PSName, PK_VALUE, columnValue);
@@ -447,8 +468,8 @@ public abstract class AbstractEngineSchemaTest {
 
         try {
             final DbEntity entity = createSpecialValuesEntity();
-            engine.beginTransaction();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.createPreparedStatement(PSName, preparedStatementQuery);
             engine.clearParameters(PSName);
             engine.setParameter(PSName, 1, PK_VALUE);
@@ -475,8 +496,8 @@ public abstract class AbstractEngineSchemaTest {
 
         try {
             final DbEntity entity = createSpecialValuesEntity();
-            engine.beginTransaction();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(columnValue));
             engine.flush();
             engine.commit();
