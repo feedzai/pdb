@@ -62,12 +62,12 @@
              Needed for compilation even if Oracle DB won't be used;
              This driver is not (officially) available in public repositories, download the driver from Oracle driver page
              and run the following to install the driver in your local maven repository:
-                mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6-11.2.0.2.0.jar
+                mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc8 -Dversion=12.2.0.1 -Dpackaging=jar -Dfile=ojdbc8.jar
               -->
             <dependency>
                 <groupId>com.oracle</groupId>
-                <artifactId>ojdbc6</artifactId>
-                <version>11.2.0.2.0</version>
+                <artifactId>ojdbc8</artifactId>
+                <version>12.2.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -139,7 +139,7 @@
         <!-- Oracle -->
         <dependency>
             <groupId>com.oracle</groupId>
-            <artifactId>ojdbc6</artifactId>
+            <artifactId>ojdbc8</artifactId>
             <scope>provided</scope>
         </dependency>
         <!-- H2 -->

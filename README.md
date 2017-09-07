@@ -32,13 +32,16 @@ Add the following dependency to your Maven pom.
 
 ## Compiling PDB
 
-In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.
-The current version assumes Oracle Driver version 11.2.0.2.0. Please download the driver from the respective
+In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.  
+The current version assumes Oracle Driver version 12.2.0.1 (even when compiled with this version
+ it is possible to use version 11 drivers in runtime; it is also possible to compile with
+  version 11 instead, but the oracle pom dependency has to be modified).  
+Please download the driver from the respective
  [Oracle driver page](http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html) and
-run the following to install the driver in your local maven repository.
+ run the following to install the driver in your local maven repository.
 ```bash
-mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc6 \
--Dversion=11.2.0.2.0 -Dpackaging=jar -Dfile=ojdbc6-11.2.0.2.0.jar
+mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc8 \
+-Dversion=12.2.0.1 -Dpackaging=jar -Dfile=ojdbc8.jar
 ```
 
 ## Running PDB tests
