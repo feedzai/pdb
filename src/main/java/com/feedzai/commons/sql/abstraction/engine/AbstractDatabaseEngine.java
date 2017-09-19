@@ -720,6 +720,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
          * Reconnect on this method does not make sense since a new connection will have nothing to rollback.
          */
         try {
+            // While rolling back, the entities can still have batch data which needs to be cleared.
+            for (final MappedEntity mappedEntity : entities.values()) {
+                mappedEntity.getInsert().clearBatch();
+                mappedEntity.getInsertReturning().clearBatch();
+                mappedEntity.getInsertWithAutoInc().clearBatch();
+            }
             conn.rollback();
             conn.setAutoCommit(true);
         } catch (SQLException ex) {
