@@ -153,10 +153,9 @@ public abstract class AbstractBatch implements Runnable {
      * @param batchTimeout         The batch timeout.
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
-     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. Defaults to
-     *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
-     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
-     *                             {@value DEFAULT_RETRY_INTERVAL}.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
+     *                             will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
      *
      * @since 2.1.12
      */
@@ -354,7 +353,7 @@ public abstract class AbstractBatch implements Runnable {
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
-                logger.debug(dev, "[{}] Error occurred while flushing. Retrying.", name, e);
+                logger.warn(dev, "[{}] Error occurred while flushing. Retrying.", name, e);
             }
 
             boolean success = false;
@@ -383,7 +382,7 @@ public abstract class AbstractBatch implements Runnable {
 
                     success = true;
                 } catch (final Exception exc) {
-                    logger.debug(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, exc);
+                    logger.warn(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, exc);
                 }
             }
 

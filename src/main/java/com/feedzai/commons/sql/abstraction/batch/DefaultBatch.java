@@ -71,7 +71,10 @@ public class DefaultBatch extends AbstractBatch {
      * @param maxFlushRetries      The number of times to retry a batch flush upon failure. Defaults to
      *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
-     *                             {@value DEFAULT_RETRY_INTERVAL}.     */
+     *                             {@value DEFAULT_RETRY_INTERVAL}.
+     *
+     * @since 2.1.12
+     */
     protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
                            final long maxAwaitTimeShutdown, final FailureListener listener, final int maxFlushRetries,
                            final long flushRetryDelay) {
