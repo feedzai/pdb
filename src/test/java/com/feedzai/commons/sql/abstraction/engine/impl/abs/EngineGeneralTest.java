@@ -17,18 +17,34 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.RecoveryException;
+import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
+import mockit.Mock;
+import mockit.MockUp;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,14 +56,69 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.sql.SQLException;
-import java.util.*;
-import java.util.regex.Pattern;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static org.junit.Assert.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.CLOB;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.createView;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbColumn;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.delete;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.div;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lower;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.min;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -436,6 +507,44 @@ public class EngineGeneralTest {
 
         // calling close on a closed result set has no effect.
         it.close();
+    }
+
+    /**
+     * Tests that an iterator created in a try-with-resources' resource specification header is automatically closed
+     * once the block is exited from.
+     *
+     * @throws Exception If an unexpected error occurs.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void queryWithIteratorInTryWithResources() throws Exception {
+        test5Columns();
+
+        final EntityEntry entry = entry()
+                .set("COL1", 1)
+                .set("COL2", false)
+                .set("COL3", 2D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS")
+                .build();
+        engine.persist("TEST", entry);
+
+        final ResultIterator resultIterator;
+        try (final ResultIterator it = engine.iterator(select(all()).from(table("TEST")))){
+
+            resultIterator = it;
+
+            assertFalse(
+                    "Result iterator should not be closed before exiting try-with-resources block",
+                    resultIterator.isClosed()
+            );
+        }
+
+        assertTrue(
+                "Result iterator should be closed after exiting try-with-resources block",
+                resultIterator.isClosed()
+        );
     }
 
     @Test
@@ -3281,5 +3390,35 @@ public class EngineGeneralTest {
                 .build();
 
         assertEquals("entry's hashCode() matches map's hashCode()", map.hashCode(), entry.hashCode());
+    }
+
+    /**
+     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine once the block is
+     * exited from.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void tryWithResourcesClosesEngine() {
+        final AtomicInteger closeCallCount = new AtomicInteger(0);
+
+        try(final DatabaseEngine ignored = new MockUp<DatabaseEngine>() {
+            @Mock
+            void close() {
+                closeCallCount.incrementAndGet();
+            }
+        }.getMockInstance()) {
+            assertEquals(
+                    "DatabaseEngine#close method should not be called within the try-with-resources block",
+                    0,
+                    closeCallCount.get()
+            );
+        }
+
+        assertEquals(
+                "DatabaseEngine#close method should be called after exiting try-with-resources block",
+                1,
+                closeCallCount.get()
+        );
     }
 }
