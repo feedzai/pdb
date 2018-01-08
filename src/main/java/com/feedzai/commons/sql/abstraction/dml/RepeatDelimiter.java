@@ -101,7 +101,7 @@ public class RepeatDelimiter extends Expression {
     /**
      * The list of expressions.
      */
-    private final List<Expression> expressions = new ArrayList<Expression>();
+    private final List<Expression> expressions = new ArrayList<>();
 
     /**
      * Creates a new instance of {@link RepeatDelimiter}.

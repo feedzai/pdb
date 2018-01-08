@@ -23,13 +23,22 @@ import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.util.concurrent.Uninterruptibles;
-import mockit.*;
+import mockit.Expectations;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Mocked;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -38,16 +47,37 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
-import static org.junit.Assert.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for AbstractBatch.
@@ -62,7 +92,7 @@ public class BatchUpdateTest {
     protected Properties properties;
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -206,7 +236,7 @@ public class BatchUpdateTest {
         );
 
         // Simulate failures in beginTransaction() for flush to fail
-        new NonStrictExpectations() {{
+        new Expectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
@@ -239,7 +269,7 @@ public class BatchUpdateTest {
         );
 
         // Simulate failures in beginTransaction() for flush to fail
-        new NonStrictExpectations() {{
+        new Expectations() {{
             engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
         }};
 
@@ -270,7 +300,7 @@ public class BatchUpdateTest {
     /**
      * Tests that {@link AbstractBatch#flush(boolean)} can be synchronous and waits for previous flush calls.
      *
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If the operations on the engine fail.
      * @since 2.1.6
      */
     @Test
@@ -285,6 +315,7 @@ public class BatchUpdateTest {
                 transactions.incrementAndGet();
             }
         };
+
         DbEntity entity = dbEntity()
                 .name("TEST")
                 .addColumn("COL1", INT)
@@ -398,7 +429,7 @@ public class BatchUpdateTest {
      * to the row generated with getTestEntry().
      *
      * @param numEntries  The number of entries
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If the operations on the engine fail.
      */
     private void checkTestEntriesInDB(int numEntries) throws DatabaseEngineException {
         List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
@@ -422,11 +453,11 @@ public class BatchUpdateTest {
         assertTrue("COL5 exists", row.containsKey("COL5"));
 
         EntityEntry expectedEntry = getTestEntry(idx);
-        assertEquals("COL1 ok?", (int) expectedEntry.get("COL1"), (int) row.get("COL1").toInt());
-        assertFalse("COL2 ok?", row.get("COL2").toBoolean());
+        assertEquals("COL1 ok?", expectedEntry.get("COL1"), row.get("COL1").toInt());
+        assertEquals("COL2 ok?", expectedEntry.get("COL2"), row.get("COL2").toBoolean());
         assertEquals("COL3 ok?", (double) expectedEntry.get("COL3"), row.get("COL3").toDouble(), 0);
-        assertEquals("COL4 ok?", (long) expectedEntry.get("COL4"), (long) row.get("COL4").toLong());
-        assertEquals("COL5  ok?", (String) expectedEntry.get("COL5"), row.get("COL5").toString());
+        assertEquals("COL4 ok?", expectedEntry.get("COL4"), row.get("COL4").toLong());
+        assertEquals("COL5 ok?", expectedEntry.get("COL5"), row.get("COL5").toString());
     }
 
     /**

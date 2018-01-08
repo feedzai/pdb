@@ -74,7 +74,7 @@ public class JSonTest {
      * @return  The configurations under which the test runs.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -179,7 +179,7 @@ public class JSonTest {
     /**
      * Creates the test entry value used in most tests.
      *
-     * @return
+     * @return the created test entry.
      */
     private EntityEntry getTestEntry() {
         return entry()

@@ -15,22 +15,41 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
+import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.DB2ResultIterator;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
+import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
-import com.google.common.base.Optional;
 import org.apache.commons.lang.StringUtils;
 
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -142,13 +161,13 @@ public class DB2Engine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<String>();
+        List<String> createTable = new ArrayList<>();
 
         createTable.add("CREATE TABLE");
         createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<String>();
+        List<String> columns = new ArrayList<>();
         for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<String>();
+            List<String> column = new ArrayList<>();
             column.add(quotize(c.getName()));
             column.add(translateType(c));
 
@@ -207,7 +226,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
         final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
 
-        List<String> statement = new ArrayList<String>();
+        List<String> statement = new ArrayList<>();
         statement.add("ALTER TABLE");
         statement.add(quotize(entity.getName()));
         statement.add("ADD CONSTRAINT");
@@ -264,7 +283,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
      * @return The command to perform the operation.
      */
     private String reorg(String tableName) {
-        List<String> statement = new ArrayList<String>();
+        List<String> statement = new ArrayList<>();
         statement.add("CALL sysproc.admin_cmd('REORG TABLE");
         statement.add(quotize(tableName));
         statement.add("')");
@@ -280,7 +299,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
      * @return The command to perform the operation.
      */
     private String alterColumnSetNotNull(String tableName, List<String> columnNames) {
-        List<String> statement = new ArrayList<String>();
+        List<String> statement = new ArrayList<>();
         statement.add("ALTER TABLE");
         statement.add(quotize(tableName));
 
@@ -300,15 +319,15 @@ public class DB2Engine extends AbstractDatabaseEngine {
         for (DbIndex index : indexes) {
 
 
-            List<String> createIndex = new ArrayList<String>();
+            List<String> createIndex = new ArrayList<>();
             createIndex.add("CREATE");
             if (index.isUnique()) {
                 createIndex.add("UNIQUE");
             }
             createIndex.add("INDEX");
 
-            List<String> columns = new ArrayList<String>();
-            List<String> columnsForName = new ArrayList<String>();
+            List<String> columns = new ArrayList<>();
+            List<String> columnsForName = new ArrayList<>();
             for (String column : index.getColumns()) {
                 columns.add(quotize(column));
                 columnsForName.add(column);
@@ -355,7 +374,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
             final String sequenceName = md5(format("%s_%s_SEQ", entity.getName(), column.getName()), properties.getMaxIdentifierSize());
 
-            List<String> createSequence = new ArrayList<String>();
+            List<String> createSequence = new ArrayList<>();
             createSequence.add("CREATE SEQUENCE");
             createSequence.add(quotize(sequenceName));
             createSequence.add("MINVALUE 0");
@@ -422,16 +441,16 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     protected MappedEntity createPreparedStatementForInserts(final DbEntity entity) throws DatabaseEngineException {
-        List<String> insertInto = new ArrayList<String>();
+        List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName()));
-        List<String> insertIntoWithAutoInc = new ArrayList<String>();
+        List<String> insertIntoWithAutoInc = new ArrayList<>();
         insertIntoWithAutoInc.add("INSERT INTO");
         insertIntoWithAutoInc.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<String>();
-        List<String> values = new ArrayList<String>();
-        List<String> columnsWithAutoInc = new ArrayList<String>();
-        List<String> valuesWithAutoInc = new ArrayList<String>();
+        List<String> columns = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        List<String> columnsWithAutoInc = new ArrayList<>();
+        List<String> valuesWithAutoInc = new ArrayList<>();
         String returning = null;
         for (DbColumn column : entity.getColumns()) {
             columnsWithAutoInc.add(quotize(column.getName()));
@@ -453,7 +472,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
-        List<String> insertIntoReturn = new ArrayList<String>(insertInto);
+        List<String> insertIntoReturn = new ArrayList<>(insertInto);
 
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
@@ -542,7 +561,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
         Statement drop = null;
         Statement reorgStatement = null;
 
-        List<String> removeColumns = new ArrayList<String>();
+        List<String> removeColumns = new ArrayList<>();
         removeColumns.add("ALTER TABLE");
         removeColumns.add(quotize(entity.getName()));
 
@@ -602,13 +621,13 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     protected void addColumn(DbEntity entity, DbColumn... columns) throws DatabaseEngineException {
-        List<String> addColumns = new ArrayList<String>();
+        List<String> addColumns = new ArrayList<>();
         addColumns.add("ALTER TABLE");
         addColumns.add(quotize(entity.getName(), translator.translateEscape()));
 
         for (DbColumn c : columns) {
             addColumns.add("ADD COLUMN");
-            List<String> column = new ArrayList<String>();
+            List<String> column = new ArrayList<>();
             column.add(quotize(c.getName(), translator.translateEscape()));
             column.add(translateType(c));
 
@@ -681,8 +700,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
             }
 
-
-            PreparedStatement ps = null;
+            final PreparedStatement ps;
             if (useAutoInc) {
                 ps = me.getInsertReturning();
             } else {
@@ -713,8 +731,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
                     if (!q.isEmpty()) {
                         final Iterator<ResultColumn> it = q.get(0).values().iterator();
-                        long max = Optional.fromNullable(it.next().toLong()).or(-1L);
-                        long seqCurVal = Optional.fromNullable(it.next().toLong()).or(-1L);
+                        long max = Optional.ofNullable(it.next().toLong()).orElse(-1L);
+                        long seqCurVal = Optional.ofNullable(it.next().toLong()).orElse(-1L);
 
                         if (seqCurVal != max) {
                             //table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
@@ -835,7 +853,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
-        final Map<String, DbColumnType> metaMap = new LinkedHashMap<String, DbColumnType>();
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
 
         Statement s = null;
         ResultSet rsColumns = null;
@@ -843,8 +861,10 @@ public class DB2Engine extends AbstractDatabaseEngine {
             getConnection();
 
             s = conn.createStatement();
-            rsColumns = s.executeQuery(String.format("SELECT NAME, COLTYPE,SCALE  FROM sysibm.SYSCOLUMNS WHERE tbname='%s' and TBCREATOR=UPPER('%s')", name,
-                    Optional.fromNullable(properties.getSchema()).or(properties.getUsername())));
+            rsColumns = s.executeQuery(
+                String.format("SELECT NAME, COLTYPE,SCALE  FROM sysibm.SYSCOLUMNS WHERE tbname='%s' and TBCREATOR=UPPER('%s')",
+                    name, Optional.ofNullable(properties.getSchema()).orElse(properties.getUsername()))
+            );
 
             while (rsColumns.next()) {
                 String columnType = rsColumns.getString("COLTYPE").trim();

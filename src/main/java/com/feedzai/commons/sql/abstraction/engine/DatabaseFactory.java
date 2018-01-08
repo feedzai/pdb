@@ -49,8 +49,6 @@ public final class DatabaseFactory {
      */
     public static DatabaseEngine getConnection(Properties p) throws DatabaseFactoryException {
         PdbProperties pdbProperties = new PdbProperties(p, true);
-        AbstractDatabaseEngine de = null;
-
         final String engine = pdbProperties.getEngine();
 
         if (StringUtils.isBlank(engine)) {
@@ -61,7 +59,7 @@ public final class DatabaseFactory {
             Class<?> c = Class.forName(engine);
 
             Constructor cons = c.getConstructor(PdbProperties.class);
-            de = (AbstractDatabaseEngine) cons.newInstance(pdbProperties);
+            final AbstractDatabaseEngine de = (AbstractDatabaseEngine) cons.newInstance(pdbProperties);
 
             Class<? extends AbstractTranslator> tc = de.getTranslatorClass();
 

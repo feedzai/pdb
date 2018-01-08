@@ -19,13 +19,12 @@ package com.feedzai.commons.sql.abstraction.engine.impl.db2;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.Properties;
-
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 
 /**
  * @author Joao Silva (joao.silva@feedzai.com)
@@ -36,38 +35,31 @@ public class DB2EngineSchemaTest extends AbstractEngineSchemaTest {
 
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("db2");
     }
 
-    @Parameterized.Parameter
-    public DatabaseConfiguration config;
-
-    @Override
-    public void init() throws Exception {
-        properties = new Properties() {
-            {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
-                setProperty(SCHEMA_POLICY, "drop-create");
-                setProperty(SCHEMA, getDefaultSchema());
-            }
-        };
-    }
-
-    @Override
     protected String getDefaultSchema() {
-        return "";
-    }
-
-    @Override
-    protected String getSchema() {
-        return "";
+        return config.username;
     }
 
     /*
-     * TODO: http://newpush.com/2009/08/creating-a-user-defined-function-udf-in-java-for-ibm-db2-9-7/
+     * TODO: remove after creating UDFs for DB2
+     * http://newpush.com/2009/08/creating-a-user-defined-function-udf-in-java-for-ibm-db2-9-7/
      */
+    @Override
+    @Test
+    @Ignore("Test suite doesn't have UDFs for DB2")
+    public void udfGetOneTest() throws Exception {
+    }
+
+    /*
+     * TODO: remove after creating UDFs for DB2
+     * http://newpush.com/2009/08/creating-a-user-defined-function-udf-in-java-for-ibm-db2-9-7/
+     */
+    @Override
+    @Test
+    @Ignore("Test suite doesn't have UDFs for DB2")
+    public void udfTimesTwoTest() throws Exception {
+    }
 }

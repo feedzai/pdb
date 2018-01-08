@@ -17,7 +17,6 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -25,7 +24,12 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -35,7 +39,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 public class DatabaseFactoryTest {
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("oracle");
     }
 
@@ -57,6 +61,6 @@ public class DatabaseFactoryTest {
 
         DatabaseEngine de = DatabaseFactory.getConnection(properties);
 
-        Assert.assertEquals("class ok?", Class.forName(config.engine), de.getClass());
+        assertEquals("class ok?", Class.forName(config.engine), de.getClass());
     }
 }

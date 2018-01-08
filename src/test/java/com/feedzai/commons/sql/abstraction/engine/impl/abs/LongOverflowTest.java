@@ -37,8 +37,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -71,7 +78,7 @@ public class LongOverflowTest {
     /**
      * A long that was causing an overflow prior to the fix.
      */
-    private static final long ERROR_VALUE = 876534351009985545l;
+    private static final long ERROR_VALUE = 876534351009985545L;
 
     /**
      * A double with no decimal digits.
@@ -93,7 +100,7 @@ public class LongOverflowTest {
      * @return  The configurations under which the test runs.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -125,6 +132,8 @@ public class LongOverflowTest {
                 .pkFields(PK_COL)
                 .build();
         dbEngine.addEntity(testEntity);
+
+        dbEngine.beginTransaction();
     }
 
     /**
@@ -143,7 +152,11 @@ public class LongOverflowTest {
     @Test
     public void testLongOverflowPreparedStatement1() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec) +
+            "(" + quotize(PK_COL, ec) + ", " + quotize(LONG_COL, ec) + ", " + quotize(DBL_COL_1, ec) + ", " + quotize(DBL_COL_2, ec) +
+            ") VALUES (?,?,?,?)";
+
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameters(PS_NAME, PK_VALUE, ERROR_VALUE, DBL_INT_VALUE, DBL_FRAC_VALUE);
@@ -158,7 +171,11 @@ public class LongOverflowTest {
     @Test
     public void testLongOverflowPreparedStatement2() throws Exception {
         String PS_NAME = "MyPS";
-        String insertQuery = "insert into TEST_OVFL_TBL(PK_COL,LONG_COL,DBL_COL_1,DBL_COL_2) values (?,?,?,?)";
+        final String ec = dbEngine.escapeCharacter();
+        final String insertQuery = "INSERT INTO " + quotize(TEST_TABLE, ec) +
+            "(" + quotize(PK_COL, ec) + ", " + quotize(LONG_COL, ec) + ", " + quotize(DBL_COL_1, ec) + ", " + quotize(DBL_COL_2, ec) +
+            ") VALUES (?,?,?,?)";
+
         dbEngine.createPreparedStatement(PS_NAME, insertQuery);
         dbEngine.clearParameters(PS_NAME);
         dbEngine.setParameter(PS_NAME, 1, PK_VALUE);

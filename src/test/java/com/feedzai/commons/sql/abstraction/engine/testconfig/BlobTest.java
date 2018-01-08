@@ -16,6 +16,7 @@
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * @author Diogo Guerra (diogo.guerra@feedzai.com)
@@ -45,10 +46,7 @@ public class BlobTest implements Serializable {
 
         BlobTest blobTest = (BlobTest) o;
 
-        if (id != blobTest.id) return false;
-        if (name != null ? !name.equals(blobTest.name) : blobTest.name != null) return false;
-
-        return true;
+        return id == blobTest.id && Objects.equals(name, blobTest.name);
     }
 
     @Override

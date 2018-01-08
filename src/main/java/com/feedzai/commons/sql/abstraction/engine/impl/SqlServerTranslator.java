@@ -53,12 +53,7 @@ public class SqlServerTranslator extends AbstractTranslator {
                 .append(translate(column))
                 .append(" ");
 
-        List<Object> trans = Lists.transform(column.getColumnConstraints(), new com.google.common.base.Function<DbColumnConstraint, Object>() {
-            @Override
-            public Object apply(DbColumnConstraint input) {
-                return input.translate();
-            }
-        });
+        List<Object> trans = Lists.transform(column.getColumnConstraints(), DbColumnConstraint::translate);
 
         sb.append(Joiner.on(" ").join(trans));
 
@@ -292,7 +287,7 @@ public class SqlServerTranslator extends AbstractTranslator {
         final String name = v.getName();
         inject(as);
 
-        final List<String> res = new ArrayList<String>();
+        final List<String> res = new ArrayList<>();
 
         res.add("CREATE VIEW");
         res.add(quotize(name));
@@ -327,7 +322,7 @@ public class SqlServerTranslator extends AbstractTranslator {
                 if (properties.isMaxBlobSizeSet()) {
                     return format("VARBINARY(%s)", properties.getProperty(MAX_BLOB_SIZE));
                 } else { // Use the default of the buffer, since it can't be greater than that.
-                    return format("VARBINARY(MAX)");
+                    return "VARBINARY(MAX)";
                 }
 
 

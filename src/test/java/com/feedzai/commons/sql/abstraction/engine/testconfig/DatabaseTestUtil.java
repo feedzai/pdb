@@ -15,17 +15,14 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Utility to read and filter database instances to test.
@@ -53,7 +50,7 @@ public class DatabaseTestUtil {
      * @return The instances to test defined in the configuration file.
      * @throws Exception If something occurs reading the resource.
      */
-    public static Collection<Object[]> loadConfigurations() throws Exception {
+    public static Collection<DatabaseConfiguration> loadConfigurations() throws Exception {
         final String connectionLocation = System.getProperty(CONFIG_FILE_LOCATION);
         final InputStream is; // closed later by DatabaseConfigurationUtil.
         if (connectionLocation != null) {
@@ -62,20 +59,9 @@ public class DatabaseTestUtil {
             is = DatabaseTestUtil.class.getClassLoader().getResourceAsStream(CONFIGURATION_FILE);
         }
 
-
-        final Map<String, DatabaseConfiguration> configs =
-                DatabaseConfigurationUtil
-                        .from(is)
-                        .filter(instancesToTest());
-
-        return FluentIterable
-                .from(configs.values())
-                .transform(new Function<DatabaseConfiguration, Object[]>() {
-                    @Override
-                    public Object[] apply(DatabaseConfiguration input) {
-                        return new Object[]{input};
-                    }
-                }).toList();
+        return DatabaseConfigurationUtil.from(is)
+            .filter(instancesToTest())
+            .values();
     }
 
     /**
@@ -83,26 +69,22 @@ public class DatabaseTestUtil {
      * <p/>
      * The match is performed by contains, i.e. oracle matches oracle11 and oracle12.
      *
-     * @param vendor The list of instances to test.
+     * @param vendors The list of instances to test.
      * @return The filtered instances to test.
-     * @throws Exception
+     * @throws Exception If something wrong occurs reading the configurations.
      */
-    public static Collection<Object[]> loadConfigurations(final String... vendor) throws Exception {
-        return FluentIterable
-                .from(loadConfigurations())
-                .filter(new Predicate<Object[]>() {
-                    @Override
-                    public boolean apply(Object[] input) {
-                        final DatabaseConfiguration db = (DatabaseConfiguration) input[0];
-                        for (String v : vendor) {
-                            if (db.vendor.contains(v)) {
-                                return true;
-                            }
-                        }
-
-                        return false;
+    public static Collection<DatabaseConfiguration> loadConfigurations(final String... vendors) throws Exception {
+        return loadConfigurations().stream()
+            .filter(dbConfig -> {
+                for (String vendor : vendors) {
+                    if (dbConfig.vendor.contains(vendor)) {
+                        return true;
                     }
-                }).toList();
+                }
+
+                return false;
+            })
+            .collect(Collectors.toList());
     }
 
     /**
@@ -110,7 +92,7 @@ public class DatabaseTestUtil {
      * <p/>
      * Must match the ones defined in {@code CONFIGURATION_FILE}.
      *
-     * @return A {@link java.util.Set} containing the instances to test.
+     * @return A {@link Set} containing the instances to test.
      */
     private static Set<String> instancesToTest() {
         final String databases = System.getProperty(INSTANCES);

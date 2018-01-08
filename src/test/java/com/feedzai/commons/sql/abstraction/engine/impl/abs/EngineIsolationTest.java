@@ -15,19 +15,25 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Collection;
 import java.util.Properties;
 
-import org.junit.Before;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ISOLATION_LEVEL;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -38,7 +44,7 @@ public class EngineIsolationTest {
     protected Properties properties;
 
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
     }
 
@@ -61,28 +67,24 @@ public class EngineIsolationTest {
     @Test
     public void readCommittedTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         properties.setProperty(ISOLATION_LEVEL, "read_committed");
-
-        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+        DatabaseFactory.getConnection(properties);
     }
 
     @Test
     public void readUncommittedTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
-
-        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+        DatabaseFactory.getConnection(properties);
     }
 
     @Test
     public void repeatableReadTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
-
-        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+        DatabaseFactory.getConnection(properties);
     }
 
     @Test
     public void serializableTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
-
-        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+        DatabaseFactory.getConnection(properties);
     }
 }

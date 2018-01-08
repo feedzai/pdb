@@ -18,10 +18,13 @@ package com.feedzai.commons.sql.abstraction.engine.impl.h2;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
@@ -31,7 +34,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Properties;
@@ -39,10 +41,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_NUMBER_OF_RETRIES;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.RETRY_INTERVAL;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -58,7 +70,7 @@ public class BatchConnectionRetryTest {
      * Run only for h2.
      */
     @Parameterized.Parameters
-    public static Collection<Object[]> data() throws Exception {
+    public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("h2");
     }
 
@@ -95,7 +107,7 @@ public class BatchConnectionRetryTest {
     /**
      * Tests that a batch retries the connection after a failed flush.
      *
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If the operations on the engine fail.
      */
     @Test
     public void testConnectionRetryAfterBatchFailure() throws DatabaseEngineException {
@@ -104,7 +116,7 @@ public class BatchConnectionRetryTest {
 
         final AtomicReference<DatabaseEngine> engineCapsule = new AtomicReference<>(engine);
 
-        // mock the connect method to force the retry of the connections to be exausted
+        // mock the connect method to force the retry of the connections to be exhausted
         new MockUp<AbstractDatabaseEngine>() {
 
             @Mock
@@ -155,7 +167,7 @@ public class BatchConnectionRetryTest {
             engineCapsule.get().getConnection().close();
         } catch (Exception e) {
         }
-        // disallow new connections to force to exaust the retry mechanism
+        // disallow new connections to force to exhaust the retry mechanism
         allowConnection.set(false);
 
 

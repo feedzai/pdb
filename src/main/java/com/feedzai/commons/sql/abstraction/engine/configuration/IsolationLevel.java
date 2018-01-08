@@ -30,5 +30,5 @@ public enum IsolationLevel {
     /**
      * Serializable isolation level.
      */
-    SERIALIZABLE;
+    SERIALIZABLE
 }

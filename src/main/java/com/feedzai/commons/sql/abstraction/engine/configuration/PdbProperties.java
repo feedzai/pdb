@@ -25,7 +25,17 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.util.Constants.*;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ALLOW_COLUMN_DROP;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_BLOB_BUFFER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_FETCH_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ISOLATION_LEVEL;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAX_IDENTIFIER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RECONNECT_ON_LOST;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RETRY_INTERVAL;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SECRET_LOCATION;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_VARCHAR_SIZE;
 
 /**
  * Represents the possible properties to include when configuring the

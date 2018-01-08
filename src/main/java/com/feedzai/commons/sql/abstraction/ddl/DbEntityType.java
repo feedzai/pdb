@@ -41,5 +41,5 @@ public enum DbEntityType {
     /**
      * A type that is not mapped.
      */
-    UNMAPPED;
+    UNMAPPED
 }

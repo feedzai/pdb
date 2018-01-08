@@ -15,25 +15,39 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
+import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.OracleResultIterator;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
+import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import oracle.jdbc.OraclePreparedStatement;
 import oracle.jdbc.OracleTypes;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -77,7 +91,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
      *
      *  @since 2.1.4
      */
-    private static Double ZERO = Double.valueOf(0.0);
+    private static final Double ZERO = 0.0;
 
     /**
      * Creates a new Oracle connection.
@@ -168,25 +182,25 @@ public class OracleEngine extends AbstractDatabaseEngine {
             ps.setBytes(index, (byte[]) param);
         } else {
             if (!(param instanceof Double)) {
-                /**
-                 * If it is not a double it may be:
-                 *  - A String with the special values such as infinity or NaN
-                 *  - A String with some invalid value
-                 *  - An integer/long
-                 *  - Some other invalid type
-                 *
-                 *  In these cases we will invoke the setObject.
+                /*
+                  If it is not a double it may be:
+                   - A String with the special values such as infinity or NaN
+                   - A String with some invalid value
+                   - An integer/long
+                   - Some other invalid type
+
+                  In these cases we will invoke the setObject.
                  */
                 ps.setObject(index, param);
             } else {
-                /**
-                 * Only Double typed values will execute here.
-                 * They may be:
-                 *  - Regular double number
-                 *  - Double.NaN
-                 *  - Double.{POSITIVE|NEGATIVE}_INFINITY
-                 *
-                 *  In these cases we use the setBinaryDouble specific to the oracle prepared statement.
+                /*
+                  Only Double typed values will execute here.
+                  They may be:
+                   - Regular double number
+                   - Double.NaN
+                   - Double.{POSITIVE|NEGATIVE}_INFINITY
+
+                  In these cases we use the setBinaryDouble specific to the oracle prepared statement.
                  */
                 final OraclePreparedStatement orclPs = (OraclePreparedStatement) ps;
                 orclPs.setBinaryDouble(index, (Double) ensureNoUnderflow(param));
@@ -226,7 +240,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     /**
-     * Overrides {@link com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine#setTransactionIsolation()} This is because
+     * Overrides {@link AbstractDatabaseEngine#setTransactionIsolation()} This is because
      * Oracle does not support READ_UNCOMMITTED e REPEATABLE_READ.
      *
      * @throws SQLException If a database access error occurs.
@@ -254,13 +268,13 @@ public class OracleEngine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<String>();
+        List<String> createTable = new ArrayList<>();
 
         createTable.add("CREATE TABLE");
         createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<String>();
+        List<String> columns = new ArrayList<>();
         for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<String>();
+            List<String> column = new ArrayList<>();
             column.add(quotize(c.getName()));
             column.add(translateType(c));
 
@@ -311,14 +325,14 @@ public class OracleEngine extends AbstractDatabaseEngine {
             return;
         }
 
-        List<String> pks = new ArrayList<String>();
+        List<String> pks = new ArrayList<>();
         for (String pk : entity.getPkFields()) {
             pks.add(quotize(pk));
         }
 
         final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
 
-        List<String> statement = new ArrayList<String>();
+        List<String> statement = new ArrayList<>();
         statement.add("ALTER TABLE");
         statement.add(quotize(entity.getName()));
         statement.add("ADD CONSTRAINT");
@@ -359,15 +373,15 @@ public class OracleEngine extends AbstractDatabaseEngine {
         for (DbIndex index : indexes) {
 
 
-            List<String> createIndex = new ArrayList<String>();
+            List<String> createIndex = new ArrayList<>();
             createIndex.add("CREATE");
             if (index.isUnique()) {
                 createIndex.add("UNIQUE");
             }
             createIndex.add("INDEX");
 
-            List<String> columns = new ArrayList<String>();
-            List<String> columnsForName = new ArrayList<String>();
+            List<String> columns = new ArrayList<>();
+            List<String> columnsForName = new ArrayList<>();
             for (String column : index.getColumns()) {
                 columns.add(quotize(column));
                 columnsForName.add(column);
@@ -414,7 +428,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
             final String sequenceName = md5(format("%s_%s_SEQ", entity.getName(), column.getName()), properties.getMaxIdentifierSize());
 
-            List<String> createSequence = new ArrayList<String>();
+            List<String> createSequence = new ArrayList<>();
             createSequence.add("CREATE SEQUENCE ");
             createSequence.add(quotize(sequenceName));
             createSequence.add("MINVALUE 0");
@@ -463,16 +477,16 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     @Override
     protected MappedEntity createPreparedStatementForInserts(final DbEntity entity) throws DatabaseEngineException {
-        List<String> insertInto = new ArrayList<String>();
+        List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName()));
-        List<String> insertIntoWithAutoInc = new ArrayList<String>();
+        List<String> insertIntoWithAutoInc = new ArrayList<>();
         insertIntoWithAutoInc.add("INSERT INTO");
         insertIntoWithAutoInc.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<String>();
-        List<String> values = new ArrayList<String>();
-        List<String> columnsWithAutoInc = new ArrayList<String>();
-        List<String> valuesWithAutoInc = new ArrayList<String>();
+        List<String> columns = new ArrayList<>();
+        List<String> values = new ArrayList<>();
+        List<String> columnsWithAutoInc = new ArrayList<>();
+        List<String> valuesWithAutoInc = new ArrayList<>();
         String returning = null;
         for (DbColumn column : entity.getColumns()) {
             columnsWithAutoInc.add(quotize(column.getName()));
@@ -494,7 +508,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
-        List<String> insertIntoReturn = new ArrayList<String>(insertInto);
+        List<String> insertIntoReturn = new ArrayList<>(insertInto);
 
         if (returning != null) {
             insertIntoReturn.add(format("RETURNING %s INTO ?", quotize(returning)));
@@ -588,11 +602,11 @@ public class OracleEngine extends AbstractDatabaseEngine {
     protected void dropColumn(DbEntity entity, String... columns) throws DatabaseEngineException {
         Statement drop = null;
 
-        List<String> removeColumns = new ArrayList<String>();
+        List<String> removeColumns = new ArrayList<>();
         removeColumns.add("ALTER TABLE");
         removeColumns.add(quotize(entity.getName()));
         removeColumns.add("DROP");
-        List<String> cols = new ArrayList<String>();
+        List<String> cols = new ArrayList<>();
         for (String col : columns) {
             cols.add(quotize(col));
         }
@@ -624,13 +638,13 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void addColumn(DbEntity entity, DbColumn... columns) throws DatabaseEngineException {
-        List<String> addColumns = new ArrayList<String>();
+        List<String> addColumns = new ArrayList<>();
         addColumns.add("ALTER TABLE");
         addColumns.add(quotize(entity.getName()));
         addColumns.add("ADD");
-        List<String> cols = new ArrayList<String>();
+        List<String> cols = new ArrayList<>();
         for (DbColumn c : columns) {
-            List<String> column = new ArrayList<String>();
+            List<String> column = new ArrayList<>();
             column.add(quotize(c.getName()));
             column.add(translateType(c));
 
@@ -690,7 +704,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
             }
 
-            PreparedStatement ps = null;
+            final PreparedStatement ps;
             if (useAutoInc) {
                 ps = me.getInsertReturning();
                 synchronizeSequence(name, me);
@@ -762,10 +776,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 quotize(sequenceName));
         logger.trace(dev, "{}", sqlDiff);
 
-        try (
-                Statement statementDiffSeq = conn.createStatement();
-                ResultSet diff = statementDiffSeq.executeQuery(sqlDiff);
-        ) {
+        try (Statement statementDiffSeq = conn.createStatement();
+             ResultSet diff = statementDiffSeq.executeQuery(sqlDiff)) {
 
             if (diff.next()) {
                 final long diffLong = diff.getObject(1) != null ? diff.getLong(1) : -1L;
@@ -796,9 +808,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
      */
     private void silentlyExecuteStatements(List<String> stmts) {
         for (String stmt : stmts) {
-            try (
-                    Statement statementSyncSequence = conn.createStatement();
-            ) {
+            try (Statement statementSyncSequence = conn.createStatement()) {
                 logger.trace(dev, "{}", stmt);
                 statementSyncSequence.execute(stmt);
             } catch (SQLException e) {
@@ -812,12 +822,12 @@ public class OracleEngine extends AbstractDatabaseEngine {
     @Override
     protected void addFks(DbEntity entity) throws DatabaseEngineException {
         for (DbFk fk : entity.getFks()) {
-            final List<String> quotizedLocalColumns = new ArrayList<String>();
+            final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
             }
 
-            final List<String> quotizedForeignColumns = new ArrayList<String>();
+            final List<String> quotizedForeignColumns = new ArrayList<>();
             for (String s : fk.getForeignColumns()) {
                 quotizedForeignColumns.add(quotize(s));
             }
@@ -888,7 +898,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
      */
     @Override
     protected String getSchema() {
-        return Optional.fromNullable(super.getSchema()).or(properties.getUsername());
+        return Optional.ofNullable(super.getSchema()).orElse(properties.getUsername());
     }
 
     @Override
@@ -902,7 +912,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
             getConnection();
 
             s = conn.createStatement();
-            rsColumns = s.executeQuery(String.format("SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = UPPER('%s')", name, properties.getProperty(PdbProperties.USERNAME)));
+            rsColumns = s.executeQuery(
+                String.format("SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = UPPER('%s')",
+                    name, properties.getProperty(PdbProperties.USERNAME))
+            );
 
             while (rsColumns.next()) {
                 String columnName = rsColumns.getString("COLUMN_NAME");
@@ -946,9 +959,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     private DbColumnType toPdbType(String type) {
-        /**
-         * We want to override the default mappings depending on number precision.
-         */
+        // We want to override the default mappings depending on number precision.
         Preconditions.checkNotNull(type, "Type cannot be null.");
 
         switch (type) {

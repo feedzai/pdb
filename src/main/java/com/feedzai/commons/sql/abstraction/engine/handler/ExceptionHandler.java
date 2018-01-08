@@ -28,12 +28,7 @@ public interface ExceptionHandler extends Serializable {
      * Default exception handler that doesn't stop the definition flow
      * in any case.
      */
-    public static final ExceptionHandler DEFAULT = new ExceptionHandler() {
-        @Override
-        public boolean proceed(OperationFault op, Exception e) {
-            return true;
-        }
-    };
+    ExceptionHandler DEFAULT = (operationFault, exception) -> true;
 
     /**
      * Decides if the flow must continue after a faulty operation take place.

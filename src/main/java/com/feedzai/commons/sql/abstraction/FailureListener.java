@@ -17,10 +17,6 @@ package com.feedzai.commons.sql.abstraction;
 
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 
-import java.io.Serializable;
-import java.util.List;
-import java.util.Map;
-
 /**
  * Listener interface to add behavior when there is some failure executing batch
  * operations on databases (e.g. write rows to file).

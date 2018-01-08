@@ -17,12 +17,19 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.Sets;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runners.Parameterized;
 
 import java.util.List;
 import java.util.Map;
@@ -30,11 +37,27 @@ import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
+import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.UNSUPPORTED;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static org.hamcrest.core.Is.is;
+import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assume.assumeThat;
 
 /**
  * @author Rafael Marmelo (rafael.marmelo@feedzai.com)
@@ -42,28 +65,86 @@ import static org.junit.Assert.assertTrue;
  */
 public abstract class AbstractEngineSchemaTest {
 
+    /**
+     * An enumeration of the level of support of IEEE 754 non-number values a {@link DatabaseEngine} provides.
+     *
+     * Values in question: {@link Double#NaN}, {@link Double#NEGATIVE_INFINITY} and {@link Double#POSITIVE_INFINITY}.
+     */
+    public enum Ieee754Support {
+        /**
+         * IEEE 754 non-number values are unsupported.
+         */
+        UNSUPPORTED,
+
+        /**
+         * IEEE 754 non-number values are supported.
+         */
+        SUPPORTED,
+
+        /**
+         * IEEE 754 non-number values are supported, even when provided as {@link String}
+         *
+         * Most engines don't support this because the destination column for the values will be numeric, of type
+         * {@link com.feedzai.commons.sql.abstraction.ddl.DbColumnType#DOUBLE}.
+         */
+        SUPPORTED_STRINGS
+    }
+
+    private static final String IEE754_SUPPORT_MESSAGE = "Test not supported for this engine - skipped";
+
     protected DatabaseEngine engine;
     protected Properties properties;
+
+    @Parameterized.Parameter
+    public DatabaseConfiguration config;
 
     private static String TABLE_NAME = "TEST_DOUBLE_COLUMN";
     private static String ID_COL = "ID";
     private static String DBL_COL = "DBL_COL";
     private static int PK_VALUE = 1;
 
-    protected abstract String getSchema();
-
-    protected abstract String getDefaultSchema();
-
     @Before
-    public abstract void init() throws Exception;
+    public void init() throws Exception {
+        properties = new Properties() {
+            {
+                setProperty(JDBC, config.jdbc);
+                setProperty(USERNAME, config.username);
+                setProperty(PASSWORD, config.password);
+                setProperty(ENGINE, config.engine);
+                setProperty(SCHEMA_POLICY, "drop-create");
+                setProperty(SCHEMA, getDefaultSchema());
+            }
+        };
+    }
 
+    protected String getDefaultSchema() {
+        return "";
+    }
 
-    //
-    // these tests use the default schema
-    //
+    protected String getSchema() {
+        return "";
+    }
 
+    /**
+     * This method tells what kind of support the current engine (and the corresponding test class extending this one)
+     * has for IEEE 754 non-number values.
+     *
+     * Default is assuming it is {@link Ieee754Support#UNSUPPORTED}, unless otherwise stated by overriding this method.
+     *
+     * @return the level of {@link Ieee754Support}.
+     */
+    protected Ieee754Support getIeee754Support() {
+        return UNSUPPORTED;
+    }
+
+    /**
+     * Tests a query including an UDF {@link com.feedzai.commons.sql.abstraction.dml.Expression},
+     * using the default schema.
+     *
+     * @throws Exception If something goes wrong with the test.
+     */
     @Test
-    public void udfGetOneTest() throws DatabaseEngineException, DatabaseFactoryException {
+    public void udfGetOneTest() throws Exception {
         // engine using the default schema
         engine = DatabaseFactory.getConnection(properties);
         defineUDFGetOne(engine);
@@ -72,13 +153,14 @@ public abstract class AbstractEngineSchemaTest {
         assertEquals("result ok?", 1, (int) query.get(0).get("ONE").toInt());
     }
 
-
-    //
-    // these tests use a given schema
-    //
-
+    /**
+     * Tests a query including an UDF {@link com.feedzai.commons.sql.abstraction.dml.Expression},
+     * using the schema defined in the properties.
+     *
+     * @throws Exception If something goes wrong with the test.
+     */
     @Test
-    public void udfTimesTwoTest() throws DatabaseEngineException, DatabaseFactoryException {
+    public void udfTimesTwoTest() throws Exception {
         // engine using the default schema
         this.properties.setProperty(SCHEMA, getSchema());
         engine = DatabaseFactory.getConnection(properties);
@@ -94,7 +176,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testPersisttNan() throws Exception {
+    public void testPersistNan() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testPersistSpecialValues("NaN");
     }
 
@@ -103,7 +186,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testPersisttNanDouble() throws Exception {
+    public void testPersistNanDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testPersistSpecialValues(Double.NaN);
     }
 
@@ -112,7 +196,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertPStNan() throws Exception {
+    public void testInsertPSNan() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByPS("NaN");
     }
 
@@ -121,7 +206,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertPStNanDouble() throws Exception {
+    public void testInsertPSNanDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS(Double.NaN);
     }
 
@@ -130,7 +216,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertPS2tNan() throws Exception {
+    public void testInsertPS2Nan() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByPS2("NaN");
     }
 
@@ -139,7 +226,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertPS2tNanDouble() throws Exception {
+    public void testInsertPS2NanDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS2(Double.NaN);
     }
 
@@ -148,7 +236,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertBatchtNan() throws Exception {
+    public void testInsertBatchNan() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByBatch("NaN");
     }
 
@@ -157,7 +246,8 @@ public abstract class AbstractEngineSchemaTest {
      * value 'NaN' should be inserted into the database without any error.
      */
     @Test
-    public void testInsertBatchtNanDouble() throws Exception {
+    public void testInsertBatchNanDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByBatch(Double.NaN);
     }
 
@@ -167,6 +257,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testPersistInfinity() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testPersistSpecialValues("Infinity");
     }
 
@@ -176,6 +267,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testPersistInfinityDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testPersistSpecialValues(Double.POSITIVE_INFINITY);
     }
 
@@ -185,6 +277,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testPersistInfinityDoubleNegative() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testPersistSpecialValues(Double.NEGATIVE_INFINITY);
     }
 
@@ -194,6 +287,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPSInfinity() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByPS("Infinity");
     }
 
@@ -203,6 +297,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPSInfinityDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS(Double.POSITIVE_INFINITY);
     }
 
@@ -213,6 +308,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPSInfinityDoubleNegative() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS(Double.NEGATIVE_INFINITY);
     }
 
@@ -222,6 +318,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPS2Infinity() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByPS2("Infinity");
     }
 
@@ -231,6 +328,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPS2InfinityDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS2(Double.POSITIVE_INFINITY);
     }
 
@@ -240,6 +338,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertPS2InfinityDoubleNegative() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByPS2(Double.NEGATIVE_INFINITY);
     }
 
@@ -249,6 +348,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertBatchInfinity() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), is(SUPPORTED_STRINGS));
         testInsertSpecialValuesByBatch("Infinity");
     }
 
@@ -258,6 +358,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertBatchInfinityDouble() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByBatch(Double.POSITIVE_INFINITY);
     }
 
@@ -267,13 +368,14 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void testInsertBatchInfinityDoubleNegative() throws Exception {
+        assumeThat(IEE754_SUPPORT_MESSAGE, getIeee754Support(), not(UNSUPPORTED));
         testInsertSpecialValuesByBatch(Double.NEGATIVE_INFINITY);
     }
 
     /**
      * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
      */
-    @Test(expected=Exception.class)
+    @Test(expected = Exception.class)
     public void testPersistRandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
         testPersistSpecialValues("randomString");
     }
@@ -281,7 +383,7 @@ public abstract class AbstractEngineSchemaTest {
     /**
      * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
      */
-    @Test(expected=Exception.class)
+    @Test(expected = Exception.class)
     public void testInsertPSRandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
         testInsertSpecialValuesByPS("randomString");
     }
@@ -289,7 +391,7 @@ public abstract class AbstractEngineSchemaTest {
     /**
      * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
      */
-    @Test(expected=Exception.class)
+    @Test(expected = Exception.class)
     public void testInsertPS2RandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
         testInsertSpecialValuesByPS2("randomString");
     }
@@ -297,7 +399,7 @@ public abstract class AbstractEngineSchemaTest {
     /**
      * The 'randomString' is not a special value for the BINARY_DOUBLE type so it should throw an error.
      */
-    @Test(expected=Exception.class)
+    @Test(expected = Exception.class)
     public void testInsertBatchRandomValuesDoNoWorkInBinaryDoubleColumn() throws Exception {
         testInsertSpecialValuesByBatch("randomString");
     }
@@ -309,6 +411,7 @@ public abstract class AbstractEngineSchemaTest {
      */
     protected void testPersistSpecialValues(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.addEntity(entity);
@@ -328,17 +431,25 @@ public abstract class AbstractEngineSchemaTest {
     protected void testInsertSpecialValuesByPS(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         final String PSName = "PS_DUMMY";
-        final String preparedStatementQuery = "insert into TEST_DOUBLE_COLUMN(ID, DBL_COL) values (?,?)";
+        final String ec = engine.escapeCharacter();
+        final String preparedStatementQuery = "INSERT INTO " + quotize(TABLE_NAME, ec) +
+                "(" + quotize(ID_COL, ec) + ", " + quotize(DBL_COL, ec) + ") VALUES (?,?)";
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.createPreparedStatement(PSName, preparedStatementQuery);
             engine.clearParameters(PSName);
             engine.setParameters(PSName, PK_VALUE, columnValue);
             engine.executePS(PSName);
             engine.commit();
             checkResult(engine, TABLE_NAME, columnValue);
+
         } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
             engine.close();
         }
     }
@@ -351,10 +462,14 @@ public abstract class AbstractEngineSchemaTest {
     protected void testInsertSpecialValuesByPS2(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
         final String PSName = "PS_DUMMY";
-        final String preparedStatementQuery = "insert into TEST_DOUBLE_COLUMN(ID, DBL_COL) values (?,?)";
+        final String ec = engine.escapeCharacter();
+        final String preparedStatementQuery = "INSERT INTO " + quotize(TABLE_NAME, ec) +
+            "(" + quotize(ID_COL, ec) + ", " + quotize(DBL_COL, ec) + ") VALUES (?,?)";
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.createPreparedStatement(PSName, preparedStatementQuery);
             engine.clearParameters(PSName);
             engine.setParameter(PSName, 1, PK_VALUE);
@@ -362,10 +477,13 @@ public abstract class AbstractEngineSchemaTest {
             engine.executePS(PSName);
             engine.commit();
             checkResult(engine, TABLE_NAME, columnValue);
+
         } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
             engine.close();
         }
-
     }
 
     /**
@@ -375,14 +493,20 @@ public abstract class AbstractEngineSchemaTest {
      */
     protected void testInsertSpecialValuesByBatch(final Object columnValue) throws DatabaseFactoryException, DatabaseEngineException {
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.addEntity(entity);
+            engine.beginTransaction();
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(columnValue));
             engine.flush();
             engine.commit();
             checkResult(engine, TABLE_NAME, columnValue);
+
         } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
             engine.close();
         }
     }
@@ -401,10 +525,12 @@ public abstract class AbstractEngineSchemaTest {
         // use only a create to avoid dropping the table when adding.
         defaultAllowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
 
-        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is dropped.
+        // 1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is dropped.
         DatabaseEngine engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
+            engine.beginTransaction();
             engine.updateEntity(entity);
             // guarantee that is deleted and doesn't come from previous tests.
             engine.dropEntity(TABLE_NAME);
@@ -420,15 +546,22 @@ public abstract class AbstractEngineSchemaTest {
                     engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
             // drop the entity to prepare for the rest of the test.
             engine.dropEntity(TABLE_NAME);
+
         } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
             engine.close();
         }
 
-        //1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that column is not dropped because ALLOW_COLUMN_DROP is false.
+        // 2. create the table, insert, do a updateEntity that doesn't have the second column
+        // and confirm that column is not dropped because ALLOW_COLUMN_DROP is false.
         defaultAllowColumnDropProperties.put(PdbProperties.ALLOW_COLUMN_DROP, false);
         engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
+
         try {
             final DbEntity entity = createSpecialValuesEntity();
+            engine.beginTransaction();
             engine.updateEntity(entity);
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
             engine.flush();
@@ -442,6 +575,9 @@ public abstract class AbstractEngineSchemaTest {
             checkResult(engine, TABLE_NAME, 10d);
 
         } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
             engine.close();
         }
     }
@@ -460,7 +596,7 @@ public abstract class AbstractEngineSchemaTest {
         }
         final List<Map<String, ResultColumn>> dbl = engine.query(select(column(DBL_COL)).from(table(entityName)));
         final ResultColumn result = dbl.get(0).get(DBL_COL);
-        assertTrue("Should be equal to '"+ columnValue +"'. But was: " + result.toString(), result.toString().equals(columnValue));
+        assertEquals("Should be equal to '" + columnValue + "'. But was: " + result.toString(), columnValue, result.toString());
     }
 
     /**
@@ -473,7 +609,7 @@ public abstract class AbstractEngineSchemaTest {
     protected void checkResultDouble(final DatabaseEngine engine, final String entityName, final double columnValue) throws DatabaseEngineException {
         final List<Map<String, ResultColumn>> dbl = engine.query(select(column(DBL_COL)).from(table(entityName)));
         final ResultColumn result = dbl.get(0).get(DBL_COL);
-        assertTrue("Should be equal to '"+ columnValue +"'. But was: " + result.toString(), result.toDouble().equals(columnValue));
+        assertEquals("Should be equal to '" + columnValue + "'. But was: " + result.toString(), columnValue, result.toDouble(), 0);
     }
 
     /**

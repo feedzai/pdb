@@ -15,8 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimaps;
 import org.slf4j.Logger;
@@ -83,7 +81,7 @@ public class DatabaseConfigurationUtil {
     }
 
     /**
-     * Reads configuration from a {@link java.io.File}.
+     * Reads configuration from a {@link File}.
      *
      * @param path The file.
      * @return A {@link DatabaseConfigurationUtil} object.
@@ -94,9 +92,9 @@ public class DatabaseConfigurationUtil {
     }
 
     /**
-     * Reads configuration from an {@link java.io.InputStream} closing it at the end.
+     * Reads configuration from an {@link InputStream} closing it at the end.
      *
-     * @param is The {@link java.io.InputStream}.
+     * @param is The {@link InputStream}.
      * @return A {@link DatabaseConfigurationUtil} object.
      * @throws Exception If something occurs while reading the data.
      */
@@ -127,18 +125,13 @@ public class DatabaseConfigurationUtil {
      * @return The configurations filtered.
      */
     public Map<String, DatabaseConfiguration> filter(final Set<String> instances) {
-        return Maps.filterKeys(configs, new Predicate<String>() {
-            @Override
-            public boolean apply(String input) {
-                return instances.contains(input);
-            }
-        });
+        return Maps.filterKeys(configs, instances::contains);
     }
 
     /**
      * Loads the database configurations from the given source.
      *
-     * @throws java.io.IOException
+     * @throws IOException if an error occurred when reading from the input stream.
      */
     private void loadDatabaseConfigurations(InputStream is) throws IOException {
         final Properties properties = new Properties();
@@ -147,14 +140,10 @@ public class DatabaseConfigurationUtil {
         final Map<String, String> config = Maps.fromProperties(properties);
         final Map<String, Collection<String>> propsByVendor = groupByVendor(config);
 
-        this.configs = Maps.transformEntries(propsByVendor, new Maps.EntryTransformer<String,
-                Collection<String>,
-                DatabaseConfiguration>() {
-            @Override
-            public DatabaseConfiguration transformEntry(String vendor, Collection<String> properties) {
-                return buildDatabaseConfiguration(vendor, properties, config);
-            }
-        });
+        this.configs = Maps.transformEntries(
+            propsByVendor,
+            (vendor, propertiesCollection) -> buildDatabaseConfiguration(vendor, propertiesCollection, config)
+        );
     }
 
     /**
@@ -204,11 +193,6 @@ public class DatabaseConfigurationUtil {
      * @return Configuration grouped by vendor.
      */
     private Map<String, Collection<String>> groupByVendor(Map<String, String> config) {
-        return Multimaps.index(config.keySet(), new Function<String, String>() {
-            @Override
-            public String apply(String input) {
-                return input.split("\\.")[0];
-            }
-        }).asMap();
+        return Multimaps.index(config.keySet(), input -> input.split("\\.")[0]).asMap();
     }
 }

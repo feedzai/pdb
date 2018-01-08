@@ -52,12 +52,7 @@ public class OracleTranslator extends AbstractTranslator {
                 .append(translate(column))
                 .append(" ");
 
-        List<Object> trans = Lists.transform(column.getColumnConstraints(), new com.google.common.base.Function<DbColumnConstraint, Object>() {
-            @Override
-            public Object apply(DbColumnConstraint input) {
-                return input.translate();
-            }
-        });
+        List<Object> trans = Lists.transform(column.getColumnConstraints(), DbColumnConstraint::translate);
 
 
         sb.append(Joiner.on(" ").join(trans));
@@ -125,12 +120,9 @@ public class OracleTranslator extends AbstractTranslator {
     public String translate(RepeatDelimiter rd) {
         final String delimiter = rd.getDelimiter();
 
-        List<Object> all = Lists.transform(rd.getExpressions(), new com.google.common.base.Function<Expression, Object>() {
-            @Override
-            public Object apply(Expression input) {
-                inject(input);
-                return input.translate();
-            }
+        List<Object> all = Lists.transform(rd.getExpressions(), input -> {
+            inject(input);
+            return input.translate();
         });
 
         if (rd.isEnclosed()) {
@@ -248,7 +240,7 @@ public class OracleTranslator extends AbstractTranslator {
         final String name = v.getName();
         inject(as);
 
-        final List<String> res = new ArrayList<String>();
+        final List<String> res = new ArrayList<>();
         res.add("CREATE");
 
         if (v.isReplace()) {

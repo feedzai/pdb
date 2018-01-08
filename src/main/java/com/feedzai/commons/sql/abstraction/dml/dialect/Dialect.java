@@ -50,5 +50,5 @@ public enum Dialect {
      * Unknown implementation (can be used when implementing
      * new engines that are not distributed with the library.
      */
-    UNKNOWN;
+    UNKNOWN
 }

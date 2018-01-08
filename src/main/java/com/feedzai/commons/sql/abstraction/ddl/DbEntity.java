@@ -16,12 +16,14 @@
 package com.feedzai.commons.sql.abstraction.ddl;
 
 import com.feedzai.commons.sql.abstraction.dml.K;
-import com.google.common.base.Function;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Represents a database entity.
@@ -120,15 +122,9 @@ public class DbEntity implements Serializable {
      * @return {@code true} if the column is present in the list of columns, {@code false} otherwise.
      */
     public boolean containsColumn(String columnName) {
-        return FluentIterable
-                .from(columns)
-                .transform(new Function<DbColumn, String>() {
-                    @Override
-                    public String apply(DbColumn input) {
-                        return input.getName();
-                    }
-                })
-                .contains(columnName);
+        return columns.stream()
+            .map(DbColumn::getName)
+            .anyMatch(listColName -> listColName.equals(columnName));
     }
 
     /**

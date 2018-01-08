@@ -19,6 +19,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Represents an entry, i.e. the columns that are part of an entry.
@@ -88,14 +89,7 @@ public class EntityEntry implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        EntityEntry that = (EntityEntry) o;
-
-        if (map != null ? !map.equals(that.map) : that.map != null) return false;
-
-        return true;
+        return this == o || o != null && getClass() == o.getClass() && Objects.equals(this.map, ((EntityEntry) o).map);
     }
 
     @Override
