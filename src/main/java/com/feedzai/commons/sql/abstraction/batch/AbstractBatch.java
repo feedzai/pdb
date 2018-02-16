@@ -185,7 +185,17 @@ public abstract class AbstractBatch implements Runnable {
      * Starts the timer task.
      */
     protected void start() {
-        scheduler.scheduleAtFixedRate(this, 0, batchTimeout + salt, TimeUnit.MILLISECONDS);
+        // if a periodic execution throws an exception, future executions are suspended,
+        // this task wraps the call in a try-catch block to prevent that. Errors are still propagated.
+        final Runnable resilientTask = () -> {
+            try {
+                run();
+            } catch (final Exception e) {
+                logger.error("[{}] Error during timeout-initiated flush", name, e);
+            }
+        };
+
+        scheduler.scheduleAtFixedRate(resilientTask, 0, batchTimeout + salt, TimeUnit.MILLISECONDS);
     }
 
     /**
