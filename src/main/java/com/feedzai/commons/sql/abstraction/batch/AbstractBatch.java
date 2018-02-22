@@ -339,17 +339,8 @@ public abstract class AbstractBatch implements Runnable {
             flushTransactionLock.lock();
             start = System.currentTimeMillis();
 
-            // begin the transaction before the addBatch calls in order to force the retry
-            // of the connection if the same was lost during or since the last batch. Otherwise
-            // the addBatch call that uses a prepared statement will fail
-            de.beginTransaction();
+            processBatch(temp);
 
-            for (final BatchEntry entry : temp) {
-                de.addBatch(entry.getTableName(), entry.getEntityEntry());
-            }
-
-            de.flush();
-            de.commit();
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
@@ -368,17 +359,7 @@ public abstract class AbstractBatch implements Runnable {
                         de.rollback();
                     }
 
-                    // begin the transaction before the addBatch calls in order to force the retry
-                    // of the connection if the same was lost during or since the last batch. Otherwise
-                    // the addBatch call that uses a prepared statement will fail
-                    de.beginTransaction();
-
-                    for (final BatchEntry entry : temp) {
-                        de.addBatch(entry.getTableName(), entry.getEntityEntry());
-                    }
-
-                    de.flush();
-                    de.commit();
+                    processBatch(temp);
 
                     success = true;
                 } catch (final Exception exc) {
@@ -459,5 +440,29 @@ public abstract class AbstractBatch implements Runnable {
             logger.trace("[{}] Flush timeout occurred", name);
             flush();
         }
+    }
+
+    /**
+     * Processes all batch entries.
+     * <p>
+     * This is done by creating a transaction (by disabling auto-commit), adding all {@link BatchEntry batch entries} to
+     * their respective prepared statements, flush them and finally perform a commit on the transaction (which will
+     * enable auto-commit again afterwards).
+     *
+     * @param batchEntries The list of batch entries to be flush on the DB
+     * @throws DatabaseEngineException If the operation failed
+     */
+    private void processBatch(final List<BatchEntry> batchEntries) throws DatabaseEngineException {
+        // begin the transaction before the addBatch calls in order to force the retry
+        // of the connection if the same was lost during or since the last batch. Otherwise
+        // the addBatch call that uses a prepared statement will fail
+        de.beginTransaction();
+
+        for (final BatchEntry entry : batchEntries) {
+            de.addBatch(entry.getTableName(), entry.getEntityEntry());
+        }
+
+        de.flush();
+        de.commit(); // automatically ends transaction
     }
 }
