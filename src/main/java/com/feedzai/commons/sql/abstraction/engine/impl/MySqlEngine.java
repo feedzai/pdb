@@ -368,17 +368,17 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     @Override
     protected MappedEntity createPreparedStatementForInserts(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> insertInto = new ArrayList<>();
+        final List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName(), escapeCharacter()));
-        List<String> insertIntoWithAutoInc = new ArrayList<>();
+        final List<String> insertIntoWithAutoInc = new ArrayList<>();
         insertIntoWithAutoInc.add("INSERT INTO");
         insertIntoWithAutoInc.add(quotize(entity.getName(), escapeCharacter()));
-        List<String> columns = new ArrayList<>();
-        List<String> values = new ArrayList<>();
-        List<String> columnsWithAutoInc = new ArrayList<>();
-        List<String> valuesWithAutoInc = new ArrayList<>();
-        for (DbColumn column : entity.getColumns()) {
+        final List<String> columns = new ArrayList<>();
+        final List<String> values = new ArrayList<>();
+        final List<String> columnsWithAutoInc = new ArrayList<>();
+        final List<String> valuesWithAutoInc = new ArrayList<>();
+        for (final DbColumn column : entity.getColumns()) {
             columnsWithAutoInc.add(quotize(column.getName(), escapeCharacter()));
             valuesWithAutoInc.add("?");
             if (!column.isAutoInc()) {
@@ -395,18 +395,22 @@ public class MySqlEngine extends AbstractDatabaseEngine {
 
 
         final String statement = join(insertInto, " ");
+        // The MySQL DB doesn't implement INSERT RETURNING. Therefore, we just create a dummy statement, which will
+        // never be invoked by this implementation.
+        final String insertReturnStatement = "";
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
 
         logger.trace(statement);
         logger.trace(statementWithAutoInt);
 
-        PreparedStatement ps, psWithAutoInc;
+        final PreparedStatement ps, psReturn, psWithAutoInc;
         try {
             ps = conn.prepareStatement(statement, Statement.RETURN_GENERATED_KEYS);
+            psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
-            return new MappedEntity().setInsert(ps).setInsertWithAutoInc(psWithAutoInc);
-        } catch (SQLException ex) {
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc);
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
