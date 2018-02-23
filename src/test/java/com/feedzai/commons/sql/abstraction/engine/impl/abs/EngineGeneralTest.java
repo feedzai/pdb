@@ -691,7 +691,7 @@ public class EngineGeneralTest {
      * <ol>
      *     <li>Add batch to transaction and purposely fail to flush</li>
      *     <li>Ensure the existence of the Exception and rollback transaction</li>
-     *     <li>Flush again successfully an ensure that the DB table doesn't have any rows</li>
+     *     <li>Flush again successfully and ensure that the DB table doesn't have any rows</li>
      * </ol>
      *
      * This is a regression test.
@@ -728,6 +728,7 @@ public class EngineGeneralTest {
 
             engine.addBatch("TEST", entry);
             engine.flush();
+            fail("Was expecting the flush operation to fail");
         } catch (final DatabaseEngineException e) {
             expectedException = e;
         } finally {
@@ -744,11 +745,13 @@ public class EngineGeneralTest {
         engine.flush();
         engine.commit();
 
-        final List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
+        final List<Map<String, ResultColumn>> query = engine.query(select(all())
+                                                                           .from(table("TEST"))
+                                                                           .orderby(column("COL1").asc()));
 
         // Previously, we rolled back the transaction; now we are trying the flush an empty transaction.
         // Therefore, we shouldn't have any rows on the table.
-        assertEquals("There is no rows on table TEST", query.size(), 0);
+        assertEquals("There are no rows on table TEST", 0, query.size());
     }
 
     @Test
