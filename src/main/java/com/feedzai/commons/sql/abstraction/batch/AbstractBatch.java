@@ -293,6 +293,16 @@ public abstract class AbstractBatch implements Runnable {
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (Exception e) {
             logger.error(dev, "[{}] Error occurred while flushing.", name, e);
+
+            try {
+                if (de.isTransactionActive()) {
+                    de.rollback();
+                }
+            } catch (Exception ee) {
+                ee.addSuppressed(e);
+                logger.trace("[{}] Batch failed to check the flush transaction state", name, ee);
+            }
+
             /*
              * We cannot try any recovery here because we don't know why it failed. If it failed by a Constraint
              * violation for instance, we cannot try it again and again because it will always fail.
@@ -309,9 +319,10 @@ public abstract class AbstractBatch implements Runnable {
                     de.rollback();
                 }
             } catch (Exception e) {
-                logger.trace("[{}] Batch failed to check the flush transaction state", name);
+                logger.trace("[{}] Batch failed to check the flush transaction state", name, e);
+            } finally {
+                flushTransactionLock.unlock();
             }
-            flushTransactionLock.unlock();
         }
     }
 
