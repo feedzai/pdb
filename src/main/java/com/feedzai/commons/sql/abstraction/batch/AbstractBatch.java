@@ -55,6 +55,14 @@ public abstract class AbstractBatch implements Runnable {
      * Constant {@link FailureListener} representing the NO OP operation.
      */
     public final static FailureListener NO_OP = rowsFailed -> {};
+    /**
+     * Constant representing that no retries should be attempted on batch flush failures.
+     */
+    public final static int NO_RETRY = 0;
+    /**
+     * Constant representing the default time interval (milliseconds) to wait between batch flush retries.
+     */
+    public final static long DEFAULT_RETRY_INTERVAL = 300L;
 
     /**
      * The dev Marker.
@@ -123,6 +131,57 @@ public abstract class AbstractBatch implements Runnable {
      * The failure listener for customized behavior when this batch fails to persist data.
      */
     protected Optional<FailureListener> failureListener = Optional.empty();
+    /**
+     * The number of times to retry a batch flush upon failure.
+     * <p>
+     * Defaults to {@value NO_RETRY}.
+     */
+    protected final int maxFlushRetries;
+    /**
+     * The time interval (milliseconds) to wait between batch flush retries.
+     * <p>
+     * Defaults to {@value DEFAULT_RETRY_INTERVAL}.
+     */
+    protected final long flushRetryDelay;
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with a {@link FailureListener}.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
+     *                             will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
+     *
+     * @since 2.1.12
+     */
+    protected AbstractBatch(
+            final DatabaseEngine de,
+            final String name,
+            final int batchSize,
+            final long batchTimeout,
+            final long maxAwaitTimeShutdown,
+            final FailureListener failureListener,
+            final int maxFlushRetries,
+            final long flushRetryDelay) {
+        Preconditions.checkNotNull(de, "The provided database engine is null.");
+        Preconditions.checkNotNull(failureListener, "The provided failure listener is null");
+
+        this.de = de;
+        this.batchSize = batchSize;
+        this.batch = batchSize;
+        this.batchTimeout = batchTimeout;
+        this.lastFlush = System.currentTimeMillis();
+        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
+        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
+        this.failureListener = Optional.of(failureListener);
+        this.maxFlushRetries = maxFlushRetries;
+        this.flushRetryDelay = flushRetryDelay;
+    }
 
     /**
      * Creates a new instance of {@link AbstractBatch} with a {@link FailureListener}.
@@ -143,17 +202,7 @@ public abstract class AbstractBatch implements Runnable {
             final long batchTimeout,
             final long maxAwaitTimeShutdown,
             final FailureListener failureListener) {
-        Preconditions.checkNotNull(de, "The provided database engine is null.");
-        Preconditions.checkNotNull(failureListener, "The provided failure listener is null");
-
-        this.de = de;
-        this.batchSize = batchSize;
-        this.batch = batchSize;
-        this.batchTimeout = batchTimeout;
-        this.lastFlush = System.currentTimeMillis();
-        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
-        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
-        this.failureListener = Optional.of(failureListener);
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, failureListener, NO_RETRY, DEFAULT_RETRY_INTERVAL);
     }
 
     /**
@@ -285,50 +334,61 @@ public abstract class AbstractBatch implements Runnable {
             bufferLock.unlock();
         }
 
+        long start = System.currentTimeMillis();
         try {
             flushTransactionLock.lock();
-            final long start = System.currentTimeMillis();
+            start = System.currentTimeMillis();
 
-            // begin the transaction before the addBatch calls in order to force the retry
-            // of the connection if the same was lost during or since the last batch. Otherwise
-            // the addBatch call that uses a prepared statement will fail
-            de.beginTransaction();
+            processBatch(temp);
 
-            for (BatchEntry entry : temp) {
-                de.addBatch(entry.getTableName(), entry.getEntityEntry());
-            }
-
-            de.flush();
-            de.commit();
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
-        } catch (Exception e) {
-            logger.error(dev, "[{}] Error occurred while flushing.", name, e);
-
-            try {
-                if (de.isTransactionActive()) {
-                    de.rollback();
-                }
-            } catch (Exception ee) {
-                ee.addSuppressed(e);
-                logger.trace("[{}] Batch failed to check the flush transaction state", name, ee);
+        } catch (final Exception e) {
+            if (this.maxFlushRetries > 0) {
+                logger.warn(dev, "[{}] Error occurred while flushing. Retrying.", name, e);
             }
 
-            /*
-             * We cannot try any recovery here because we don't know why it failed. If it failed by a Constraint
-             * violation for instance, we cannot try it again and again because it will always fail.
-             *
-             * The idea here is to hand the entries that could not be added and continue right where we were.
-             *
-             * So, temp will only have the entries until it failed, this can be all the entries or until de.addBatch() failed;
-             * and buffer will have the events right after the failure.
-             */
-            onFlushFailure(temp.toArray(new BatchEntry[temp.size()]));
+            boolean success = false;
+            int retryCount;
+
+            for (retryCount = 0; retryCount < this.maxFlushRetries && !success; retryCount++) {
+                try {
+                    Thread.sleep(this.flushRetryDelay);
+
+                    // If the connection was established, we might need a rollback.
+                    if (de.checkConnection() && de.isTransactionActive()) {
+                        de.rollback();
+                    }
+
+                    processBatch(temp);
+
+                    success = true;
+                } catch (final Exception exc) {
+                    logger.warn(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, exc);
+                }
+            }
+
+            if (!success) {
+                try {
+                    if (de.isTransactionActive()) {
+                        de.rollback();
+                    }
+                } catch (final Exception ee) {
+                    ee.addSuppressed(e);
+                    logger.trace("[{}] Batch failed to check the flush transaction state", name, ee);
+                }
+
+                onFlushFailure(temp.toArray(new BatchEntry[temp.size()]));
+                logger.error(dev, "[{}] Error occurred while flushing. Aborting batch flush.", name, e);
+            } else {
+                logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name,
+                        (System.currentTimeMillis() - start), retryCount, temp.size());
+            }
         } finally {
             try {
                 if (de.isTransactionActive()) {
                     de.rollback();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("[{}] Batch failed to check the flush transaction state", name, e);
             } finally {
                 flushTransactionLock.unlock();
@@ -380,5 +440,29 @@ public abstract class AbstractBatch implements Runnable {
             logger.trace("[{}] Flush timeout occurred", name);
             flush();
         }
+    }
+
+    /**
+     * Processes all batch entries.
+     * <p>
+     * This is done by creating a transaction (by disabling auto-commit), adding all {@link BatchEntry batch entries} to
+     * their respective prepared statements, flush them and finally perform a commit on the transaction (which will
+     * enable auto-commit again afterwards).
+     *
+     * @param batchEntries The list of batch entries to be flush on the DB
+     * @throws DatabaseEngineException If the operation failed
+     */
+    private void processBatch(final List<BatchEntry> batchEntries) throws DatabaseEngineException {
+        // begin the transaction before the addBatch calls in order to force the retry
+        // of the connection if the same was lost during or since the last batch. Otherwise
+        // the addBatch call that uses a prepared statement will fail
+        de.beginTransaction();
+
+        for (final BatchEntry entry : batchEntries) {
+            de.addBatch(entry.getTableName(), entry.getEntityEntry());
+        }
+
+        de.flush();
+        de.commit(); // automatically ends transaction
     }
 }

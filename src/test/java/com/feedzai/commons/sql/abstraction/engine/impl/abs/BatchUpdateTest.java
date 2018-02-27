@@ -285,6 +285,113 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Checks that flushing batch entries retries successfully on recoverable DB errors.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void batchInsertFlushRetryAfterDBErrorTest() throws Exception {
+        final int numTestEntries = 5;
+        final int numRetries = 2;
+
+        final List<BatchEntry> failedEntries = new ArrayList<>();
+        addTestEntity();
+        final DefaultBatch batch = DefaultBatch.create(
+                engine,
+                "batchInsertFlushRetryAfterDBErrorTest",
+                numTestEntries + 1,
+                10000,
+                1000000,
+                failedEvents -> Collections.addAll(failedEntries, failedEvents),
+                numRetries,
+                200
+        );
+
+        final AtomicInteger callCounter = new AtomicInteger(0);
+
+        new MockUp<AbstractDatabaseEngine>() {
+            // This mock will fail exceptionally until the last retry.
+            @Mock
+            void beginTransaction(final Invocation inv) throws DatabaseEngineRuntimeException {
+                // The following condition is sufficient since there is one extra regular call before any retry.
+                if (callCounter.getAndIncrement() < numRetries) {
+                    throw new DatabaseEngineRuntimeException("Error! Try again.");
+                }
+                inv.proceed();
+            }
+        };
+
+        for(int i = 0 ; i < numTestEntries; i++) {
+            batch.add("TEST", getTestEntry(i));
+        }
+
+        // Explicit flush.
+        batch.flush();
+
+        // Check that the correct number of retries took place.
+        // Note that the number of retries is the number of calls excluding the first (which was not a retry).
+        assertEquals("Flush was retried the correct number of times", numRetries, callCounter.get() - 1);
+
+        // Check that entries were not added to onFlushFailure().
+        assertTrue("Entries should not be added to failed", failedEntries.isEmpty());
+
+        // Check entries are in DB.
+        checkTestEntriesInDB(numTestEntries);
+    }
+
+    /**
+     * Checks that flushing batch entries fails after exhausting all configured retries.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void batchInsertFlushAbortAfterExhaustingRetriesTest() throws Exception {
+        final int numTestEntries = 5;
+        final int numRetries = 2;
+
+        final List<BatchEntry> failedEntries = new ArrayList<>();
+        addTestEntity();
+        final DefaultBatch batch = DefaultBatch.create(
+                engine,
+                "batchInsertFlushRetryAfterDBErrorTest",
+                numTestEntries + 1,
+                10000,
+                1000000,
+                failedEvents -> Collections.addAll(failedEntries, failedEvents),
+                numRetries,
+                200
+        );
+
+        final AtomicInteger callCounter = new AtomicInteger(0);
+
+        new MockUp<AbstractDatabaseEngine>() {
+            // This mock will fail exceptionally for all configured retries (but would succeed if called after that).
+            @Mock
+            void beginTransaction(final Invocation inv) throws DatabaseEngineRuntimeException {
+                // The following condition is necessary since there is one extra regular call before any retry.
+                if (callCounter.getAndIncrement() < numRetries + 1) {
+                    throw new DatabaseEngineRuntimeException("Error! Try again.");
+                }
+                inv.proceed();
+            }
+        };
+
+        for(int i = 0 ; i < numTestEntries; i++) {
+            batch.add("TEST", getTestEntry(i));
+        }
+
+        // Explicit flush.
+        batch.flush();
+
+        // Check that the correct number of retries took place.
+        // Note that the number of retries is the number of calls excluding the first (which was not a retry).
+        assertEquals("Flush was retried the correct number of times", numRetries, callCounter.get() - 1);
+
+        // Check that entries were added to onFlushFailure().
+        assertEquals("Entries were added to failed", numTestEntries, failedEntries.size());
+    }
+
+    /**
      * Ensures that the batch transaction is rolled back when the flush fails.
      *
      * @since 2.1.5
@@ -433,7 +540,7 @@ public class BatchUpdateTest {
      */
     private void checkTestEntriesInDB(int numEntries) throws DatabaseEngineException {
         List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
-        assertTrue("Inserted entries not as expected", result.size() == numEntries);
+        assertEquals("Inserted entries not as expected", numEntries, result.size());
         for(int i = 0 ; i < numEntries ; i++) {
             checkTestEntry(i, result.get(i));
         }
