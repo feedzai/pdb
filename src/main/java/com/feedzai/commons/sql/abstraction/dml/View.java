@@ -15,7 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import com.feedzai.commons.sql.abstraction.util.StringUtils;
 
 /**
  * Represents a SQL view.
@@ -43,7 +43,7 @@ public class View extends Expression {
      * @param name The name of the view.
      */
     public View(final String name) {
-        this.name = StringEscapeUtils.escapeSql(name);
+        this.name = StringUtils.escapeSql(name);
     }
 
     /**

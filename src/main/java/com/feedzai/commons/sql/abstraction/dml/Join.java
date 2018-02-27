@@ -15,7 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import com.feedzai.commons.sql.abstraction.util.StringUtils;
 
 /**
  * Represents a SQL join operator.
@@ -45,7 +45,7 @@ public class Join extends Expression {
      * @param joinExpr  The join expression.
      */
     public Join(final String join, final Expression joinTable, final Expression joinExpr) {
-        this.join = StringEscapeUtils.escapeSql(join);
+        this.join = StringUtils.escapeSql(join);
         this.joinTable = joinTable;
         this.joinExpr = joinExpr;
     }

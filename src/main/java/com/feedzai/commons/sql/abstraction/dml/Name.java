@@ -15,7 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import org.apache.commons.lang.StringEscapeUtils;
+import com.feedzai.commons.sql.abstraction.util.StringUtils;
 
 
 /**
@@ -58,8 +58,8 @@ public class Name extends Expression {
      * @param name      The name.
      */
     public Name(final String tableName, final String name) {
-        this.environment = StringEscapeUtils.escapeSql(tableName);
-        this.name = StringEscapeUtils.escapeSql(name);
+        this.environment = StringUtils.escapeSql(tableName);
+        this.name = StringUtils.escapeSql(name);
     }
 
     /**

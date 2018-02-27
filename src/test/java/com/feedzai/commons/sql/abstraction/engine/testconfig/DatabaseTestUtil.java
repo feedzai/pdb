@@ -16,7 +16,7 @@
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.InputStream;

@@ -18,7 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.configuration;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.google.common.base.Enums;
 import com.google.common.base.Optional;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.util.EnumSet;

@@ -37,7 +37,7 @@ import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutput
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
