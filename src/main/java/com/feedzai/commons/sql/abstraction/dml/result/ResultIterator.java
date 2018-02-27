@@ -35,7 +35,7 @@ import java.util.Map;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public abstract class ResultIterator {
+public abstract class ResultIterator implements AutoCloseable {
     /**
      * The logger.
      */
@@ -228,6 +228,7 @@ public abstract class ResultIterator {
     /**
      * Closes the {@link ResultSet} and the {@link Statement} if applicable.
      */
+    @Override
     public void close() {
         // Check for previous closed.
         if (!closed) {

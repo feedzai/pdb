@@ -42,6 +42,8 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import mockit.Mock;
+import mockit.MockUp;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -59,6 +61,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -504,6 +507,44 @@ public class EngineGeneralTest {
 
         // calling close on a closed result set has no effect.
         it.close();
+    }
+
+    /**
+     * Tests that an iterator created in a try-with-resources' resource specification header is automatically closed
+     * once the block is exited from.
+     *
+     * @throws Exception If an unexpected error occurs.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void queryWithIteratorInTryWithResources() throws Exception {
+        test5Columns();
+
+        final EntityEntry entry = entry()
+                .set("COL1", 1)
+                .set("COL2", false)
+                .set("COL3", 2D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS")
+                .build();
+        engine.persist("TEST", entry);
+
+        final ResultIterator resultIterator;
+        try (final ResultIterator it = engine.iterator(select(all()).from(table("TEST")))){
+
+            resultIterator = it;
+
+            assertFalse(
+                    "Result iterator should not be closed before exiting try-with-resources block",
+                    resultIterator.isClosed()
+            );
+        }
+
+        assertTrue(
+                "Result iterator should be closed after exiting try-with-resources block",
+                resultIterator.isClosed()
+        );
     }
 
     @Test
@@ -3350,5 +3391,35 @@ public class EngineGeneralTest {
                 .build();
 
         assertEquals("entry's hashCode() matches map's hashCode()", map.hashCode(), entry.hashCode());
+    }
+
+    /**
+     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine once the block is
+     * exited from.
+     *
+     * @since 2.1.12
+     */
+    @Test
+    public void tryWithResourcesClosesEngine() {
+        final AtomicInteger closeCallCount = new AtomicInteger(0);
+
+        try(final DatabaseEngine ignored = new MockUp<DatabaseEngine>() {
+            @Mock
+            void close() {
+                closeCallCount.incrementAndGet();
+            }
+        }.getMockInstance()) {
+            assertEquals(
+                    "DatabaseEngine#close method should not be called within the try-with-resources block",
+                    0,
+                    closeCallCount.get()
+            );
+        }
+
+        assertEquals(
+                "DatabaseEngine#close method should be called after exiting try-with-resources block",
+                1,
+                closeCallCount.get()
+        );
     }
 }
