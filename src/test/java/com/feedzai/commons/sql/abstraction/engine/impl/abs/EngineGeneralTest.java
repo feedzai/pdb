@@ -42,6 +42,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
 import org.junit.After;
@@ -62,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -126,6 +128,7 @@ import static org.junit.Assert.fail;
  */
 @RunWith(Parameterized.class)
 public class EngineGeneralTest {
+
 
     protected DatabaseEngine engine;
     protected Properties properties;
@@ -679,6 +682,76 @@ public class EngineGeneralTest {
 
         assertTrue("COL5 exists", query.get(1).containsKey("COL5"));
         assertEquals("COL5  ok?", "OLA", query.get(1).get("COL5").toString());
+    }
+
+    /**
+     * Tests that on a rollback situation, the prepared statement batches are cleared.
+     *
+     * The steps performed on this test are:
+     * <ol>
+     *     <li>Add batch to transaction and purposely fail to flush</li>
+     *     <li>Ensure the existence of the Exception and rollback transaction</li>
+     *     <li>Flush again successfully and ensure that the DB table doesn't have any rows</li>
+     * </ol>
+     *
+     * This is a regression test.
+     *
+     * @throws DatabaseEngineException If there is a problem on {@link DatabaseEngine} operations.
+     * @since 2.1.12
+     */
+    @Test
+    public void batchInsertRollback() throws DatabaseEngineException {
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .build();
+
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            public synchronized void flush(final Invocation invocation) throws DatabaseEngineException {
+                if (latch.getCount() == 1) {
+                    throw new DatabaseEngineException("");
+                }
+                invocation.proceed();
+            }
+        };
+
+        DatabaseEngineException expectedException = null;
+
+        engine.addEntity(entity);
+        engine.beginTransaction();
+
+        try {
+            final EntityEntry entry = entry().set("COL1", 1).build();
+
+            engine.addBatch("TEST", entry);
+            engine.flush();
+            fail("Was expecting the flush operation to fail");
+        } catch (final DatabaseEngineException e) {
+            expectedException = e;
+        } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
+        }
+
+        // Ensure we had an exception and therefore we didn't insert anything on the DB and that we cleared the batches.
+        assertNotNull("DB returned exception when flushing", expectedException);
+
+        latch.countDown();
+        engine.beginTransaction();
+        engine.flush();
+        engine.commit();
+
+        final List<Map<String, ResultColumn>> query = engine.query(select(all())
+                                                                           .from(table("TEST"))
+                                                                           .orderby(column("COL1").asc()));
+
+        // Previously, we rolled back the transaction; now we are trying the flush an empty transaction.
+        // Therefore, we shouldn't have any rows on the table.
+        assertEquals("There are no rows on table TEST", 0, query.size());
     }
 
     @Test
