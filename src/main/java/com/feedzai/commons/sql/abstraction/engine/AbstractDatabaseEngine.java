@@ -398,20 +398,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                         } catch (SQLException ex) {
                             logger.debug(String.format("Failed to flush before dropping entity '%s'", me.getValue().getEntity().getName()), ex);
                         } finally {
-                            if (insert != null) {
-                                try {
-                                    insert.close();
-                                } catch (Exception e) {
-                                    logger.trace("Could not close prepared statement.", e);
-                                }
-                            }
 
-                            if (insertReturning != null) {
-                                try {
-                                    insertReturning.close();
-                                } catch (Exception e) {
-                                    logger.trace("Could not close prepared statement.", e);
-                                }
+                            try {
+                                me.getValue().close();
+                            } catch (Exception e) {
+                                // Should never be thrown
+                                logger.trace("Could not close insert statements.", e);
                             }
                         }
 
@@ -421,6 +413,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     }
                 }
             }
+
+            for (PreparedStatementCapsule ps : stmts.values()) {
+                ps.ps.close();
+            }
+            stmts.clear();
 
             conn.close();
             logger.debug("Connection to database closed");
