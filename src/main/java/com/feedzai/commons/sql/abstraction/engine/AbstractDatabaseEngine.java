@@ -398,12 +398,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                         } catch (SQLException ex) {
                             logger.debug(String.format("Failed to flush before dropping entity '%s'", me.getValue().getEntity().getName()), ex);
                         } finally {
-
-                            try {
-                                me.getValue().close();
-                            } catch (Exception e) {
-                                logger.warn("Could not close insert statements from mapped entity.", e);
-                            }
+                            closeMappedEntity(me.getValue());
                         }
 
                         dropEntity(me.getValue().getEntity());
@@ -411,6 +406,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                         logger.debug(String.format("Failed to drop entity '%s'", me.getValue().getEntity().getName()), ex);
                     }
                 }
+
+            } else {
+                entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
             }
 
             for (PreparedStatementCapsule preparedStatement : stmts.values()) {
@@ -426,7 +424,22 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             conn.close();
             logger.debug("Connection to database closed");
         } catch (SQLException ex) {
-            logger.warn("Unable to close connection");
+            logger.warn("Unable to close connection", ex);
+        }
+    }
+
+    /**
+     * Closes a {@link MappedEntity}, logging a warning if an {@link Exception} is thrown.
+     *
+     * @param mappedEntity The mapped entity to close.
+     * @since 2.1.12
+     */
+    private void closeMappedEntity(final MappedEntity mappedEntity) {
+
+        try {
+            mappedEntity.close();
+        } catch (Exception e) {
+            logger.warn("Could not close insert statements from mapped entity.", e);
         }
     }
 
