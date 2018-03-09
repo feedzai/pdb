@@ -35,6 +35,7 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RECONNE
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RETRY_INTERVAL;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SECRET_LOCATION;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SHOULD_COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_VARCHAR_SIZE;
 
 /**
@@ -133,6 +134,10 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      * Property that indicates how much time to wait for a batch to shutdown.
      */
     public static final String MAXIMUM_TIME_BATCH_SHUTDOWN = "pdb.maximum_await_time_batch";
+    /**
+     * Property that indicates the lobs should be compressed. This depends on the database implementation.
+     */
+    public static final String SHOULD_COMPRESS_LOBS = "pdb.compress_lobs";
 
     /**
      * Creates a new instance of an empty {@link PdbProperties}.
@@ -163,6 +168,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(ALLOW_COLUMN_DROP, DEFAULT_ALLOW_COLUMN_DROP);
             setProperty(FETCH_SIZE, DEFAULT_FETCH_SIZE);
             setProperty(MAXIMUM_TIME_BATCH_SHUTDOWN, DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN);
+            setProperty(SHOULD_COMPRESS_LOBS, DEFAULT_SHOULD_COMPRESS_LOBS);
         }
     }
 
@@ -340,6 +346,15 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      */
     public boolean isReconnectOnLost() {
         return Boolean.parseBoolean(getProperty(RECONNECT_ON_LOST));
+    }
+
+    /**
+     * Checks if LOBS columns should be compressed.
+     *
+     * @return {@code true} if LOBS should be compressed, {@code false} otherwise.
+     */
+    public boolean shouldCompressLobs() {
+        return Boolean.parseBoolean(getProperty(SHOULD_COMPRESS_LOBS));
     }
 
     /**

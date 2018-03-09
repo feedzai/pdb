@@ -52,6 +52,7 @@ import java.util.Optional;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.join;
 
 /**
@@ -86,6 +87,11 @@ public class OracleEngine extends AbstractDatabaseEngine {
      * Foreign key already exists
      */
     public static final String FOREIGN_ALREADY_EXISTS = "ORA-02275";
+
+    /**
+     * Secure file LOBS cannot be used in non-ASSM (Automatic Segment Space Management) tablespace.
+     */
+    private static final String SECUREFILE_NOT_ASSM = "ORA-43853";
     /**
      *  Double instance for 0.0, so no Double instance is created whenever 0.0 is necessary.
      *
@@ -233,7 +239,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
         if (properties.getSchema() != null && properties.getSchema().length() > 0 &&
                         !properties.getUsername().equals(properties.getSchema())) {
             // Set connection schema if one is defined and not the same as the user name
-            Statement stmt = conn.createStatement();
+            final Statement stmt = conn.createStatement();
             stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
             stmt.close();
         }
@@ -268,13 +274,51 @@ public class OracleEngine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
+        // Get default create table statement
+        final String defaultCreateTableStatement = getCreateTableStatement(entity);
+
+        // Check for extra properties
+        final String createTableCompressLOBS = getCompressLobsStatements(entity);
+
+        final String createTableStatement = defaultCreateTableStatement + createTableCompressLOBS;
+
+        for (final String createTable : ImmutableList.of(createTableStatement, defaultCreateTableStatement)) {
+            try (
+                    Statement statement = conn.createStatement()
+            ) {
+                statement.executeUpdate(createTable);
+                break; // If we got here, then we successfully created the table
+            } catch (final SQLException ex) {
+                if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
+                    logger.debug(dev, "'{}' is already defined", entity.getName());
+                    handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
+                    break; // Name already exists, we cannot do anything so we exit
+                } else if (ex.getMessage().startsWith(SECUREFILE_NOT_ASSM)) {
+                    logger.warn("Secure file LOBS cannot be used in non-ASSM tablespace. Creating table " +
+                                        "without compressed lobs");
+                } else {
+                    throw new DatabaseEngineException("Something went wrong handling statement", ex);
+                }
+            }
+        }
+    }
+
+    /**
+     * This method creates a string with the create DDL for the {@link DbEntity entity} received.
+     *
+     * @param entity the entity to create
+     * @return the DDL statement
+     * @throws DatabaseEngineException if something goes wrong
+     * @since 2.1.13
+     */
+    private String getCreateTableStatement(final DbEntity entity) throws DatabaseEngineException {
+        final List<String> createTable = new ArrayList<>();
 
         createTable.add("CREATE TABLE");
         createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<>();
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
+        final List<String> columns = new ArrayList<>();
+        for (final DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
             column.add(quotize(c.getName()));
             column.add(translateType(c));
 
@@ -283,7 +327,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 column.add(translate(c.getDefaultValue()));
             }
 
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+            for (final DbColumnConstraint cc : c.getColumnConstraints()) {
                 column.add(cc.translate());
             }
             columns.add(join(column, " "));
@@ -292,31 +336,29 @@ public class OracleEngine extends AbstractDatabaseEngine {
         // segment creation deferred can cause unexpected behaviour in sequences
         // see: http://dirknachbar.blogspot.pt/2011/01/deferred-segment-creation-under-oracle.html
         createTable.add("SEGMENT CREATION IMMEDIATE");
+        return join(createTable, " ");
+    }
 
-        final String createTableStatement = join(createTable, " ");
-
-        logger.trace(createTableStatement);
-
-        Statement s = null;
-        try {
-            s = conn.createStatement();
-            s.executeUpdate(createTableStatement);
-        } catch (SQLException ex) {
-            if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
-                logger.debug(dev, "'{}' is already defined", entity.getName());
-                handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
-            } else {
-                throw new DatabaseEngineException("Something went wrong handling statement", ex);
-            }
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
+    /**
+     * Creates statements that enable LOBS compression.
+     *
+     * @param entity the entity to process
+     * @return the extra properties.
+     * @since 2.1.13
+     */
+    private String getCompressLobsStatements(final DbEntity entity) {
+        if (!this.properties.shouldCompressLobs()) {
+            return "";
         }
+
+        final String defaultLob = " LOB (\"%s\") STORE AS SECUREFILE (COMPRESS HIGH CACHE LOGGING)";
+
+        return entity.getColumns()
+                .stream()
+                .filter(dbColumn -> dbColumn.getDbColumnType().equals(DbColumnType.CLOB) ||
+                        dbColumn.getDbColumnType().equals(DbColumnType.BLOB))
+                .map(dbColumn -> String.format(defaultLob, dbColumn.getName()))
+                .collect(joining());
     }
 
     @Override

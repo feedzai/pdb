@@ -74,4 +74,9 @@ public final class Constants {
      * The default maximum amount of time to wait when batches are shutting down. 5 minutes.
      */
     public static final long DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN = TimeUnit.MINUTES.toMillis(5);
+    /**
+     * Indicates that the LOBS columns should be compressed. This is only possible on implementations that allow
+     * this behavior.
+     */
+    public static final boolean DEFAULT_SHOULD_COMPRESS_LOBS = true;
 }
