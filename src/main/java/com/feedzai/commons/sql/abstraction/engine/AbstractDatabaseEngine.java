@@ -383,26 +383,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     public synchronized void close() {
         try {
             if (properties.isSchemaPolicyCreateDrop()) {
-                for (Map.Entry<String, MappedEntity> me : entities.entrySet()) {
+
+                for (final Map.Entry<String, MappedEntity> me : entities.entrySet()) {
+                    closeMappedEntity(me.getValue());
+
                     try {
-                        // Flush first
-                        final PreparedStatement insert = me.getValue().getInsert();
-                        final PreparedStatement insertReturning = me.getValue().getInsertReturning();
-                        try {
-                            insert.executeBatch();
-
-                            if (insertReturning != null) {
-                                insertReturning.executeBatch();
-
-                            }
-                        } catch (SQLException ex) {
-                            logger.debug(String.format("Failed to flush before dropping entity '%s'", me.getValue().getEntity().getName()), ex);
-                        } finally {
-                            closeMappedEntity(me.getValue());
-                        }
-
                         dropEntity(me.getValue().getEntity());
-                    } catch (DatabaseEngineException ex) {
+                    } catch (final DatabaseEngineException ex) {
                         logger.debug(String.format("Failed to drop entity '%s'", me.getValue().getEntity().getName()), ex);
                     }
                 }
@@ -411,10 +398,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
             }
 
-            for (PreparedStatementCapsule preparedStatement : stmts.values()) {
+            for (final PreparedStatementCapsule preparedStatement : stmts.values()) {
                 try {
                     preparedStatement.ps.close();
-                } catch (SQLException e) {
+                } catch (final SQLException e) {
                     logger.warn("Could not close statement.", e);
                 }
             }
@@ -423,24 +410,43 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
             conn.close();
             logger.debug("Connection to database closed");
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             logger.warn("Unable to close connection", ex);
         }
     }
 
     /**
      * Closes a {@link MappedEntity}, logging a warning if an {@link Exception} is thrown.
+     * <p>
+     * It flushes before closing the {@link MappedEntity}.
      *
      * @param mappedEntity The mapped entity to close.
-     * @since 2.1.12
+     * @since 2.1.13
      */
     private void closeMappedEntity(final MappedEntity mappedEntity) {
 
         try {
-            mappedEntity.close();
-        } catch (Exception e) {
-            logger.warn("Could not close insert statements from mapped entity.", e);
+            // Flush first
+            final PreparedStatement insert = mappedEntity.getInsert();
+            final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
+
+            insert.executeBatch();
+            if (insertReturning != null) {
+                insertReturning.executeBatch();
+            }
+
+        } catch (final SQLException e) {
+            logger.debug(String.format("Failed to flush before closing mapped entity '%s'",
+                    mappedEntity.getEntity().getName()), e);
+
+        } finally {
+            try {
+                mappedEntity.close();
+            } catch (final Exception e) {
+                logger.warn("Could not close insert statements from mapped entity.", e);
+            }
         }
+
     }
 
     /**
@@ -568,7 +574,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                         dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
                     } else {
                         logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.",
-                            StringUtils.join(toRemove, ","), entity.getName());
+                                StringUtils.join(toRemove, ","), entity.getName());
                     }
                 }
                 List<DbColumn> columns = new ArrayList<>();
@@ -1418,9 +1424,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Maps the database type to {@link DbColumnType}. If there's no mapping a {@link DbColumnType#UNMAPPED} is returned.
      *
-     * @param type The SQL type from {@link java.sql.Types}.
-     * @param typeName  The native database type name.  It provides additional information for
-     *                  derived classes to resolve types unmapped here.
+     * @param type     The SQL type from {@link java.sql.Types}.
+     * @param typeName The native database type name.  It provides additional information for
+     *                 derived classes to resolve types unmapped here.
      * @return The {@link DbColumnType}.
      */
     protected DbColumnType toPdbType(final int type, final String typeName) {
