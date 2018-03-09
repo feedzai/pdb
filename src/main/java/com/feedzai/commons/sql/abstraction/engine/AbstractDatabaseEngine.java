@@ -402,8 +402,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                             try {
                                 me.getValue().close();
                             } catch (Exception e) {
-                                // Should never be thrown
-                                logger.trace("Could not close insert statements.", e);
+                                logger.warn("Could not close insert statements from mapped entity.", e);
                             }
                         }
 
