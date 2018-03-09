@@ -413,9 +413,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
             }
 
-            for (PreparedStatementCapsule ps : stmts.values()) {
-                ps.ps.close();
+            for (PreparedStatementCapsule preparedStatement : stmts.values()) {
+                try {
+                    preparedStatement.ps.close();
+                } catch (SQLException e) {
+                    logger.warn("Could not close statement.", e);
+                }
             }
+
             stmts.clear();
 
             conn.close();
