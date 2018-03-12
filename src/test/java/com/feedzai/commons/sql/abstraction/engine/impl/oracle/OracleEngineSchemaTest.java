@@ -45,6 +45,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -140,6 +141,8 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
         final String compression = "COMPRESSION";
         final String secureFile = "SECUREFILE";
+
+        properties.setProperty(COMPRESS_LOBS, Boolean.toString(true));
 
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 

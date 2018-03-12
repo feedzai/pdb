@@ -78,5 +78,5 @@ public final class Constants {
      * Indicates that the LOBS columns should be compressed. This is only possible on implementations that allow
      * this behavior.
      */
-    public static final boolean DEFAULT_SHOULD_COMPRESS_LOBS = true;
+    public static final boolean DEFAULT_COMPRESS_LOBS = true;
 }
