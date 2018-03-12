@@ -429,10 +429,16 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             // Flush first
             final PreparedStatement insert = mappedEntity.getInsert();
             final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
+            final PreparedStatement insertWithAutoInc = mappedEntity.getInsertWithAutoInc();
 
             insert.executeBatch();
+
             if (insertReturning != null) {
                 insertReturning.executeBatch();
+            }
+
+            if (insertWithAutoInc != null) {
+                insertWithAutoInc.executeBatch();
             }
 
         } catch (final SQLException e) {
