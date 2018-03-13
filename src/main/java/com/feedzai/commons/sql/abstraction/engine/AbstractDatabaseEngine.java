@@ -35,6 +35,7 @@ import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.AESHelper;
 import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang.StringUtils;
@@ -375,20 +376,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     @Override
     public synchronized void close() {
         try {
+            entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
+
             if (properties.isSchemaPolicyCreateDrop()) {
-
-                for (final Map.Entry<String, MappedEntity> me : entities.entrySet()) {
-                    closeMappedEntity(me.getValue());
-
-                    try {
-                        dropEntity(me.getValue().getEntity());
-                    } catch (final DatabaseEngineException ex) {
-                        logger.debug(String.format("Failed to drop entity '%s'", me.getValue().getEntity().getName()), ex);
-                    }
-                }
-
-            } else {
-                entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
+                dropAllEntities();
             }
 
             for (final PreparedStatementCapsule preparedStatement : stmts.values()) {
@@ -652,11 +643,30 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entity The entity.
      * @throws DatabaseEngineException If something goes wrong while dropping the structures.
      */
+    @Override
     public synchronized void dropEntity(final DbEntity entity) throws DatabaseEngineException {
         dropSequences(entity);
         dropTable(entity);
         entities.remove(entity.getName());
         logger.trace("Entity {} dropped", entity.getName());
+    }
+
+    /**
+     * Drops all entities associated with this engine.
+     *
+     * @since 2.1.13
+     */
+    private void dropAllEntities() {
+
+        for (MappedEntity mappedEntity : ImmutableList.copyOf(entities.values())) {
+
+            try {
+                dropEntity(mappedEntity.getEntity());
+            } catch (final DatabaseEngineException ex) {
+                logger.debug(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()), ex);
+            }
+        }
+
     }
 
     /**

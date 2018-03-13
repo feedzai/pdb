@@ -56,7 +56,7 @@ public class EngineCloseTest {
         final Collection<DatabaseConfiguration> configurations = DatabaseTestUtil.loadConfigurations();
         final Collection<String> schemaPolicies = Arrays.asList(
                 "drop-create",
-//                "create-drop", FIXME include after fixing removing issue
+                "create-drop",
                 "create",
                 "none"
         );
@@ -117,6 +117,13 @@ public class EngineCloseTest {
         engine.addEntity(buildEntity("ENTITY-2"));
         engine.createPreparedStatement("PS-1", "SELECT * FROM ENTITY-1");
         engine.createPreparedStatement("PS-2", "SELECT * FROM ENTITY-2");
+
+        // Prevent the temporary statements created while dropping entities from affecting the
+        // number of close() invocations
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            void dropEntity(final DbEntity entity) { }
+        };
 
         // Force invocation counting to start here
         new Expectations() {{ }};
