@@ -42,9 +42,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
+import mockit.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -56,6 +54,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -108,6 +107,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
+import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
@@ -3494,5 +3494,36 @@ public class EngineGeneralTest {
                 1,
                 closeCallCount.get()
         );
+    }
+
+    /**
+     * Test that closing a database engine a 'create-drop' policywith multiple entities closes all insert statements associated with each
+     * entity, regardless of the schema policy used.
+     *
+     * Each entity is associated with 3 prepared statements. This test ensures that 3 PSs per entity are closed.
+     *
+     * @throws DatabaseEngineException    If something goes wrong while adding an entity to the engine.
+     * @since 2.1.13
+     */
+    @Test
+    public void closingAnEngineUsingTheCreateDropPolicyShouldDropAllEntities()
+            throws DatabaseEngineException, DatabaseFactoryException {
+
+        // Force the schema policy to be 'create-drop'
+        properties.setProperty(SCHEMA_POLICY, "create-drop");
+        engine = DatabaseFactory.getConnection(properties);
+
+        engine.addEntity(buildEntity("ENTITY-1"));
+        engine.addEntity(buildEntity("ENTITY-2"));
+
+        // Force invocation counting to start here
+        new Expectations(engine) {};
+
+        engine.close();
+
+        new Verifications() {{
+            engine.dropEntity((DbEntity) any); times = 2;
+        }};
+
     }
 }

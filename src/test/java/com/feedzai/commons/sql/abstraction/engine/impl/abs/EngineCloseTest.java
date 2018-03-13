@@ -1,10 +1,17 @@
 /*
- * The copyright of this file belongs to Feedzai. The file cannot be
- * reproduced in whole or in part, stored in a retrieval system,
- * transmitted in any form, or by any means electronic, mechanical,
- * photocopying, or otherwise, without the prior permission of the owner.
+ * Copyright 2014 Feedzai
  *
- * © 2018 Feedzai, Strictly Confidential
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
@@ -29,13 +36,14 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 
 
 /**
  * Tests closing a {@link DatabaseEngine} to make sure all resources are cleaned up correctly.
+ *
+ * It tests with each schema policy.
  *
  * @author David Fialho (david.fialho@feedzai.com)
  * @since 2.1.13
@@ -135,25 +143,6 @@ public class EngineCloseTest {
             preparedStatementMock.executeBatch(); times = 2 * 3;   // {2 entities} x {PSs per entity}
         }};
 
-    }
-
-    /**
-     * Builds a new {@link DbEntity} with the specified name.
-     *
-     * @param name The name for the built entity.
-     * @return The built entity.
-     * @since 2.1.13
-     */
-    private static DbEntity buildEntity(final String name) {
-        return dbEntity()
-                .name(name)
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .pkFields("COL1")
-                .build();
     }
 
 }
