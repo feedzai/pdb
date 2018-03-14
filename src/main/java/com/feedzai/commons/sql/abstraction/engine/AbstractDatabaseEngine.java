@@ -660,15 +660,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     private void dropAllEntities() {
 
-        for (MappedEntity mappedEntity : ImmutableList.copyOf(entities.values())) {
-
+        for (final MappedEntity mappedEntity : ImmutableList.copyOf(entities.values())) {
             try {
                 dropEntity(mappedEntity.getEntity());
             } catch (final DatabaseEngineException ex) {
                 logger.debug(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()), ex);
             }
         }
-
     }
 
     /**

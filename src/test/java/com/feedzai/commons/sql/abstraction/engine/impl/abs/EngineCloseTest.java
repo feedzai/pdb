@@ -90,7 +90,7 @@ public class EngineCloseTest {
     }
 
     @Before
-    public void init() throws DatabaseFactoryException {
+    public void setUp() throws DatabaseFactoryException {
         properties = new Properties() {
 
             {
