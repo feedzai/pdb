@@ -125,6 +125,14 @@ public interface DatabaseEngine extends AutoCloseable {
     void dropEntity(final String entity) throws DatabaseEngineException;
 
     /**
+     * Drops everything that belongs to the entity.
+     *
+     * @param entity The entity.
+     * @throws DatabaseEngineException If something goes wrong while dropping the structures.
+     */
+    void dropEntity(final DbEntity entity) throws DatabaseEngineException;
+
+    /**
      * <p>
      * Persists a given entry. Persisting a query implies executing the statement.
      * </p>
