@@ -18,10 +18,19 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.engine.*;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import mockit.*;
+import mockit.Capturing;
+import mockit.Expectations;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Verifications;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,7 +46,11 @@ import java.util.Collection;
 import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 
 
 /**

@@ -17,7 +17,11 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.*;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 
 /**
@@ -26,7 +30,12 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntit
  * @author David Fialho (david.fialho@feedzai.com)
  * @since 2.1.13
  */
-public interface EngineTestUtils {
+public final class EngineTestUtils {
+
+    /**
+     * Disable the default constructor.
+     */
+    private EngineTestUtils() {}
 
     /**
      * Builds a new {@link DbEntity} with the specified name.
@@ -35,7 +44,7 @@ public interface EngineTestUtils {
      * @return The built entity.
      * @since 2.1.13
      */
-    static DbEntity buildEntity(final String name) {
+    public static DbEntity buildEntity(final String name) {
         return dbEntity()
                 .name(name)
                 .addColumn("COL1", INT)
