@@ -376,11 +376,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     @Override
     public synchronized void close() {
         try {
-            entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
-
-            if (properties.isSchemaPolicyCreateDrop()) {
-                dropAllEntities();
-            }
 
             for (final PreparedStatementCapsule preparedStatement : stmts.values()) {
                 try {
@@ -392,8 +387,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
             stmts.clear();
 
+            entities.forEach((key, mappedEntity) -> closeMappedEntity(mappedEntity));
+
+            if (properties.isSchemaPolicyCreateDrop()) {
+                dropAllEntities();
+            }
+
             conn.close();
             logger.debug("Connection to database closed");
+
         } catch (final SQLException ex) {
             logger.warn("Unable to close connection", ex);
         }
