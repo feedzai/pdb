@@ -3502,7 +3502,8 @@ public class EngineGeneralTest {
      *
      * Each entity is associated with 3 prepared statements. This test ensures that 3 PSs per entity are closed.
      *
-     * @throws DatabaseEngineException    If something goes wrong while adding an entity to the engine.
+     * @throws DatabaseEngineException  If something goes wrong while adding an entity to the engine.
+     * @throws DatabaseFactoryException If the database engine class specified in the properties does not exist.
      * @since 2.1.13
      */
     @Test

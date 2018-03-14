@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Feedzai
+ * Copyright 2018 Feedzai
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,8 +70,8 @@ public class EngineCloseTest {
         );
 
         final ArrayList<Object[]> data = new ArrayList<>();
-        for (DatabaseConfiguration configuration : configurations) {
-            for (String schemaPolicy : schemaPolicies) {
+        for (final DatabaseConfiguration configuration : configurations) {
+            for (final String schemaPolicy : schemaPolicies) {
                 data.add(new Object[]{configuration, schemaPolicy});
             }
         }
@@ -91,16 +91,13 @@ public class EngineCloseTest {
 
     @Before
     public void setUp() throws DatabaseFactoryException {
-        properties = new Properties() {
-
-            {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
-                setProperty(SCHEMA_POLICY, schemaPolicy);
-            }
-        };
+        properties = new Properties() {{
+            setProperty(JDBC, config.jdbc);
+            setProperty(USERNAME, config.username);
+            setProperty(PASSWORD, config.password);
+            setProperty(ENGINE, config.engine);
+            setProperty(SCHEMA_POLICY, schemaPolicy);
+        }};
 
         engine = DatabaseFactory.getConnection(properties);
     }
@@ -126,7 +123,7 @@ public class EngineCloseTest {
         engine.createPreparedStatement("PS-1", "SELECT * FROM ENTITY-1");
         engine.createPreparedStatement("PS-2", "SELECT * FROM ENTITY-2");
 
-        // Prevent the temporary statements created while dropping entities from affecting the
+        // Prevent the temporary statements, created while dropping entities, from affecting the
         // number of close() invocations
         new MockUp<AbstractDatabaseEngine>() {
             @Mock
