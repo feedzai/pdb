@@ -135,9 +135,9 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         final String tableName = "TEST_TABLE";
         final String tableUserLobs = "USER_LOBS";
 
-        final String tableId = "ID";
-        final String tableBlob = "BLOB_COLUMN";
-        final String tableClob = "CLOB_COLUMN";
+        final String idColumn = "ID";
+        final String blobColumn = "BLOB_COLUMN";
+        final String clobColumn = "CLOB_COLUMN";
 
         final String compression = "COMPRESSION";
         final String secureFile = "SECUREFILE";
@@ -146,67 +146,55 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
         final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 
-        createUserTablespace(tablespace);
-        updateUserTablespace(tablespace, engine.getProperties().getUsername());
+        createUserTablespace(tablespace, engine.getProperties().getUsername(), engine);
 
         final DbEntity entity = dbEntity()
                 .name(tableName)
-                .addColumn(tableId, INT)
-                .addColumn(tableBlob, BLOB)
-                .addColumn(tableClob, CLOB)
-                .pkFields(tableId)
+                .addColumn(idColumn, INT)
+                .addColumn(blobColumn, BLOB)
+                .addColumn(clobColumn, CLOB)
+                .pkFields(idColumn)
                 .build();
 
         engine.addEntity(entity);
 
-        assertTrue("ID column should exist", engine.getMetadata(tableName).containsKey(tableId));
-        assertTrue("BLOB_COLUMN column should exist", engine.getMetadata(tableName).containsKey(tableBlob));
-        assertTrue("CLOB_COLUMN column should exist", engine.getMetadata(tableName).containsKey(tableClob));
+        assertTrue("ID column should exist", engine.getMetadata(tableName).containsKey(idColumn));
+        assertTrue("BLOB_COLUMN column should exist", engine.getMetadata(tableName).containsKey(blobColumn));
+        assertTrue("CLOB_COLUMN column should exist", engine.getMetadata(tableName).containsKey(clobColumn));
 
-        // Now, test that the both columns are configured with secure file and compression is enable with "high"
+        // Now, test that the both columns are configured with secure file and compression is enable with "medium"
         final Expression query =
                 select(column(compression), column(secureFile))
                         .from(table(tableUserLobs))
-                        .where(in(column("COLUMN_NAME"), L(k(tableClob), k(tableBlob))));
+                        .where(in(column("COLUMN_NAME"), L(k(clobColumn), k(blobColumn))));
 
         final List<Map<String, ResultColumn>> results = engine.query(query);
 
         assertEquals("Check that two lines are returned",2, results.size());
 
         for (final Map<String, ResultColumn> result : results) {
-            assertEquals("Check that compression is defined as HIGH", result.get(compression).toString(), "HIGH");
+            assertEquals("Check that compression is defined as MEDIUM", result.get(compression).toString(), "MEDIUM");
             assertEquals("Check that secure file is enabled", result.get(secureFile).toString(), "YES");
         }
     }
 
     /**
-     * Helper method that updates the tablespace for a user.
+     * Helper method that creates and sets a new tablespace for a user.
      *
      * @param tablespace the name of the tablespace
-     * @param user the user for which its default tablespace will be assigned
+     * @param user       the user for which its default tablespace will be assigned
+     * @param engine     the database engine used to create the tablespace
      * @throws DatabaseFactoryException if anything goes wrong when obtaining an {@link DatabaseEngine engine}
-     * @throws DatabaseEngineException if there is a problem when executing the update tablespace query
+     * @throws DatabaseEngineException  if there is a problem when executing the update tablespace query
      */
-    private void updateUserTablespace(final String tablespace, final String user) throws DatabaseFactoryException, DatabaseEngineException {
-        final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
-
-        final String updateTablespace = String.format("ALTER USER %s DEFAULT TABLESPACE %s", user, tablespace);
-
-        engine.query(updateTablespace);
-    }
-
-    /**
-     * Helper method that creates a tablespace with a default size of 40M.
-     *
-     * @param tablespace the tablespace name
-     * @throws DatabaseFactoryException if anything goes wrong when obtaining an {@link DatabaseEngine engine}
-     * @throws DatabaseEngineException if there is a problem when executing the create tablespace query
-     */
-    private void createUserTablespace(final String tablespace) throws DatabaseFactoryException, DatabaseEngineException {
-        final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+    private void createUserTablespace(final String tablespace,
+                                      final String user,
+                                      final DatabaseEngine engine) throws DatabaseFactoryException, DatabaseEngineException {
 
         final String createTablespace = String.format("CREATE TABLESPACE %s DATAFILE 'tbs_f1.dat' SIZE 40M", tablespace);
+        final String updateTablespace = String.format("ALTER USER %s DEFAULT TABLESPACE %s", user, tablespace);
 
         engine.query(createTablespace);
+        engine.query(updateTablespace);
     }
 }

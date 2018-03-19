@@ -90,8 +90,25 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     /**
      * Secure file LOBS cannot be used in non-ASSM (Automatic Segment Space Management) tablespace.
+     *
+     * @since 2.1.13
      */
     private static final String SECUREFILE_NOT_ASSM = "ORA-43853";
+
+    /**
+     * Unsupported LOB type for SECUREFILE LOB operation.
+     *
+     * @since 2.1.13
+     */
+    private static final String SECUREFILE_LOB_NOT_ENABLED = "ORA-43856";
+
+    /**
+     * Feature not enabled: Advanced Compression.
+     *
+     * @since 2.1.13
+     */
+    private static final String COMPRESSION_NOT_ENABLED = "ORA-00439";
+
     /**
      *  Double instance for 0.0, so no Double instance is created whenever 0.0 is necessary.
      *
@@ -239,9 +256,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
         if (properties.getSchema() != null && properties.getSchema().length() > 0 &&
                         !properties.getUsername().equals(properties.getSchema())) {
             // Set connection schema if one is defined and not the same as the user name
-            final Statement stmt = conn.createStatement();
-            stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
-            stmt.close();
+            try (final Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
+            }
         }
     }
 
@@ -283,11 +300,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
         final String createTableStatement = defaultCreateTableStatement + createTableCompressLOBS;
 
         for (final String createTable : ImmutableList.of(createTableStatement, defaultCreateTableStatement)) {
-            try (
-                    Statement statement = conn.createStatement()
-            ) {
+            try (final Statement statement = conn.createStatement()) {
                 statement.executeUpdate(createTable);
-                break; // If we got here, then we successfully created the table
+                return; // If we got here, then we successfully created the table
             } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", entity.getName());
@@ -295,6 +310,12 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     break; // Name already exists, we cannot do anything so we exit
                 } else if (ex.getMessage().startsWith(SECUREFILE_NOT_ASSM)) {
                     logger.warn("Secure file LOBS cannot be used in non-ASSM tablespace. Creating table " +
+                                        "without compressed lobs");
+                } else if (ex.getMessage().startsWith(SECUREFILE_LOB_NOT_ENABLED)) {
+                    logger.warn("Unsupported LOB type for SECUREFILE LOB operation. Creating table " +
+                                        "without compressed lobs");
+                } else if (ex.getMessage().startsWith(COMPRESSION_NOT_ENABLED)) {
+                    logger.warn("Feature not enabled: Advanced Compression. Creating table " +
                                         "without compressed lobs");
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);
@@ -351,7 +372,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             return "";
         }
 
-        final String defaultLob = " LOB (\"%s\") STORE AS SECUREFILE (COMPRESS HIGH CACHE LOGGING)";
+        final String defaultLob = " LOB (\"%s\") STORE AS SECUREFILE (COMPRESS MEDIUM CACHE LOGGING)";
 
         return entity.getColumns()
                 .stream()
