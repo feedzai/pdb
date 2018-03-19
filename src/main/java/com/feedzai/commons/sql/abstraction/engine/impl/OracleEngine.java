@@ -307,7 +307,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", entity.getName());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
-                    break; // Name already exists, we cannot do anything so we exit
+                    return; // Name already exists, we cannot do anything so we exit
                 } else if (ex.getMessage().startsWith(SECUREFILE_NOT_ASSM)) {
                     logger.warn("Secure file LOBS cannot be used in non-ASSM tablespace. Creating table " +
                                         "without compressed lobs");
