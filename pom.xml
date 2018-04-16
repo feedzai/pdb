@@ -424,7 +424,7 @@
                                             <port>3306:3306</port>
                                         </ports>
                                         <env>
-                                            <MYSQL_ROOT_PASSWORD>my-secret-pw</MYSQL_ROOT_PASSWORD>
+                                            <MYSQL_ROOT_PASSWORD>AaBb12.#</MYSQL_ROOT_PASSWORD>
                                         </env>
                                         <cmd>--max-allowed-packet=16000000 --innodb-log-file-size=160000000</cmd>
                                         <wait>
@@ -470,7 +470,7 @@
                                         </ports>
                                         <env>
                                             <ACCEPT_EULA>Y</ACCEPT_EULA>
-                                            <SA_PASSWORD>AAaa11!!</SA_PASSWORD>
+                                            <SA_PASSWORD>AaBb12.#</SA_PASSWORD>
                                         </env>
                                         <wait>
                                             <time>40000</time>
@@ -514,7 +514,7 @@
                                             <port>5432:5432</port>
                                         </ports>
                                         <env>
-                                            <POSTGRES_PASSWORD>pgpassword</POSTGRES_PASSWORD>
+                                            <POSTGRES_PASSWORD>AaBb12.#</POSTGRES_PASSWORD>
                                         </env>
                                         <wait>
                                             <time>40000</time>
@@ -620,7 +620,7 @@
                                         </ports>
                                         <env>
                                             <LICENSE>accept</LICENSE>
-                                            <DB2INST1_PASSWORD>db2inst1-pwd</DB2INST1_PASSWORD>
+                                            <DB2INST1_PASSWORD>AaBb12.#</DB2INST1_PASSWORD>
                                         </env>
                                         <entrypoint>
                                             <arg>/bin/bash</arg>

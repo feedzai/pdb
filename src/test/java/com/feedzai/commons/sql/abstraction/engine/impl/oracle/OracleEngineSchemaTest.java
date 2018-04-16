@@ -15,14 +15,12 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
-
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -47,6 +45,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -70,26 +69,57 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     @Override
+    protected String getTestSchema() {
+        // to have lowercase schema, Oracle needs it to be quoted
+        return "\"myschema\"";
+    }
+
+    @Override
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION GetOne\n" +
-                "    RETURN INTEGER\n" +
-                "    AS\n" +
-                "        BEGIN\n" +
-                "    RETURN 1;\n" +
-                "    END GetOne;"
+            "CREATE OR REPLACE FUNCTION GetOne " +
+            "RETURN INTEGER " +
+            "AS " +
+            "BEGIN " +
+            "    RETURN 1;" +
+            "END GetOne;"
         );
     }
 
     @Override
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "    CREATE OR REPLACE FUNCTION TimesTwo (n IN INTEGER)\n" +
-                "    RETURN INTEGER\n" +
-                "    AS\n" +
-                "        BEGIN\n" +
-                "    RETURN n * 2;\n" +
-                "    END TimesTwo;\n"
+            "CREATE OR REPLACE FUNCTION " + getTestSchema() + ".TimesTwo (n IN INTEGER) " +
+            "RETURN INTEGER " +
+            "AS " +
+            "BEGIN " +
+            "    RETURN n * 2;" +
+            "END TimesTwo;"
+        );
+    }
+
+    @Override
+    protected void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        // create user (=schema) with all privileges granted
+        // schema needs to be quotized to have proper case; assume it already is if it starts with double quote
+        engine.executeUpdate(
+            "GRANT ALL PRIVILEGES TO " + (schema.startsWith("\"") ? schema : quotize(schema))
+                + " IDENTIFIED BY " + engine.getProperties().getPassword() + " WITH ADMIN OPTION"
+        );
+    }
+
+    @Override
+    protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        // schema needs to be quotized to have proper case; assume it already is if it starts with double quote
+        engine.executeUpdate(
+                "DECLARE\n" +
+                "   not_exists EXCEPTION;" +
+                "   PRAGMA EXCEPTION_INIT(not_exists, -01918);" +
+                "BEGIN\n" +
+                "   EXECUTE IMMEDIATE 'DROP USER " + (schema.startsWith("\"") ? schema : quotize(schema)) + " CASCADE';" +
+                "EXCEPTION\n" +
+                "   WHEN not_exists THEN null; -- ignore the error\n" +
+                "END;"
         );
     }
 
@@ -102,7 +132,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
     @Test
     public void testSystemGeneratedColumns() throws Exception {
 
-        try (DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
             final DbEntity entity = dbEntity()
                     .name("TEST_SYS_COL")
                     // Simulates a system generated column
@@ -184,12 +214,11 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
      * @param tablespace the name of the tablespace
      * @param user       the user for which its default tablespace will be assigned
      * @param engine     the database engine used to create the tablespace
-     * @throws DatabaseFactoryException if anything goes wrong when obtaining an {@link DatabaseEngine engine}
      * @throws DatabaseEngineException  if there is a problem when executing the update tablespace query
      */
     private void createUserTablespace(final String tablespace,
                                       final String user,
-                                      final DatabaseEngine engine) throws DatabaseFactoryException, DatabaseEngineException {
+                                      final DatabaseEngine engine) throws DatabaseEngineException {
 
         final String createTablespace = String.format("CREATE TABLESPACE %s DATAFILE 'tbs_f1.dat' SIZE 40M", tablespace);
         final String updateTablespace = String.format("ALTER USER %s DEFAULT TABLESPACE %s", user, tablespace);

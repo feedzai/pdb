@@ -1,12 +1,11 @@
 USE [pdb]
 GO
 
-IF OBJECT_ID (N'dbo.GetOne', N'FN') IS NOT NULL
-    DROP FUNCTION dbo.GetOne;
+IF OBJECT_ID (N'GetOne', N'FN') IS NOT NULL
+    DROP FUNCTION GetOne;
 GO
 
--- sqlserver always requires a schema
-CREATE FUNCTION dbo.GetOne()
+CREATE FUNCTION GetOne()
 RETURNS INTEGER
 AS
 BEGIN
@@ -15,7 +14,7 @@ END
 GO
 
 --
--- Query:
+-- Query (sqlserver always requires a schema when calling functions):
 -- SELECT dbo.GetOne();
 --
 -- Output:
@@ -44,7 +43,7 @@ END
 GO
 
 --
--- Query:
+-- Query (sqlserver always requires a schema when calling functions):
 -- SELECT myschema.TimesTwo(10);
 --
 -- Output:

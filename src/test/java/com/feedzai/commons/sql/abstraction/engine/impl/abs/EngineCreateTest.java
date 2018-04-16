@@ -17,7 +17,6 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
@@ -56,7 +55,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.TRANSLATOR;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.runners.Parameterized.Parameter;
 import static org.junit.runners.Parameterized.Parameters;
 
@@ -83,7 +82,7 @@ public class EngineCreateTest {
 
 
     @Before
-    public void init() throws DatabaseEngineException {
+    public void init() {
         this.properties = new Properties() {
             {
                 setProperty(JDBC, config.jdbc);
@@ -97,15 +96,13 @@ public class EngineCreateTest {
     }
 
     @Test
-    public void addEntityWithSchemaAlreadyCreated2Test() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
+    public void addEntityWithSchemaAlreadyCreated2Test() throws DatabaseEngineException, DatabaseFactoryException {
         DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 
         try {
-            ((AbstractDatabaseEngine) engine).dropEntity(dbEntity().name("TEST2")
-                    .build());
-            ((AbstractDatabaseEngine) engine).dropEntity(dbEntity().name("TEST1")
-                    .build());
-        } catch (DatabaseEngineException e) {
+            engine.dropEntity(dbEntity().name("TEST2").build());
+            engine.dropEntity(dbEntity().name("TEST1").build());
+        } catch (final DatabaseEngineException e) {
         }
 
         DbEntity entity1 = dbEntity()
@@ -146,15 +143,16 @@ public class EngineCreateTest {
     public void duplicationFailsTest() throws DatabaseFactoryException, DuplicateEngineException {
         expected.expect(DuplicateEngineException.class);
         expected.expectMessage("Duplicate can only be called if pdb.policy is set to 'create' or 'none'");
-        DatabaseEngine engine = DatabaseFactory.getConnection(properties);
 
-        Properties prop = new Properties() {
-            {
-                setProperty("pdb.schema_policy", "drop-create");
-            }
-        };
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+            final Properties prop = new Properties() {
+                {
+                    setProperty("pdb.schema_policy", "drop-create");
+                }
+            };
 
-        engine.duplicate(prop, false);
+            engine.duplicate(prop, false);
+        }
     }
 
     @Test
@@ -248,21 +246,13 @@ public class EngineCreateTest {
                 .pkFields("COL1")
                 .build();
 
-        DatabaseEngine engine = null;
-
         // make sure that entity doesn't exist and then create it from scratch
-        try {
-            engine = DatabaseFactory.getConnection(properties);
-
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)){
             silentTableDrop(engine, "TEST");
             engine.addEntity(entity);
-
-        } finally {
-            engine.close();
         }
 
-        try {
-            engine = DatabaseFactory.getConnection(properties);
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)){
             engine.loadEntity(entity);
             engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 1).build());
 
@@ -275,9 +265,6 @@ public class EngineCreateTest {
             assertEquals("Check that two lines are returned", 2, results.size());
             assertEquals("Check that first result is correct", 1, results.get(0).get("COL1").toInt().intValue());
             assertEquals("Check that second result is correct", 2, results.get(1).get("COL1").toInt().intValue());
-
-        } finally {
-            engine.close();
         }
     }
 
@@ -294,16 +281,12 @@ public class EngineCreateTest {
                 .pkFields("COL1")
                 .build();
 
-        DatabaseEngine engine = null;
-        try {
-            engine = DatabaseFactory.getConnection(properties);
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
 
             expected.expect(DatabaseEngineException.class);
             expected.expectMessage("You have to define the entity name");
 
             engine.loadEntity(entity);
-        } finally {
-            engine.close();
         }
     }
 
@@ -321,21 +304,13 @@ public class EngineCreateTest {
                 .pkFields("COL1")
                 .build();
 
-        DatabaseEngine engine = null;
-
         // make sure that entity doesn't exist and then create it from scratch
-        try {
-            engine = DatabaseFactory.getConnection(properties);
-
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)){
             silentTableDrop(engine, "TEST");
             engine.addEntity(entity);
-
-        } finally {
-            engine.close();
         }
 
-        try {
-            engine = DatabaseFactory.getConnection(properties);
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)){
 
             engine.loadEntity(entity);
 
@@ -345,12 +320,12 @@ public class EngineCreateTest {
             // before persist force the connection to be closed in order to force a recover
             try {
                 engine.getConnection().close();
-            } catch (Exception e) {
+            } catch (final Exception e) {
             }
 
             engine.persist(entity.getName(), new EntityEntry.Builder().set("COL1", 1).build());
 
-            assertFalse("Check that old and new connections are not the same", engine.getConnection().equals(oldConnection));
+            assertNotEquals("Check that old and new connections are not the same", oldConnection, engine.getConnection());
 
             // make sure that calling loadEntity twice doesn't have any impact.
             engine.loadEntity(entity);
@@ -362,9 +337,6 @@ public class EngineCreateTest {
             assertEquals("Check that two lines are returned", 2, results.size());
             assertEquals("Check that first result is correct", 1, results.get(0).get("COL1").toInt().intValue());
             assertEquals("Check that second result is correct", 2, results.get(1).get("COL1").toInt().intValue());
-
-        } finally {
-            engine.close();
         }
     }
 
@@ -377,8 +349,8 @@ public class EngineCreateTest {
      */
     private void silentTableDrop(DatabaseEngine engine, String tableName) {
         try {
-            ((AbstractDatabaseEngine) engine).dropEntity(new DbEntity.Builder().name(tableName).build());
-        } catch (Exception ignored) {
+            engine.dropEntity(new DbEntity.Builder().name(tableName).build());
+        } catch (final Exception ignored) {
         }
     }
 }

@@ -40,24 +40,32 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     @Override
-    protected String getSchema() {
-        return "myschema";
-    }
-
-    @Override
     protected Ieee754Support getIeee754Support() {
         return SUPPORTED_STRINGS;
     }
 
     @Override
-    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
-        engine.executeUpdate("CREATE ALIAS IF NOT EXISTS GetOne FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.GetOne\";");
+    protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate(
+            "CREATE ALIAS IF NOT EXISTS GetOne FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.GetOne\";"
+        );
     }
 
     @Override
-    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
-        engine.executeUpdate("CREATE SCHEMA IF NOT EXISTS " + getSchema());
-        engine.executeUpdate("CREATE ALIAS IF NOT EXISTS " + getSchema() + ".TimesTwo FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.TimesTwo\";");
+    protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate(
+            "CREATE ALIAS IF NOT EXISTS \"" + getTestSchema() + "\".TimesTwo FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.TimesTwo\";"
+        );
+    }
+
+    @Override
+    protected void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        engine.executeUpdate("CREATE SCHEMA IF NOT EXISTS \"" + schema + "\"");
+    }
+
+    @Override
+    protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        engine.executeUpdate("DROP SCHEMA IF EXISTS \"" + schema + "\" CASCADE");
     }
 
     public static int GetOne() {

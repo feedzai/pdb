@@ -75,7 +75,7 @@ public class NotifyOnFailureTest {
     private BatchEntry[] failureResults = null;
 
     @Before
-    public void init() throws DatabaseEngineException, DatabaseFactoryException {
+    public void init() throws DatabaseFactoryException {
         properties = new Properties() {
 
             {
