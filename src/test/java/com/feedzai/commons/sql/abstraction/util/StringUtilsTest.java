@@ -56,9 +56,23 @@ public class StringUtilsTest {
      */
     @Test
     public void md5() {
+        final String hash = "b45cffe084dd3d20d928bee85e7b0f21";
+
         assertEquals("md5 should create the right output",
-                "b45cffe084dd3d20d928bee85e7b0f21",
+                hash,
                 StringUtils.md5("string"));
+
+        assertEquals("md5 should create the right output when max size is below hash size",
+                hash.substring(0, hash.length() - 1),
+                StringUtils.md5("string", hash.length() - 1));
+
+        assertEquals("md5 should create the right output when max size equals hash size",
+                hash,
+                StringUtils.md5("string", hash.length()));
+
+        assertEquals("md5 should create the right output when max size is above hash size",
+                hash,
+                StringUtils.md5("string", hash.length() + 1));
     }
 
     /**
