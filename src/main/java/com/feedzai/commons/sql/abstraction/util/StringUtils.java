@@ -95,7 +95,8 @@ public class StringUtils {
      * @return The hexadecimal checksum with the specified maximum number of chars.
      */
     public static String md5(final String message, final int nchar) {
-        return md5(message).substring(0, nchar);
+        final String hash = md5(message);
+        return nchar > hash.length() ? hash : hash.substring(0, nchar);
     }
 
     /**
