@@ -68,6 +68,11 @@ import static org.junit.Assert.fail;
 @RunWith(Parameterized.class)
 public class SqlServerEngineGeneralTest {
 
+    private static final String USER_TABLE = "USER";
+    private static final String ID_COLUMN = "ID";
+    private static final String NAME_COLUMN = "NAME";
+    private static final String AGE_COLUMN = "AGE";
+
     protected DatabaseEngine engine;
     protected Properties properties;
 
@@ -132,7 +137,7 @@ public class SqlServerEngineGeneralTest {
     @Test
     public void joinsWithNoLocksTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
-            .name("USER")
+            .name(USER_TABLE)
             .addColumn("COL1", INT, true)
             .pkFields("COL1").build();
 
@@ -152,7 +157,7 @@ public class SqlServerEngineGeneralTest {
             .addFk(
                 dbFk()
                     .addColumn("COL1")
-                    .foreignTable("USER")
+                    .foreignTable(USER_TABLE)
                     .addForeignColumn("COL1")
                     .build(),
                 dbFk()
@@ -167,14 +172,14 @@ public class SqlServerEngineGeneralTest {
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
                     .innerJoin(table("ROLE").alias("c"), eq(column("b", "COL2"), column("c", "COL1")))
             )
@@ -182,14 +187,14 @@ public class SqlServerEngineGeneralTest {
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .rightOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .leftOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
@@ -198,36 +203,36 @@ public class SqlServerEngineGeneralTest {
     @Test
     public void selectWithOrderByWithMultipartIdentifier() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
-                .name("USER")
-                .addColumn("ID", INT, true)
-                .addColumn("NAME", STRING)
-                .addColumn("AGE", INT)
-                .pkFields("ID").build();
+                .name(USER_TABLE)
+                .addColumn(ID_COLUMN, INT, true)
+                .addColumn(NAME_COLUMN, STRING)
+                .addColumn(AGE_COLUMN, INT)
+                .pkFields(ID_COLUMN).build();
 
         engine.addEntity(entity);
 
         final EntityEntry person1Entity = entry()
-                .set("NAME","Person 1")
-                .set("AGE", 10)
+                .set(NAME_COLUMN,"Person 1")
+                .set(AGE_COLUMN, 10)
                 .build();
-        engine.persist("USER", person1Entity);
+        engine.persist(USER_TABLE, person1Entity);
 
         final EntityEntry person2Entity = entry()
-                .set("NAME","Person 2")
-                .set("AGE", 46)
+                .set(NAME_COLUMN,"Person 2")
+                .set(AGE_COLUMN, 46)
                 .build();
-        engine.persist("USER", person2Entity);
+        engine.persist(USER_TABLE, person2Entity);
 
         final EntityEntry person3Entity = entry()
-                .set("NAME","Person 3")
-                .set("AGE", 23)
+                .set(NAME_COLUMN,"Person 3")
+                .set(AGE_COLUMN, 23)
                 .build();
-        engine.persist("USER", person3Entity);
+        engine.persist(USER_TABLE, person3Entity);
 
         // query with order by clause
         final Query query = select(all())
-                .from(table("USER"))
-                .orderby(ImmutableList.of(column("USER", "AGE").asc()))
+                .from(table(USER_TABLE))
+                .orderby(ImmutableList.of(column(USER_TABLE, AGE_COLUMN).asc()))
                 .limit(10)
                 .offset(0);
 
@@ -240,8 +245,8 @@ public class SqlServerEngineGeneralTest {
 
         // try with a different page
         final Query query2 = select(all())
-                .from(table("USER"))
-                .orderby(ImmutableList.of(column("USER", "AGE").asc()))
+                .from(table(USER_TABLE))
+                .orderby(ImmutableList.of(column(USER_TABLE, AGE_COLUMN).asc()))
                 .limit(1)
                 .offset(1);
 
@@ -254,17 +259,17 @@ public class SqlServerEngineGeneralTest {
         final List<Map<String, Object>> listProcessed = new ArrayList<>();
         for (final Map<String, ResultColumn> entry : results) {
             listProcessed.add(ImmutableMap.of(
-                    "ID", entry.get("ID").toInt(),
-                    "NAME", entry.get("NAME").toString(),
-                    "AGE", entry.get("AGE").toInt()
+                    ID_COLUMN, entry.get(ID_COLUMN).toInt(),
+                    NAME_COLUMN, entry.get(NAME_COLUMN).toString(),
+                    AGE_COLUMN, entry.get(AGE_COLUMN).toInt()
             ));
         }
         return listProcessed;
     }
 
     private void assertPerson(final int id, final String name, final int age, final Map<String, Object> person) {
-        assertEquals(id, person.get("ID"));
-        assertEquals(name, person.get("NAME"));
-        assertEquals(age, person.get("AGE"));
+        assertEquals(id, person.get(ID_COLUMN));
+        assertEquals(name, person.get(NAME_COLUMN));
+        assertEquals(age, person.get(AGE_COLUMN));
     }
 }
