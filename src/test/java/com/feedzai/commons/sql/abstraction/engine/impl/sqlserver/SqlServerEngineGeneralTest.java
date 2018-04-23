@@ -16,12 +16,22 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.sqlserver;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,6 +49,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
@@ -47,6 +58,8 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -54,6 +67,11 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
  */
 @RunWith(Parameterized.class)
 public class SqlServerEngineGeneralTest {
+
+    private static final String USER_TABLE = "USER";
+    private static final String ID_COLUMN = "ID";
+    private static final String NAME_COLUMN = "NAME";
+    private static final String AGE_COLUMN = "AGE";
 
     protected DatabaseEngine engine;
     protected Properties properties;
@@ -119,7 +137,7 @@ public class SqlServerEngineGeneralTest {
     @Test
     public void joinsWithNoLocksTest() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
-            .name("USER")
+            .name(USER_TABLE)
             .addColumn("COL1", INT, true)
             .pkFields("COL1").build();
 
@@ -139,7 +157,7 @@ public class SqlServerEngineGeneralTest {
             .addFk(
                 dbFk()
                     .addColumn("COL1")
-                    .foreignTable("USER")
+                    .foreignTable(USER_TABLE)
                     .addForeignColumn("COL1")
                     .build(),
                 dbFk()
@@ -154,14 +172,14 @@ public class SqlServerEngineGeneralTest {
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .innerJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
                     .innerJoin(table("ROLE").alias("c"), eq(column("b", "COL2"), column("c", "COL1")))
             )
@@ -169,16 +187,89 @@ public class SqlServerEngineGeneralTest {
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .rightOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
 
         engine.query(
             select(all()).from(
-                table("USER").alias("a").withNoLock()
+                table(USER_TABLE).alias("a").withNoLock()
                     .leftOuterJoin(table("USER_ROLE").alias("b").withNoLock(), eq(column("a", "COL1"), column("b", "COL1")))
             )
         );
+    }
+
+    @Test
+    public void selectWithOrderByWithMultipartIdentifier() throws DatabaseEngineException {
+        DbEntity entity = dbEntity()
+                .name(USER_TABLE)
+                .addColumn(ID_COLUMN, INT, true)
+                .addColumn(NAME_COLUMN, STRING)
+                .addColumn(AGE_COLUMN, INT)
+                .pkFields(ID_COLUMN).build();
+
+        engine.addEntity(entity);
+
+        final EntityEntry person1Entity = entry()
+                .set(NAME_COLUMN,"Person 1")
+                .set(AGE_COLUMN, 10)
+                .build();
+        engine.persist(USER_TABLE, person1Entity);
+
+        final EntityEntry person2Entity = entry()
+                .set(NAME_COLUMN,"Person 2")
+                .set(AGE_COLUMN, 46)
+                .build();
+        engine.persist(USER_TABLE, person2Entity);
+
+        final EntityEntry person3Entity = entry()
+                .set(NAME_COLUMN,"Person 3")
+                .set(AGE_COLUMN, 23)
+                .build();
+        engine.persist(USER_TABLE, person3Entity);
+
+        // query with order by clause
+        final Query query = select(all())
+                .from(table(USER_TABLE))
+                .orderby(ImmutableList.of(column(USER_TABLE, AGE_COLUMN).asc()))
+                .limit(10)
+                .offset(0);
+
+        final List<Map<String, Object>> listProcessed = extractPersonList(engine.query(query));
+        assertEquals(3, listProcessed.size());
+
+        assertPerson(1, "Person 1", 10, listProcessed.get(0));
+        assertPerson(3, "Person 3", 23, listProcessed.get(1));
+        assertPerson(2, "Person 2", 46, listProcessed.get(2));
+
+        // try with a different page
+        final Query query2 = select(all())
+                .from(table(USER_TABLE))
+                .orderby(ImmutableList.of(column(USER_TABLE, AGE_COLUMN).asc()))
+                .limit(1)
+                .offset(1);
+
+        final List<Map<String, Object>> listProcessed2 = extractPersonList(engine.query(query2));
+        assertEquals(1, listProcessed2.size());
+        assertPerson(3, "Person 3", 23, listProcessed2.get(0));
+    }
+
+    private List<Map<String, Object>> extractPersonList(final List<Map<String, ResultColumn>> results) {
+        final List<Map<String, Object>> listProcessed = new ArrayList<>();
+        for (final Map<String, ResultColumn> entry : results) {
+            listProcessed.add(ImmutableMap.of(
+                    ID_COLUMN, entry.get(ID_COLUMN).toInt(),
+                    NAME_COLUMN, entry.get(NAME_COLUMN).toString(),
+                    AGE_COLUMN, entry.get(AGE_COLUMN).toInt()
+            ));
+        }
+        return listProcessed;
+    }
+
+    private void assertPerson(final int id, final String name, final int age, final Map<String, Object> person) {
+        assertEquals(id, person.get(ID_COLUMN));
+        assertEquals(name, person.get(NAME_COLUMN));
+        assertEquals(age, person.get(AGE_COLUMN));
     }
 }

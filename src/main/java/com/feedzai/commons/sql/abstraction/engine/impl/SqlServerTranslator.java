@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -267,7 +268,8 @@ public class SqlServerTranslator extends AbstractTranslator {
             if (!orderbyColumns.isEmpty()) {
                 final List<String> queryOrderByColumns = new ArrayList<>();
                 for (Expression column : orderbyColumns) {
-                    queryOrderByColumns.add(column.translate());
+                    final Expression parsedColumn = getParsedOrderByColumn(column);
+                    queryOrderByColumns.add(parsedColumn.translate());
                 }
                 orderByClause = join(queryOrderByColumns, ", ");
                 finalQuery = String.format("SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY %s) rnum ,offlim.* FROM (%s) offlim) offlim WHERE rnum <= %d and rnum > %d ORDER BY %s",
@@ -382,5 +384,38 @@ public class SqlServerTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "0";
+    }
+
+    /**
+     * Helper method which removes the environment parameter from a column when it is used inside an order by statement
+     * and in a paginated query. This is needed in order to avoid "The multi-part identifier could not be bound" error
+     * which only happens in SQL Server.
+     *
+     * @param column The column that will be parsed.
+     * @return The new column which does not contain any environment value.
+     * @since 2.1.13
+     */
+    private Expression getParsedOrderByColumn(final Expression column) {
+        if (column instanceof Name) {
+            final Name columnName = (Name) column;
+            final String environment = columnName.getEnvironment();
+
+            if (environment != null && !environment.isEmpty()) {
+                final Expression parsedColumn = column(columnName.getName());
+                inject(parsedColumn);
+                switch (column.getOrdering()) {
+                    case "DESC":
+                        parsedColumn.desc();
+                        break;
+                    default:
+                        parsedColumn.asc();
+                        break;
+                }
+
+                return parsedColumn;
+            }
+        }
+
+        return column;
     }
 }
