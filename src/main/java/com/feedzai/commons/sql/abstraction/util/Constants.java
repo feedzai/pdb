@@ -75,8 +75,8 @@ public final class Constants {
      */
     public static final long DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN = TimeUnit.MINUTES.toMillis(5);
     /**
-     * Indicates that the LOBS columns should be compressed. This is only possible on implementations that allow
-     * this behavior.
+     * Indicates if the LOB columns should be compressed. This is only possible on implementations that allow
+     * this behavior. The default value is {@code false}.
      */
-    public static final boolean DEFAULT_COMPRESS_LOBS = true;
+    public static final boolean DEFAULT_COMPRESS_LOBS = false;
 }
