@@ -133,9 +133,7 @@ public interface DatabaseEngine extends AutoCloseable {
     void dropEntity(final DbEntity entity) throws DatabaseEngineException;
 
     /**
-     * <p>
      * Persists a given entry. Persisting a query implies executing the statement.
-     * </p>
      * <p>
      * If you are inside of an explicit transaction, changes will only be visible upon explicit commit, otherwise a
      * commit will immediately take place.
@@ -314,7 +312,7 @@ public interface DatabaseEngine extends AutoCloseable {
     List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException;
 
     /**
-     * Gets the database entities.
+     * Gets the database entities for the current schema.
      *
      * @return The list of database entities and types (tables, views, and so on).
      * @throws DatabaseEngineException If something occurs getting the existing tables.
@@ -322,12 +320,38 @@ public interface DatabaseEngine extends AutoCloseable {
     Map<String, DbEntityType> getEntities() throws DatabaseEngineException;
 
     /**
-     * Gets the table metadata.
+     * Gets the database entities for the specified schema.
      *
+     * @param schemaPattern A schema name pattern; must match the schema name as it is stored in the database;
+     *                      {@code ""} retrieves those without a schema; {@code null} means that the schema name
+     *                      should not be used to narrow the search.
+     * @return The list of database entities and types (tables, views, and so on).
+     * @throws DatabaseEngineException If something occurs getting the existing tables.
+     * @since 2.1.13
+     */
+    Map<String, DbEntityType> getEntities(final String schemaPattern) throws DatabaseEngineException;
+
+    /**
+     * Gets the table metadata (table must be in the current schema).
+     *
+     * @param tableNamePattern A table name pattern; must match the table name as it is stored in the database.
      * @return A representation of the table columns and types.
      * @throws DatabaseEngineException If something occurs getting the metadata.
      */
-    Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException;
+    Map<String, DbColumnType> getMetadata(final String tableNamePattern) throws DatabaseEngineException;
+
+    /**
+     * Gets the table metadata (table must be in the current schema).
+     *
+     * @param tableNamePattern A table name pattern; must match the table name as it is stored in the database.
+     * @param schemaPattern    A schema name pattern; must match the schema name as it is stored in the database;
+     *                         {@code ""} retrieves those without a schema; {@code null} means that the schema name
+     *                         should not be used to narrow the search.
+     * @return A representation of the table columns and types.
+     * @throws DatabaseEngineException If something occurs getting the metadata.
+     * @since 2.1.13
+     */
+    Map<String, DbColumnType> getMetadata(final String schemaPattern, final String tableNamePattern) throws DatabaseEngineException;
 
     /**
      * Gets the query metadata.

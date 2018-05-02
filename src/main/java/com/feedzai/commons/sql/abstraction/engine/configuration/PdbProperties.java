@@ -46,6 +46,12 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_VARCHAR
  * @since 2.0.0
  */
 public class PdbProperties extends Properties implements com.feedzai.commons.sql.abstraction.util.Cloneable<PdbProperties> {
+
+    /**
+     * The serial version UID of this class.
+     */
+    private static final long serialVersionUID = -4948574874005506022L;
+
     /**
      * The JDBC property name.
      */

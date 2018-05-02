@@ -85,12 +85,7 @@ public class H2Translator extends AbstractTranslator {
             expTranslated = String.format("CONVERT(%s, DOUBLE PRECISION)", expTranslated);
         }
 
-        // if it is a user-defined function
-        if (f.isUDF() && properties.isSchemaSet()) {
-            return properties.getSchema() + "." + function + "(" + expTranslated + ")";
-        } else {
-            return function + "(" + expTranslated + ")";
-        }
+        return function + "(" + expTranslated + ")";
     }
 
     @Override

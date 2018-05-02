@@ -75,7 +75,7 @@ public class StringUtils {
             instance.update(message.getBytes());
             res = instance.digest();
 
-        } catch (NoSuchAlgorithmException ex) {
+        } catch (final NoSuchAlgorithmException ex) {
             throw new RuntimeException(ex);
         }
 
@@ -125,7 +125,7 @@ public class StringUtils {
             if (br != null) {
                 try {
                     br.close();
-                } catch (IOException ex) {
+                } catch (final IOException ex) {
                 }
             }
 

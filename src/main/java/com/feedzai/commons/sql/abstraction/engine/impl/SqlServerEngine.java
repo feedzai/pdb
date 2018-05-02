@@ -147,7 +147,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     default:
                         ps.setObject(i, val);
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
             }
 
@@ -204,7 +204,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(createTableStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == NAME_ALREADY_EXISTS) {
                 logger.debug(dev, "'{}' is already defined", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
@@ -216,7 +216,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -262,14 +262,14 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     try {
                         s = conn.createStatement();
                         s.executeUpdate(alterTable);
-                    } catch (SQLException ex) {
+                    } catch (final SQLException ex) {
                         throw new DatabaseEngineException("Something went wrong altering the table. This shouldn't have happened", ex);
                     } finally {
                         try {
                             if (s != null) {
                                 s.close();
                             }
-                        } catch (Exception e) {
+                        } catch (final Exception e) {
                             logger.trace("Error closing statement.", e);
                         }
                     }
@@ -297,7 +297,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
@@ -309,7 +309,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -348,7 +348,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getErrorCode() == INDEX_ALREADY_EXISTS) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
@@ -360,7 +360,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -414,7 +414,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
             return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
@@ -437,7 +437,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             final String query = format("DROP TABLE %s", quotize(entity.getName()));
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_OR_VIEW_DOES_NOT_EXIST) {
                 logger.debug("Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
@@ -449,7 +449,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -474,7 +474,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             final String query = join(removeColumns, " ");
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_OR_VIEW_DOES_NOT_EXIST) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.COLUMN_DOES_NOT_EXIST), ex);
@@ -486,7 +486,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -525,14 +525,14 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addColumnsStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         } finally {
             try {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -595,7 +595,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             }
 
             return ret == 0 ? null : ret;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
         } finally {
             try {
@@ -608,7 +608,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                         getConnection().createStatement().execute("SET IDENTITY_INSERT \"" + name + "\" OFF");
                     }
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing result set.", e);
             }
         }
@@ -646,7 +646,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 alterTableStmt = conn.createStatement();
                 logger.trace(alterTable);
                 alterTableStmt.executeUpdate(alterTable);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getErrorCode() == NAME_ALREADY_EXISTS) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getErrorCode());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
@@ -658,7 +658,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     if (alterTableStmt != null) {
                         alterTableStmt.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -700,32 +700,32 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     logger.trace(dropFkString);
                     dropFk.executeUpdate(dropFkString);
 
-                } catch (SQLException ex) {
+                } catch (final SQLException ex) {
                     logger.debug(format("Unable to drop constraint '%s' in table '%s'", dependentTables.getString(2), dependentTables.getString(1)), ex);
                 } finally {
                     if (dropFk != null) {
                         try {
                             dropFk.close();
-                        } catch (Exception e) {
+                        } catch (final Exception e) {
                             logger.trace("Error closing statement.", e);
                         }
                     }
                 }
             }
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException(format("Unable to drop foreign keys of the tables that depend on '%s'", entity.getName()), ex);
         } finally {
             if (dependentTables != null) {
                 try {
                     dependentTables.close();
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing result set.", e);
                 }
             }
             if (s != null) {
                 try {
                     s.close();
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -758,7 +758,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             s.executeQuery("select 1");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Connection is down.", e);
             return false;
         } finally {
@@ -766,9 +766,18 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
+        }
+    }
+
+    @Override
+    protected void setSchema(final String schema) throws DatabaseEngineException {
+        if (!properties.getSchema().equals(getSchema())) {
+            throw new DatabaseEngineException(
+                "Microsoft Sql Server doesn't support setting a schema for the session! Use a different user or database instead."
+            );
         }
     }
 

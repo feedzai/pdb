@@ -148,7 +148,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     default:
                         ps.setObject(i, val);
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
             }
 
@@ -192,7 +192,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(createTableStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                 logger.debug(dev, "'{}' is already defined", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
@@ -204,7 +204,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -258,7 +258,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             logger.trace(reorg);
             s = conn.createStatement();
             s.executeUpdate(reorg);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY)) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
@@ -270,7 +270,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -346,7 +346,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
@@ -358,7 +358,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -402,7 +402,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_ALREADY_EXISTS), ex);
@@ -414,7 +414,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -489,7 +489,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             psWithAutoInc = conn.prepareStatement(insertWithAutoInc);
 
             return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
@@ -510,7 +510,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 drop = conn.createStatement();
                 logger.trace(stmt);
                 drop.executeUpdate(stmt);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(SEQUENCE_DOES_NOT_EXIST)) {
                     logger.debug(dev, "Sequence '{}' does not exist", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_DOES_NOT_EXIST), ex);
@@ -522,7 +522,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     if (drop != null) {
                         drop.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -537,7 +537,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             final String query = format("DROP TABLE %s", quotize(entity.getName()));
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
@@ -549,7 +549,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -580,7 +580,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             logger.trace(reorg);
             reorgStatement = conn.createStatement();
             reorgStatement.executeUpdate(reorg);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.COLUMN_DOES_NOT_EXIST), ex);
@@ -592,14 +592,14 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
             try {
                 if (reorgStatement != null) {
                     reorgStatement.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -614,7 +614,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
         super.updateEntity(entity);
         try (Statement reorg = conn.createStatement()) {
             reorg.executeUpdate(reorg(entity.getName()));
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new DatabaseEngineException("Error reorganizing table '" + entity.getName() + "'", e);
         }
     }
@@ -658,21 +658,21 @@ public class DB2Engine extends AbstractDatabaseEngine {
             reorgStatement = conn.createStatement();
             reorgStatement.executeUpdate(reorg);
 
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         } finally {
             try {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
             try {
                 if (reorgStatement != null) {
                     reorgStatement.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -756,7 +756,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
 
             return ret == 0 ? null : ret;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
         }
     }
@@ -798,7 +798,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 logger.trace(reorg);
                 reorgStatement = conn.createStatement();
                 reorgStatement.executeUpdate(reorg);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(FOREIGN_ALREADY_EXISTS)) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
@@ -810,14 +810,14 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     if (alterTableStmt != null) {
                         alterTableStmt.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
                 try {
                     if (reorgStatement != null) {
                         reorgStatement.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -832,7 +832,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             s.executeQuery("SELECT 1 FROM sysibm.sysdummy1");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Connection is down.", e);
             return false;
         } finally {
@@ -840,7 +840,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -852,27 +852,74 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
+    protected String getSchema() throws DatabaseEngineException {
+        try (final Statement stmt = conn.createStatement();
+             final ResultSet resultSet = stmt.executeQuery("VALUES(CURRENT SCHEMA)")) {
+
+            if (!resultSet.next()) {
+                return null;
+            }
+
+            final String schema = resultSet.getString(1);
+            // result needs to be trimmed because it has padding spaces
+            return schema == null ? null : schema.trim();
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Could not get current schema", e);
+        }
+    }
+
+    @Override
+    protected void setSchema(final String schema) throws DatabaseEngineException {
+        final boolean schemaExists;
+
+        try (final PreparedStatement ps = conn.prepareStatement("SELECT count(*) FROM syscat.schemata WHERE SCHEMANAME = ?")) {
+            ps.setString(1, schema);
+
+            try (final ResultSet resultSet = ps.executeQuery()) {
+                schemaExists = resultSet.next() && resultSet.getInt(1) == 1;
+            }
+
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to '%s'", schema), e);
+        }
+
+        if (!schemaExists) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to non existing '%s'", schema));
+        }
+
+        try (final PreparedStatement ps = conn.prepareStatement("SET CURRENT SCHEMA ?")) {
+            ps.setString(1, schema);
+            ps.execute();
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to '%s'", schema), e);
+        }
+
+    }
+
+    @Override
+    public synchronized Map<String, DbColumnType> getMetadata(final String schemaPattern,
+                                                              final String tableNamePattern) throws DatabaseEngineException {
         final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
 
-        Statement s = null;
+        PreparedStatement ps = null;
         ResultSet rsColumns = null;
         try {
             getConnection();
 
-            s = conn.createStatement();
-            rsColumns = s.executeQuery(
-                String.format("SELECT NAME, COLTYPE,SCALE  FROM sysibm.SYSCOLUMNS WHERE tbname='%s' and TBCREATOR=UPPER('%s')",
-                    name, Optional.ofNullable(properties.getSchema()).orElse(properties.getUsername()))
-            );
+            ps = conn.prepareStatement(
+                    "SELECT NAME, COLTYPE, SCALE FROM sysibm.SYSCOLUMNS WHERE tbname LIKE ? AND TBCREATOR LIKE ?");
+            ps.setString(1, tableNamePattern == null ? "%" : tableNamePattern);
+            ps.setString(2, schemaPattern == null ? "%" : schemaPattern);
+
+            rsColumns = ps.executeQuery();
 
             while (rsColumns.next()) {
-                String columnType = rsColumns.getString("COLTYPE").trim();
+                final String columnType = rsColumns.getString("COLTYPE").trim();
 
                 int scale = 0;
                 try {
                     scale = Integer.parseInt(rsColumns.getString("SCALE"));
-                } catch (NumberFormatException e) {
+                } catch (final NumberFormatException e) {
                     /* swallow - scale is already 0*/
                 }
 
@@ -880,22 +927,22 @@ public class DB2Engine extends AbstractDatabaseEngine {
             }
 
             return metaMap;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get metadata", e);
         } finally {
             try {
                 if (rsColumns != null) {
                     rsColumns.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
 
             try {
-                if (s != null) {
-                    s.close();
+                if (ps != null) {
+                    ps.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing statement.", a);
             }
         }
@@ -951,7 +998,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 } else {
                     setObjectParameter(ps, i, o);
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                     throw new DatabaseEngineException("Could not set parameters", ex);
                 }
@@ -959,7 +1006,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 // At this point maybe it is an error with the connection, so we try to re-establish it.
                 try {
                     getConnection();
-                } catch (Exception e2) {
+                } catch (final Exception e2) {
                     throw new DatabaseEngineException("Connection is down", e2);
                 }
 
@@ -982,7 +1029,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             } else {
                 setObjectParameter(ps, index, param);
             }
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException("Could not set parameter", ex);
             }
@@ -990,7 +1037,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             // At this point maybe it is an error with the connection, so we try to re-establish it.
             try {
                 getConnection();
-            } catch (Exception e2) {
+            } catch (final Exception e2) {
                 throw new DatabaseEngineException("Connection is down", e2);
             }
 
@@ -1011,7 +1058,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
     private void setObjectParameter(PreparedStatementCapsule ps, int index, Object o) throws Exception {
         try {
             ps.ps.setObject(index, o);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             if (!(o instanceof String)) {
                 throw e;
             }
