@@ -18,7 +18,7 @@ Add the following dependency to your Maven pom.
 	<dependency>
 		<groupId>com.feedzai</groupId>
 		<artifactId>pdb</artifactId>
-		<version>2.0.1</version>
+		<version>2.1.13</version>
 	</dependency>
 	...
 </dependencies>
@@ -40,9 +40,10 @@ Please download the driver from the respective
  [Oracle driver page](http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html) and
  run the following to install the driver in your local maven repository.
 ```bash
-mvn install:install-file -DgroupId=com.oracle -DartifactId=ojdbc8 \
+mvn install:install-file -DgroupId=com.oracle.jdbc -DartifactId=ojdbc8 \
 -Dversion=12.2.0.1 -Dpackaging=jar -Dfile=ojdbc8.jar
 ```
+Alternatively you can setup the username/password for accessing Oracle's Maven repository in your _settings.xml_ file.
 
 ## Running PDB tests
 
