@@ -124,8 +124,8 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     /**
-     * This method tests that, when the {@link PdbProperties pdb.compress_lobs} is true (which is the default value),
-     * the LOBS columns are compressed: Both BLOB and CLOB types are tested.
+     * This method tests that, when the {@link PdbProperties pdb.compress_lobs} is true (default value is false),
+     * the LOB columns are compressed: Both BLOB and CLOB types are tested.
      *
      * @throws Exception if anything goes wrong with the test
      */
