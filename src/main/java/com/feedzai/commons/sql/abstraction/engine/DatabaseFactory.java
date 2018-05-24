@@ -81,9 +81,9 @@ public final class DatabaseFactory {
             injector.injectMembers(de);
 
             return de;
-        } catch (DatabaseFactoryException e) {
+        } catch (final DatabaseFactoryException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseFactoryException(e);
         }
     }
@@ -117,7 +117,7 @@ public final class DatabaseFactory {
             try {
                 bind(PdbProperties.class).toProvider(Providers.of(pdbProperties));
                 bind(AbstractTranslator.class).toInstance(translator.newInstance());
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 Throwables.propagate(e);
             }
         }

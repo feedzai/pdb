@@ -64,6 +64,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -117,11 +118,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * The logger that will be used.
      */
-    protected Logger logger;
+    protected final Logger logger;
     /**
      * The notification logger for administration.
      */
-    protected Logger notificationLogger;
+    protected final Logger notificationLogger;
     /**
      * Map of entities.
      */
@@ -130,6 +131,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * Map of prepared statements.
      */
     protected final Map<String, PreparedStatementCapsule> stmts = new HashMap<>();
+
+    /**
+     * The current schema that's being used by the engine.
+     *
+     * @since 2.1.13
+     */
+    protected String currentSchema;
+
     /**
      * The configuration.
      */
@@ -181,13 +190,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             Class.forName(driver);
             connect();
-        } catch (ClassNotFoundException ex) {
+        } catch (final ClassNotFoundException ex) {
             throw new DatabaseEngineException("Driver not found", ex);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Unable to connect to database", ex);
-        } catch (DatabaseEngineException ex) {
+        } catch (final DatabaseEngineException ex) {
             throw ex;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("An unknown error occurred while establishing a connection to the database.", ex);
         }
     }
@@ -241,12 +250,19 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
         }
 
-        String jdbc = getFinalJdbcConnection(this.properties.getProperty(JDBC));
+        final String jdbc = getFinalJdbcConnection(this.properties.getJdbc());
 
-        conn = DriverManager.getConnection(
+        this.conn = DriverManager.getConnection(
                 jdbc,
                 username,
                 password);
+
+        if (this.properties.isSchemaSet()) {
+            setSchema(this.properties.getSchema());
+        }
+
+        this.currentSchema = Optional.ofNullable(getSchema())
+            .orElseThrow(() -> new DatabaseEngineException("Could not get current schema"));
 
         setTransactionIsolation();
 
@@ -333,13 +349,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
                 try {
                     recover();
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     throw new RecoveryException("Error recovering from lost connection.", e);
                 }
 
                 // return it.
                 return conn;
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
 
                 logger.debug("Connection failed.");
 
@@ -348,7 +364,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
 
                 retries++;
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.error("An unexpected error occurred.", e);
             }
         }
@@ -466,7 +482,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             conn.setAutoCommit(false);
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineRuntimeException("Error occurred while starting transaction", ex);
         }
     }
@@ -503,7 +519,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         if (!recovering) {
             try {
                 getConnection();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 throw new DatabaseEngineException("Could not add entity", e);
             }
 
@@ -609,14 +625,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
         try {
             toRemove.getInsert().executeBatch();
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             logger.debug("Could not flush before remove '{}'", name, ex);
         }
 
         if (properties.isSchemaPolicyCreateDrop()) {
             try {
                 dropEntity(toRemove.getEntity());
-            } catch (DatabaseEngineException ex) {
+            } catch (final DatabaseEngineException ex) {
                 logger.debug(String.format("Something went wrong while dropping entity '%s'", name), ex);
             }
         }
@@ -677,7 +693,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * <p>Persists a given entry. Persisting a query implies executing the statement.</p> <p>If you are inside of an explicit transaction, changes will only be
+     * Persists a given entry. Persisting a query implies executing the statement.</p> <p>If you are inside of an explicit transaction, changes will only be
      * visible upon explicit commit, otherwise a commit will immediately take place.</p>
      *
      * @param name  The entity name.
@@ -722,7 +738,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             for (MappedEntity me : entities.values()) {
                 me.getInsert().executeBatch();
             }
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong while flushing", ex);
         }
     }
@@ -740,7 +756,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             conn.commit();
             conn.setAutoCommit(true);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineRuntimeException("Something went wrong while committing transaction", ex);
         }
     }
@@ -764,7 +780,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
             conn.rollback();
             conn.setAutoCommit(true);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineRuntimeException("Something went wrong while rolling back the transaction", ex);
         }
     }
@@ -783,7 +799,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
          */
         try {
             return !conn.getAutoCommit();
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineRuntimeException("Something went wrong while rolling back the transaction", ex);
         }
     }
@@ -802,13 +818,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             getConnection();
             s = conn.createStatement();
             return s.executeUpdate(query);
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Error handling native query", ex);
         } finally {
             if (s != null) {
                 try {
                     s.close();
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -979,7 +995,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 recover();
 
                 return true;
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 logger.debug(dev, "reconnection failure", ex);
                 return false;
             }
@@ -1020,7 +1036,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             entityToPreparedStatement(me.getEntity(), ps, entry, true);
 
             ps.addBatch();
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Error adding to batch", ex);
         }
 
@@ -1226,55 +1242,53 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong dropping the FKs.
      */
     protected void dropFks(final String table) throws DatabaseEngineException {
-        String schema = StringUtils.stripToNull(properties.getSchema());
         ResultSet rs = null;
         try {
             getConnection();
-            rs = conn.getMetaData().getImportedKeys(null, schema, table);
-            Set<String> fks = new HashSet<>();
+            rs = conn.getMetaData().getImportedKeys(null, this.currentSchema, table);
+            final Set<String> fks = new HashSet<>();
             while (rs.next()) {
                 fks.add(rs.getString("FK_NAME"));
             }
-            for (String fk : fks) {
+            for (final String fk : fks) {
                 try {
-                    executeUpdate(String.format("ALTER TABLE %s DROP CONSTRAINT %s", quotize(table, escapeCharacter()), quotize(fk, escapeCharacter())));
-                } catch (Exception e) {
+                    executeUpdate(
+                        String.format("ALTER TABLE %s DROP CONSTRAINT %s",
+                            quotize(table, escapeCharacter()), quotize(fk, escapeCharacter()))
+                    );
+                } catch (final Exception e) {
                     logger.warn("Could not drop foreign key '{}' on table '{}'", fk, table);
                     logger.debug("Could not drop foreign key.", e);
                 }
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Error dropping foreign key", e);
         } finally {
             try {
                 if (rs != null) {
                     rs.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
         }
     }
 
-    /**
-     * Gets the database entities.
-     *
-     * @return The list of database entities and types (tables, views, procedures, and so on).
-     * @throws DatabaseEngineException If something occurs getting the existing tables.
-     */
     @Override
     public synchronized Map<String, DbEntityType> getEntities() throws DatabaseEngineException {
+        return getEntities(this.currentSchema);
+    }
+
+    @Override
+    public synchronized Map<String, DbEntityType> getEntities(final String schemaPattern) throws DatabaseEngineException {
         final Map<String, DbEntityType> entities = new LinkedHashMap<>();
         ResultSet rs = null;
 
         try {
             getConnection();
 
-            // restrict database schema if it exists
-            String schema = properties.isSchemaSet() ? properties.getSchema() : null;
-
             // get the entities
-            rs = conn.getMetaData().getTables(null, schema, "%", null);
+            rs = conn.getMetaData().getTables(null, schemaPattern, "%", null);
 
             while (rs.next()) {
                 String entityName = rs.getString("table_name");
@@ -1299,14 +1313,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             return entities;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get entities", e);
         } finally {
             try {
                 if (rs != null) {
                     rs.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
         }
@@ -1324,51 +1338,72 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         logger.trace(statement);
         try (Statement alter = conn.createStatement()) {
             alter.execute(statement);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Could not execute {}.", statement, e);
         }
     }
 
     /**
-     * Gets the schema.
+     * Gets the schema being used in the current {@link #conn connection}.
      *
-     * @return The schema.
+     * @return The current schema name or <code>null</code> if there is none.
+     * @throws DatabaseEngineException If a database access error occurs or this method is called on a closed connection.
      */
-    protected String getSchema() {
-        return properties.getSchema();
+    protected String getSchema() throws DatabaseEngineException {
+        try {
+            return this.conn.getSchema();
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Could not get current schema", e);
+        }
     }
 
     /**
-     * Gets the table metadata.
+     * Sets the schema for the current {@link #conn connection}.
      *
-     * @return A representation of the table columns and types.
-     * @throws DatabaseEngineException If something occurs getting the metadata.
+     * @throws DatabaseEngineException If schema doesn't exist, a database access error occurs or this method
+     * is called on a closed connection.
+     * @since 2.1.13
      */
+    protected void setSchema(final String schema) throws DatabaseEngineException {
+        try {
+            this.conn.setSchema(schema);
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to '%s'", schema), e);
+        }
+    }
+
     @Override
-    public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
+    public synchronized Map<String, DbColumnType> getMetadata(final String tableNamePattern) throws DatabaseEngineException {
+        return getMetadata(this.currentSchema, tableNamePattern);
+    }
+
+    @Override
+    public synchronized Map<String, DbColumnType> getMetadata(final String schemaPattern,
+                                                              final String tableNamePattern) throws DatabaseEngineException {
         final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
 
         ResultSet rsColumns = null;
         try {
             getConnection();
 
-
-            final DatabaseMetaData meta = conn.getMetaData();
-            rsColumns = meta.getColumns(null, getSchema(), name, null);
+            final DatabaseMetaData meta = this.conn.getMetaData();
+            rsColumns = meta.getColumns(null, schemaPattern, tableNamePattern, null);
             while (rsColumns.next()) {
-                metaMap.put(rsColumns.getString("COLUMN_NAME"),
-                        toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME")));
+                metaMap.put(
+                    rsColumns.getString("COLUMN_NAME"),
+                    toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME"))
+                );
             }
 
             return metaMap;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get metadata", e);
         } finally {
             try {
                 if (rsColumns != null) {
                     rsColumns.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
         }
@@ -1413,8 +1448,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 metaMap.put(meta.getColumnName(i), toPdbType(meta.getColumnType(i), meta.getColumnTypeName(i)));
             }
 
-            stmt.close();
-
             return metaMap;
         } catch (final Exception e) {
             throw new DatabaseEngineException("Error querying", e);
@@ -1423,7 +1456,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 if (rs != null) {
                     rs.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing result set.", e);
             }
 
@@ -1431,7 +1464,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 if (stmt != null) {
                     stmt.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -1447,78 +1480,59 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected DbColumnType toPdbType(final int type, final String typeName) {
         switch (type) {
-            case Types.ARRAY:
-                return DbColumnType.UNMAPPED;
-            case Types.BIGINT:
-                return DbColumnType.LONG;
-            case Types.BINARY:
-                return DbColumnType.BLOB;
             case Types.BIT:
-                return DbColumnType.BOOLEAN;
-            case Types.BLOB:
-                return DbColumnType.BLOB;
             case Types.BOOLEAN:
                 return DbColumnType.BOOLEAN;
+
             case Types.CHAR:
-                return DbColumnType.STRING;
-            case Types.CLOB:
-                return DbColumnType.STRING;
-            case Types.DATALINK:
-                return DbColumnType.UNMAPPED;
-            case Types.DATE:
-                return DbColumnType.UNMAPPED;
-            case Types.DECIMAL:
-                return DbColumnType.DOUBLE;
-            case Types.DISTINCT:
-                return DbColumnType.UNMAPPED;
-            case Types.DOUBLE:
-                return DbColumnType.DOUBLE;
-            case Types.FLOAT:
-                return DbColumnType.DOUBLE;
-            case Types.INTEGER:
-                return DbColumnType.INT;
-            case Types.JAVA_OBJECT:
-                return DbColumnType.BLOB;
             case Types.LONGNVARCHAR:
-                return DbColumnType.STRING;
-            case Types.LONGVARBINARY:
-                return DbColumnType.BLOB;
             case Types.LONGVARCHAR:
-                return DbColumnType.STRING;
             case Types.NCHAR:
-                return DbColumnType.STRING;
-            case Types.NCLOB:
-                return DbColumnType.STRING;
-            case Types.NULL:
-                return DbColumnType.UNMAPPED;
-            case Types.NUMERIC:
-                return DbColumnType.DOUBLE;
             case Types.NVARCHAR:
-                return DbColumnType.STRING;
-            case Types.OTHER:
-                return DbColumnType.UNMAPPED;
-            case Types.REAL:
-                return DbColumnType.DOUBLE;
-            case Types.REF:
-                return DbColumnType.UNMAPPED;
             case Types.ROWID:
-                return DbColumnType.STRING;
-            case Types.SMALLINT:
-                return DbColumnType.INT;
             case Types.SQLXML:
-                return DbColumnType.STRING;
-            case Types.STRUCT:
-                return DbColumnType.UNMAPPED;
-            case Types.TIME:
-                return DbColumnType.UNMAPPED;
-            case Types.TIMESTAMP:
-                return DbColumnType.LONG;
-            case Types.TINYINT:
-                return DbColumnType.INT;
-            case Types.VARBINARY:
-                return DbColumnType.BLOB;
             case Types.VARCHAR:
                 return DbColumnType.STRING;
+
+            case Types.INTEGER:
+            case Types.SMALLINT:
+            case Types.TINYINT:
+                return DbColumnType.INT;
+
+            case Types.DECIMAL:
+            case Types.DOUBLE:
+            case Types.FLOAT:
+            case Types.NUMERIC:
+            case Types.REAL:
+                return DbColumnType.DOUBLE;
+
+            case Types.BIGINT:
+            case Types.TIMESTAMP:
+                return DbColumnType.LONG;
+
+            case Types.BINARY:
+            case Types.BLOB:
+            case Types.JAVA_OBJECT:
+            case Types.LONGVARBINARY:
+            case Types.VARBINARY:
+                return DbColumnType.BLOB;
+
+            case Types.CLOB:
+            case Types.NCLOB:
+                return DbColumnType.CLOB;
+
+            case Types.ARRAY:
+            case Types.DATALINK:
+            case Types.DATE:
+            case Types.DISTINCT:
+            case Types.NULL:
+            case Types.OTHER:
+            case Types.REF:
+            case Types.REF_CURSOR:
+            case Types.STRUCT:
+            case Types.TIME:
+            case Types.TIME_WITH_TIMEZONE:
+            case Types.TIMESTAMP_WITH_TIMEZONE:
             default:
                 return DbColumnType.UNMAPPED;
         }
@@ -1556,7 +1570,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             return niw;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DuplicateEngineException("Could not duplicate connection", e);
         }
     }
@@ -1601,7 +1615,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             ps.ps.close();
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Error closing prepared statement '{}'.", name, e);
         }
     }
@@ -1632,7 +1646,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             ps.ps.setFetchSize(fetchSize);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new DatabaseEngineException("Error creating PS Iterator", e);
         }
 
@@ -1649,7 +1663,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         for (Object o : params) {
             try {
                 setParameterValues(ps.ps, i, o);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                     throw new DatabaseEngineException("Could not set parameters", ex);
                 }
@@ -1657,7 +1671,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 // At this point maybe it is an error with the connection, so we try to re-establish it.
                 try {
                     getConnection();
-                } catch (Exception e2) {
+                } catch (final Exception e2) {
                     throw new DatabaseEngineException("Connection is down", e2);
                 }
 
@@ -1676,7 +1690,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             setParameterValues(ps.ps, index, param);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException("Could not set parameter", ex);
             }
@@ -1684,7 +1698,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             // At this point maybe it is an error with the connection, so we try to re-establish it.
             try {
                 getConnection();
-            } catch (Exception e2) {
+            } catch (final Exception e2) {
                 throw new DatabaseEngineException("Connection is down", e2);
             }
 
@@ -1715,7 +1729,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             ps.ps.execute();
 
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.error("Error executing prepared statement", e);
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException(String.format("Something went wrong executing the prepared statement '%s'", name), e);
@@ -1724,7 +1738,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             // At this point maybe it is an error with the connection, so we try to re-establish it.
             try {
                 getConnection();
-            } catch (Exception e2) {
+            } catch (final Exception e2) {
                 throw new DatabaseEngineException("Connection is down", e2);
             }
 
@@ -1747,7 +1761,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             ps.ps.clearParameters();
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException("Error clearing parameters", ex);
             }
@@ -1755,7 +1769,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             // At this point maybe it is an error with the connection, so we try to re-establish it.
             try {
                 getConnection();
-            } catch (Exception e2) {
+            } catch (final Exception e2) {
                 throw new DatabaseEngineException("Connection is down", e2);
             }
 
@@ -1792,7 +1806,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             return ps.ps.executeUpdate();
 
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             if (checkConnection(conn) || !properties.isReconnectOnLost()) {
                 throw new DatabaseEngineException(String.format("Something went wrong executing the prepared statement '%s'", name), e);
             }
@@ -1800,7 +1814,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             // At this point maybe it is an error with the connection, so we try to re-establish it.
             try {
                 getConnection();
-            } catch (Exception e2) {
+            } catch (final Exception e2) {
                 throw new DatabaseEngineException("Connection is down", e2);
             }
 
@@ -1826,7 +1840,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
             try {
                 getConnection();
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 throw new DatabaseEngineException("Could not create prepared statement", e);
             }
         }
@@ -1838,7 +1852,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 ps.setQueryTimeout(timeout);
             }
             stmts.put(name, new PreparedStatementCapsule(query, ps, timeout));
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             throw new DatabaseEngineException("Could not create prepared statement", e);
         }
     }
@@ -1908,7 +1922,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @return True if the entity has an identity column and false otherwise.
      */
     public boolean hasIdentityColumn(DbEntity entity) {
-        for (DbColumn column : entity.getColumns()) {
+        for (final DbColumn column : entity.getColumns()) {
             if (column.isAutoInc()) {
                 return true;
             }

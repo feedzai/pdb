@@ -45,9 +45,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -189,7 +189,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     default:
                         ps.setObject(i, ensureNoUnderflow(val));
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
             }
 
@@ -241,25 +241,11 @@ public class OracleEngine extends AbstractDatabaseEngine {
      * @since       2.1.4
      */
     private Object ensureNoUnderflow(Object val) {
-        if (val instanceof  Double) {
-            Double dblVal = (Double)val;
-            if (Math.abs(dblVal) <= 1.0e-131) {
-                val = ZERO;
-            }
+        if (val instanceof Double && Math.abs((Double) val) <= 1.0e-131) {
+            return ZERO;
         }
-        return val;
-    }
 
-    @Override
-    public void connect() throws Exception {
-        super.connect();
-        if (properties.getSchema() != null && properties.getSchema().length() > 0 &&
-                        !properties.getUsername().equals(properties.getSchema())) {
-            // Set connection schema if one is defined and not the same as the user name
-            try (final Statement stmt = conn.createStatement()) {
-                stmt.execute("ALTER SESSION SET CURRENT_SCHEMA=" + properties.getSchema());
-            }
-        }
+        return val;
     }
 
     /**
@@ -411,7 +397,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY)) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
@@ -423,7 +409,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -463,7 +449,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
@@ -475,7 +461,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -519,7 +505,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_ALREADY_EXISTS), ex);
@@ -531,7 +517,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -594,7 +580,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             psWithAutoInc = conn.prepareStatement(insertWithAutoInc);
 
             return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
@@ -615,7 +601,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 drop = conn.createStatement();
                 logger.trace(stmt);
                 drop.executeUpdate(stmt);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(SEQUENCE_DOES_NOT_EXIST)) {
                     logger.debug(dev, "Sequence '{}' does not exist", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_DOES_NOT_EXIST), ex);
@@ -627,7 +613,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     if (drop != null) {
                         drop.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -642,7 +628,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             final String query = format("DROP TABLE %s CASCADE CONSTRAINTS", quotize(entity.getName()));
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
@@ -654,7 +640,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -680,7 +666,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             final String query = join(removeColumns, " ");
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.COLUMN_DOES_NOT_EXIST), ex);
@@ -692,7 +678,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -730,14 +716,14 @@ public class OracleEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addColumnsStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         } finally {
             try {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -797,14 +783,14 @@ public class OracleEngine extends AbstractDatabaseEngine {
             }
 
             return ret == 0 ? null : ret;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
         } finally {
             try {
                 if (generatedKeys != null) {
                     generatedKeys.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing result set.", e);
             }
         }
@@ -857,9 +843,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
             }
 
             me.setSequenceDirty(false);
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Error querying.", e);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.debug("Error closing resources.", e);
         }
     }
@@ -874,9 +860,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
             try (Statement statementSyncSequence = conn.createStatement()) {
                 logger.trace(dev, "{}", stmt);
                 statementSyncSequence.execute(stmt);
-            } catch (SQLException e) {
+            } catch (final SQLException e) {
                 logger.debug("Error executing statement.", e);
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.debug("Error closing statement.", e);
             }
         }
@@ -895,25 +881,28 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 quotizedForeignColumns.add(quotize(s));
             }
 
-            final String table = quotize(entity.getName());
-            final String quotizedLocalColumnsSting = join(quotizedLocalColumns, ", ");
+            final String quotizedTable = quotize(entity.getName());
+            final String quotizedLocalColumnsString = join(quotizedLocalColumns, ", ");
             final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
 
-            final String alterTable =
-                    format(
-                            "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-                            table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
-                            quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable()),
-                            quotizedForeignColumnsString);
+            final String alterTable = format(
+                "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+                quotizedTable,
+                quotize(md5(
+                    "FK_" + quotizedTable + quotizedLocalColumnsString + quotizedForeignColumnsString,
+                    properties.getMaxIdentifierSize()
+                )),
+                quotizedLocalColumnsString,
+                quotize(fk.getForeignTable()),
+                quotizedForeignColumnsString
+            );
 
             Statement alterTableStmt = null;
             try {
                 alterTableStmt = conn.createStatement();
                 logger.trace(alterTable);
                 alterTableStmt.executeUpdate(alterTable);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(FOREIGN_ALREADY_EXISTS)) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getMessage(), ex);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
@@ -925,7 +914,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     if (alterTableStmt != null) {
                         alterTableStmt.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -940,7 +929,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
             s.executeQuery("select 1 from dual");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Connection is down.", e);
             return false;
         } finally {
@@ -948,37 +937,27 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
     }
 
-    /**
-     * Gets the schema. This implementation uses the username when the schema is null.
-     *
-     * @return The schema or the username when the first is null.
-     */
-    @Override
-    protected String getSchema() {
-        return Optional.ofNullable(super.getSchema()).orElse(properties.getUsername());
-    }
-
     @Override
     public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
 
-        // start with the default implementation. Then override some definitions here.
-        final Map<String, DbColumnType> metaMap = super.getMetadata(name);
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
         Statement s = null;
         ResultSet rsColumns = null;
         try {
             getConnection();
 
             s = conn.createStatement();
-            rsColumns = s.executeQuery(
-                String.format("SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = UPPER('%s')",
-                    name, properties.getProperty(PdbProperties.USERNAME))
-            );
+            rsColumns = s.executeQuery(format(
+                "SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = '%s'",
+                name,
+                this.currentSchema
+            ));
 
             while (rsColumns.next()) {
                 String columnName = rsColumns.getString("COLUMN_NAME");
@@ -992,7 +971,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (!columnName.toUpperCase().startsWith("SYS_")) {
                     final String dataPrecision = rsColumns.getString("DATA_PRECISION");
 
-                    final DbColumnType value = toPdbType(dataPrecision == null ? rsColumns.getString("DATA_TYPE") : (rsColumns.getString("DATA_TYPE") + dataPrecision));
+                    final DbColumnType value = toPdbType(
+                        dataPrecision == null ? rsColumns.getString("DATA_TYPE") : (rsColumns.getString("DATA_TYPE") + dataPrecision)
+                    );
+
                     if (value != DbColumnType.UNMAPPED) {
                         metaMap.put(columnName, value);
                     }
@@ -1000,14 +982,14 @@ public class OracleEngine extends AbstractDatabaseEngine {
             }
 
             return metaMap;
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get metadata", e);
         } finally {
             try {
                 if (rsColumns != null) {
                     rsColumns.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
 
@@ -1015,7 +997,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing statement.", a);
             }
         }

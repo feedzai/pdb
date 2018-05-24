@@ -37,14 +37,12 @@ import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.postgresql.util.PGobject;
 
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -137,7 +135,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                     default:
                         ps.setObject(i, val);
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
             }
 
@@ -169,7 +167,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             dataObject.setType("jsonb");
             dataObject.setValue(val);
             return dataObject;
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Error while mapping variables to database, value = " + val, ex);
         }
     }
@@ -208,7 +206,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(createTableStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(NAME_ALREADY_EXISTS)) {
                 logger.debug(dev, "'{}' is already defined", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
@@ -220,7 +218,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -255,7 +253,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY)) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
@@ -267,7 +265,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -306,7 +304,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getSQLState().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
@@ -318,7 +316,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -387,7 +385,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
             return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
@@ -408,7 +406,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             final String query = format("DROP TABLE %s CASCADE", quotize(entity.getName()));
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
@@ -420,7 +418,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -444,7 +442,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             final String query = join(removeColumns, " ");
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
             } else {
@@ -455,7 +453,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -493,14 +491,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addColumnsStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         } finally {
             try {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -562,14 +560,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             }
 
             return ret == 0 ? null : ret;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
         } finally {
             try {
                 if (generatedKeys != null) {
                     generatedKeys.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing result set.", e);
             }
         }
@@ -606,7 +604,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 alterTableStmt = conn.createStatement();
                 logger.trace(alterTable);
                 alterTableStmt.executeUpdate(alterTable);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getSQLState().equals(CONSTRAINT_NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getSQLState());
                 } else {
@@ -617,7 +615,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                     if (alterTableStmt != null) {
                         alterTableStmt.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -633,7 +631,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             s.executeQuery("select 1");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Connection is down.", e);
             return false;
         } finally {
@@ -641,40 +639,25 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
     }
 
     @Override
-    public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
-        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
+    protected void setSchema(final String schema) throws DatabaseEngineException {
+        super.setSchema(schema);
 
-        ResultSet rsColumns = null;
+        final boolean isSchemaSet;
         try {
-            getConnection();
+            isSchemaSet = this.conn.getSchema() != null;
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to '%s'", schema), e);
+        }
 
-
-            DatabaseMetaData meta = conn.getMetaData();
-            rsColumns = meta.getColumns(null, getSchema(), name, null);
-            while (rsColumns.next()) {
-                metaMap.put(rsColumns.getString("COLUMN_NAME"),
-                        toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME")));
-            }
-
-            return metaMap;
-        } catch (Exception e) {
-            throw new DatabaseEngineException("Could not get metadata", e);
-        } finally {
-            try {
-                if (rsColumns != null) {
-                    rsColumns.close();
-                }
-
-            } catch (Exception a) {
-                logger.trace("Error closing result set.", a);
-            }
+        if (!isSchemaSet) {
+            throw new DatabaseEngineException(String.format("Schema '%s' doesn't exist", schema));
         }
     }
 
@@ -682,7 +665,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     protected DbColumnType toPdbType(final int type, final String typeName) {
         DbColumnType pdbType = super.toPdbType(type, typeName);
         if (pdbType == DbColumnType.UNMAPPED && typeName.equals("jsonb")) {
-            pdbType = DbColumnType.JSON;
+            return DbColumnType.JSON;
         }
         return pdbType;
     }

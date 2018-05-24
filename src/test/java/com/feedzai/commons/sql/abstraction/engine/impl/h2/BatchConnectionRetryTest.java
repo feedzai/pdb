@@ -82,7 +82,7 @@ public class BatchConnectionRetryTest {
     private BatchEntry[] failureResults = null;
 
     @Before
-    public void init() throws DatabaseEngineException, DatabaseFactoryException {
+    public void init() throws DatabaseFactoryException {
         Properties properties = new Properties() {
 
             {
@@ -165,7 +165,7 @@ public class BatchConnectionRetryTest {
         // 2. force an error disallowing the connection to be fetched
         try {
             engineCapsule.get().getConnection().close();
-        } catch (Exception e) {
+        } catch (final Exception e) {
         }
         // disallow new connections to force to exhaust the retry mechanism
         allowConnection.set(false);

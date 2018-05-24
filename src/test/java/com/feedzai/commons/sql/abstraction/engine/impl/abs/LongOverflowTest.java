@@ -22,7 +22,6 @@ import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -64,7 +63,7 @@ public class LongOverflowTest {
     /*
      * Test table name and columns.
      */
-    private static String TEST_TABLE = "TEST_OVFL_TBL";
+    private static final String TEST_TABLE = "TEST_OVFL_TBL";
     private static final String PK_COL = "PK_COL";
     private static final String LONG_COL = "LONG_COL";
     private static final String DBL_COL_1 = "DBL_COL_1";
@@ -140,7 +139,7 @@ public class LongOverflowTest {
      * Scenario for an insert using persist().
      */
     @Test
-    public void testLongOverflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
+    public void testLongOverflowNormal() throws DatabaseEngineException {
         dbEngine.persist(TEST_TABLE, getTestEntry());
         dbEngine.commit();
         checkInsertedValue();
@@ -191,7 +190,7 @@ public class LongOverflowTest {
      * Scenario for an insert using batch updates.
      */
     @Test
-    public void testLongOverflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
+    public void testLongOverflowBatch() throws DatabaseEngineException {
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
         dbEngine.commit();
@@ -227,7 +226,7 @@ public class LongOverflowTest {
     }
 
     @After
-    public void cleanup() throws DatabaseEngineException {
+    public void cleanup() {
         dbEngine.close();
     }
 

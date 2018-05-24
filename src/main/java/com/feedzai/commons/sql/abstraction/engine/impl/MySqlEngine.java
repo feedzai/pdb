@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
@@ -31,10 +32,10 @@ import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.StringReader;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -43,7 +44,9 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -157,7 +160,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                     default:
                         ps.setObject(i, val);
                 }
-            } catch (Exception ex) {
+            } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variable s to database", ex);
             }
 
@@ -229,7 +232,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(createTableStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_NAME_ALREADY_EXISTS) {
                 logger.debug(dev, "'{}' is already defined", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
@@ -241,7 +244,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -283,7 +286,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
@@ -295,7 +298,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -338,7 +341,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             try {
                 s = conn.createStatement();
                 s.executeUpdate(statement);
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (ex.getErrorCode() == DUPLICATE_KEY_NAME) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
@@ -350,7 +353,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                     if (s != null) {
                         s.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -433,7 +436,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             final String query = format("DROP TABLE %s", quotize(entity.getName(), escapeCharacter()));
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_DOES_NOT_EXIST) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
@@ -445,7 +448,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -469,7 +472,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             final String query = join(removeColumns, " ");
             logger.trace(query);
             drop.executeUpdate(query);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_DOES_NOT_EXIST) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.COLUMN_DOES_NOT_EXIST), ex);
@@ -481,7 +484,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 if (drop != null) {
                     drop.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -519,14 +522,14 @@ public class MySqlEngine extends AbstractDatabaseEngine {
         try {
             s = conn.createStatement();
             s.executeUpdate(addColumnsStatement);
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         } finally {
             try {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
             }
         }
@@ -583,14 +586,14 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
 
             return ret == 0 ? null : ret;
-        } catch (Exception ex) {
+        } catch (final Exception ex) {
             throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
         } finally {
             try {
                 if (generatedKeys != null) {
                     generatedKeys.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing result set.", e);
             }
         }
@@ -628,7 +631,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 logger.trace(alterTable);
                 alterTableStmt.executeUpdate(alterTable);
                 alterTableStmt.close();
-            } catch (SQLException ex) {
+            } catch (final SQLException ex) {
                 if (CONSTRAINT_NAME_ALREADY_EXISTS.contains(ex.getErrorCode())) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getErrorCode());
                 } else {
@@ -639,7 +642,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                     if (alterTableStmt != null) {
                         alterTableStmt.close();
                     }
-                } catch (Exception e) {
+                } catch (final Exception e) {
                     logger.trace("Error closing statement.", e);
                 }
             }
@@ -649,44 +652,43 @@ public class MySqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void dropFks(final String table) throws DatabaseEngineException {
-        String schema = StringUtils.stripToNull(properties.getSchema());
         ResultSet rs = null;
         try {
             getConnection();
-            rs = conn.getMetaData().getImportedKeys(null, schema, table);
-            Set<String> fks = new HashSet<>();
+            rs = conn.getMetaData().getImportedKeys(null, this.currentSchema, table);
+            final Set<String> fks = new HashSet<>();
             while (rs.next()) {
                 fks.add(rs.getString("FK_NAME"));
             }
-            for (String fk : fks) {
+            for (final String fk : fks) {
                 try {
-                    executeUpdate(String.format("alter table %s drop foreign key %s", quotize(table, escapeCharacter()), quotize(fk, escapeCharacter())));
-                } catch (Exception e) {
+                    executeUpdate(
+                        String.format("ALTER TABLE %s DROP FOREIGN KEY %s",
+                            quotize(table, escapeCharacter()), quotize(fk, escapeCharacter()))
+                    );
+                } catch (final Exception e) {
                     logger.warn("Could not drop foreign key '{}' on table '{}'", fk, table);
                     logger.debug("Could not drop foreign key.", e);
                 }
             }
-        } catch (Exception e) {
+        } catch (final Exception e) {
             throw new DatabaseEngineException("Error dropping foreign key", e);
         } finally {
             try {
                 if (rs != null) {
                     rs.close();
                 }
-            } catch (Exception a) {
+            } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
         }
     }
 
     protected void dropReferringFks(DbEntity entity) throws DatabaseEngineException {
-        Statement s = null;
-        ResultSet dependentTables = null;
-        try {
+        try (final Statement s = conn.createStatement()){
             /*
              * List of constraints that won't let the table be dropped.
              */
-            s = conn.createStatement();
             final String sString = format(
                     "SELECT TABLE_NAME, CONSTRAINT_NAME "
                             + "FROM information_schema.KEY_COLUMN_USAGE "
@@ -696,49 +698,38 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             logger.trace(sString);
             s.executeQuery(sString);
 
-            dependentTables = s.getResultSet();
+            try (final ResultSet dependentTables = s.getResultSet()) {
+                while (dependentTables.next()) {
 
-            while (dependentTables.next()) {
+                    Statement dropFk = null;
+                    final String tableName = dependentTables.getString(1);
+                    final String constraintName = dependentTables.getString(2);
 
-                Statement dropFk = null;
-                try {
-                    dropFk = conn.createStatement();
-                    final String dropFkString = format(
+                    try {
+                        dropFk = conn.createStatement();
+                        final String dropFkString = format(
                             "ALTER TABLE %s DROP FOREIGN KEY %s",
-                            quotize(dependentTables.getString(1), escapeCharacter()),
-                            quotize(dependentTables.getString(2), escapeCharacter()));
-                    logger.trace(dropFkString);
-                    dropFk.executeUpdate(dropFkString);
+                            quotize(tableName, escapeCharacter()),
+                            quotize(constraintName, escapeCharacter()));
+                        logger.trace(dropFkString);
+                        dropFk.executeUpdate(dropFkString);
 
-                } catch (SQLException ex) {
-                    logger.debug(format("Unable to drop constraint '%s' in table '%s'", dependentTables.getString(2), dependentTables.getString(1)), ex);
-                } finally {
-                    if (dropFk != null) {
-                        try {
-                            dropFk.close();
-                        } catch (Exception e) {
-                            logger.trace("Error closing statement.", e);
+                    } catch (final SQLException ex) {
+                        logger.debug(format("Unable to drop constraint '%s' in table '%s'", constraintName, tableName), ex);
+                    } finally {
+                        if (dropFk != null) {
+                            try {
+                                dropFk.close();
+                            } catch (final Exception e) {
+                                logger.trace("Error closing statement.", e);
+                            }
                         }
                     }
                 }
+
             }
-
-
-        } catch (SQLException ex) {
+        } catch (final SQLException ex) {
             throw new DatabaseEngineException(format("Unable to drop foreign keys of the tables that depend on '%s'", entity.getName()), ex);
-        } finally {
-            if (dependentTables != null) {
-                try {
-                    dependentTables.close();
-                } catch (Throwable e) {
-                }
-            }
-            if (s != null) {
-                try {
-                    s.close();
-                } catch (Throwable e) {
-                }
-            }
         }
     }
 
@@ -750,7 +741,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             s.executeQuery("select 1");
 
             return true;
-        } catch (SQLException e) {
+        } catch (final SQLException e) {
             logger.debug("Connection is down.", e);
             return false;
         } finally {
@@ -758,8 +749,65 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 if (s != null) {
                     s.close();
                 }
-            } catch (Exception e) {
+            } catch (final Exception e) {
                 logger.trace("Error closing statement.", e);
+            }
+        }
+    }
+
+    @Override
+    protected String getSchema() throws DatabaseEngineException {
+        try {
+            return this.conn.getCatalog();
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Could not get current schema", e);
+        }
+    }
+
+    @Override
+    protected void setSchema(final String schema) throws DatabaseEngineException {
+        final boolean isSchemaSet;
+        try {
+            this.conn.setCatalog(schema);
+            isSchemaSet = this.conn.getCatalog() != null;
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(String.format("Could not set current schema to '%s'", schema), e);
+        }
+
+        if (!isSchemaSet) {
+            throw new DatabaseEngineException(String.format("Schema '%s' doesn't exist", schema));
+        }
+    }
+
+    @Override
+    public synchronized Map<String, DbColumnType> getMetadata(final String schemaPattern,
+                                                              final String tableNamePattern) throws DatabaseEngineException {
+        final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
+
+        ResultSet rsColumns = null;
+        try {
+            getConnection();
+
+
+            final DatabaseMetaData meta = this.conn.getMetaData();
+            rsColumns = meta.getColumns(schemaPattern, null, tableNamePattern, null);
+            while (rsColumns.next()) {
+                metaMap.put(
+                    rsColumns.getString("COLUMN_NAME"),
+                    toPdbType(rsColumns.getInt("DATA_TYPE"), rsColumns.getString("TYPE_NAME"))
+                );
+            }
+
+            return metaMap;
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Could not get metadata", e);
+        } finally {
+            try {
+                if (rsColumns != null) {
+                    rsColumns.close();
+                }
+            } catch (final Exception a) {
+                logger.trace("Error closing result set.", a);
             }
         }
     }

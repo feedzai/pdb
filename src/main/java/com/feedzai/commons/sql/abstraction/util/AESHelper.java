@@ -49,7 +49,7 @@ public final class AESHelper {
             byte[] encoded = cipher.doFinal(c.getBytes());
             return new String(Hex.encodeHex(encoded));
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not encrypt string", e);
             return null;
         }
@@ -70,7 +70,7 @@ public final class AESHelper {
             byte[] encoded = cipher.doFinal(c);
             return new String(Hex.encodeHex(encoded));
 
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not encrypt byte[]", e);
             return null;
         }
@@ -90,7 +90,7 @@ public final class AESHelper {
             cipher.init(Cipher.DECRYPT_MODE, skeySpec);
             byte[] decoded = cipher.doFinal(Hex.decodeHex(c.toCharArray()));
             return new String(decoded);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not decrypt string", e);
             return null;
         }
@@ -109,7 +109,7 @@ public final class AESHelper {
             Cipher cipher = Cipher.getInstance("AES");
             cipher.init(Cipher.DECRYPT_MODE, skeySpec);
             return cipher.doFinal(Hex.decodeHex((new String(c).toCharArray())));
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not decrypt byte[]", e);
             return null;
         }
@@ -126,7 +126,7 @@ public final class AESHelper {
         try {
             byte[] buf = readFile(path);
             return decrypt(buf, key);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not decrypt file {}", path, e);
             return null;
         }
@@ -144,7 +144,7 @@ public final class AESHelper {
             FileOutputStream fos = new FileOutputStream(path);
             fos.write(encrypt(buf, key).getBytes());
             fos.close();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             logger.warn("Could not encrypt to file {}", path, e);
         }
     }
@@ -166,7 +166,7 @@ public final class AESHelper {
             if (f != null) {
                 try {
                     f.close();
-                } catch (IOException ignored) {
+                } catch (final IOException ignored) {
                 }
             }
         }

@@ -87,12 +87,7 @@ public class MySqlTranslator extends AbstractTranslator {
             function = "STDDEV_SAMP";
         }
 
-        // if it is a user-defined function
-        if (f.isUDF() && properties.isSchemaSet()) {
-            return properties.getSchema() + "." + function + "(" + expTranslated + ")";
-        } else {
-            return function + "(" + expTranslated + ")";
-        }
+        return function + "(" + expTranslated + ")";
     }
 
     @Override

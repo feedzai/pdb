@@ -90,12 +90,7 @@ public class OracleTranslator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        // if it is a user-defined function
-        if (f.isUDF() && properties.isSchemaSet()) {
-            return properties.getSchema() + "." + function + "(" + expTranslated + ")";
-        } else {
-            return function + "(" + expTranslated + ")";
-        }
+        return function + "(" + expTranslated + ")";
     }
 
     @Override

@@ -38,30 +38,32 @@ public class MySqlEngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     @Override
-    protected String getSchema() {
-        return "myschema";
-    }
-
-    @Override
-    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+    protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate("DROP FUNCTION IF EXISTS GetOne");
         engine.executeUpdate(
-            "CREATE FUNCTION GetOne()\n" +
-                "   RETURNS INTEGER\n" +
-                "   RETURN 1;"
+            "CREATE FUNCTION GetOne() " +
+            "RETURNS INTEGER " +
+            "RETURN 1;"
         );
     }
 
     @Override
-    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
-        engine.executeUpdate("DROP SCHEMA IF EXISTS myschema");
-        engine.executeUpdate("CREATE SCHEMA myschema");
-
-        engine.executeUpdate("DROP FUNCTION IF EXISTS myschema.TimesTwo");
+    protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("DROP FUNCTION IF EXISTS " + getTestSchema() + ".TimesTwo");
         engine.executeUpdate(
-            "CREATE FUNCTION myschema.TimesTwo(number INT)\n" +
-                "   RETURNS INTEGER\n" +
-                "   RETURN number * 2;"
+            "CREATE FUNCTION " + getTestSchema() + ".TimesTwo(number INT) " +
+            "RETURNS INTEGER " +
+            "RETURN number * 2;"
         );
+    }
+
+    @Override
+    protected void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        engine.executeUpdate("CREATE SCHEMA IF NOT EXISTS " + schema);
+    }
+
+    @Override
+    protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
+        engine.executeUpdate("DROP SCHEMA IF EXISTS " + schema);
     }
 }
