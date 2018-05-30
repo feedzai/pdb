@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl.h2;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -26,6 +27,7 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Joao Silva (joao.silva@feedzai.com)
@@ -42,6 +44,42 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected Ieee754Support getIeee754Support() {
         return SUPPORTED_STRINGS;
+    }
+
+    /**
+     * This test overrides the superclass in order to check if the H2 engine is local or remote; if it is remote
+     * the test is skipped.
+     *
+     * This was done because the UDF is defined by static methods in this class, which needs to be available (compiled)
+     * to the H2 engine. This is already assumed when H2 is embedded, but making the class available in remote H2
+     * would require copying this to the location of the remote server.
+     * Since this is already being tested with H2 embedded, we just skip the test when the server is remote.
+     *
+     * @throws Exception If something goes wrong with the test.
+     * @see AbstractEngineSchemaTest#udfGetOneTest()
+     */
+    @Override
+    public void udfGetOneTest() throws Exception {
+        assumeTrue("Test not supported when using H2 remote - skipped", checkIsLocalH2());
+        super.udfGetOneTest();
+    }
+
+    /**
+     * This test overrides the superclass in order to check if the H2 engine is local or remote; if it is remote
+     * the test is skipped.
+     *
+     * This was done because the UDF is defined by static methods in this class, which needs to be available (compiled)
+     * to the H2 engine. This is already assumed when H2 is embedded, but making the class available in remote H2
+     * would require copying this to the location of the remote server.
+     * Since this is already being tested with H2 embedded, we just skip the test when the server is remote.
+     *
+     * @throws Exception If something goes wrong with the test.
+     * @see AbstractEngineSchemaTest#udfTimesTwoTest()
+     */
+    @Override
+    public void udfTimesTwoTest() throws Exception {
+        assumeTrue("Test not supported when using H2 remote - skipped", checkIsLocalH2());
+        super.udfTimesTwoTest();
     }
 
     @Override
@@ -66,6 +104,21 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
         engine.executeUpdate("DROP SCHEMA IF EXISTS \"" + schema + "\" CASCADE");
+    }
+
+    /**
+     * Checks whether the current connection to H2 is local or to a remote server.
+     *
+     * This method won't throw exceptions, if there is any problem the connection will be considered local.
+     *
+     * @return {@code true} if the connection is local, {@code false} otherwise.
+     */
+    private boolean checkIsLocalH2() {
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+            return "0".equals(engine.getConnection().getClientInfo("numServers"));
+        } catch (final Exception ex) {
+            return true;
+        }
     }
 
     public static int GetOne() {

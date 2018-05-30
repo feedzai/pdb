@@ -678,9 +678,8 @@ public class H2Engine extends AbstractDatabaseEngine {
         } catch (final Exception ex) {
             if (ex instanceof SQLException && OPTIONAL_FEATURE_NOT_SUPPORTED.equals(((SQLException) ex).getSQLState())) {
                 // if connection is remote, getSchema() may not be supported; try again
-                try (final PreparedStatement ps = conn.prepareStatement("SET SCHEMA ?")) {
-                    ps.setString(1, schema);
-                    ps.execute();
+                try (final Statement stmt = conn.createStatement()) {
+                    stmt.execute("SET SCHEMA " + quotize(schema));
                     return;
 
                 } catch (final Exception queryEx) {

@@ -54,6 +54,9 @@ Run the following to run the tests for the chosen vendor **specified in lowercas
 ```bash
 mvn test -P<vendor>
 ```
+_NOTE_: there is also a "special" profile for H2 to test that engine in server mode (instead of the default H2 embedded);
+ for that case the profile `h2remote` is used in the `<vendor>` placeholder.    
+
 This will start a docker container running the chosen vendor's database server, and run the tests.
 The container will be stopped at the end if all tests pass, otherwise will be kept running.
 
