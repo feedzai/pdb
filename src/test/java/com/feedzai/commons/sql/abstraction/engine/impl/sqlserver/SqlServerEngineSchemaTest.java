@@ -20,8 +20,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import org.junit.Ignore;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -41,60 +39,48 @@ public class SqlServerEngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     @Override
-    @Test
-    @Ignore("Microsoft Sql Server doesn't support setting schema per session")
-    public void udfTimesTwoTest() {
+    protected String getDefaultSchema() {
+        return "dbo";
     }
 
     @Override
-    @Test
-    @Ignore("Microsoft Sql Server doesn't support setting schema per session")
-    public void testCreateSameEntityDifferentSchemas() {
+    protected String getSchema() {
+        return "myschema";
     }
 
     @Override
     protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("IF OBJECT_ID (N'dbo.GetOne', N'FN') IS NOT NULL\n" +
+            "    DROP FUNCTION dbo.GetOne");
         engine.executeUpdate(
-            "IF OBJECT_ID (N'GetOne', N'FN') IS NOT NULL " +
-            "    DROP FUNCTION GetOne"
-        );
-
-        engine.executeUpdate(
-            "CREATE FUNCTION GetOne() " +
-            "RETURNS INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN(1) " +
-            "END"
+            "CREATE FUNCTION dbo.GetOne()\n" +
+                "RETURNS INTEGER\n" +
+                "AS\n" +
+                "BEGIN\n" +
+                "  RETURN(1)\n" +
+                "END"
         );
     }
 
     @Override
     protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
-        engine.executeUpdate(
-            "IF OBJECT_ID (N'" + getTestSchema() + ".TimesTwo', N'FN') IS NOT NULL " +
-            "BEGIN " +
-            "    DROP FUNCTION " + getTestSchema() + ".TimesTwo;" +
-            "END"
-        );
+        engine.executeUpdate("IF EXISTS (SELECT * FROM sys.schemas WHERE name = N'myschema')\n" +
+            "BEGIN\n" +
+            "   IF OBJECT_ID (N'myschema.TimesTwo', N'FN') IS NOT NULL\n" +
+            "   BEGIN\n" +
+            "       DROP FUNCTION myschema.TimesTwo;\n" +
+            "   END\n" +
+            "   DROP SCHEMA myschema;\n" +
+            "END");
+        engine.executeUpdate("CREATE SCHEMA myschema");
 
         engine.executeUpdate(
-            "CREATE FUNCTION " + getTestSchema() + ".TimesTwo(@number INTEGER) " +
-            "RETURNS INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN(@number * 2) " +
-            "END"
+            "CREATE FUNCTION myschema.TimesTwo(@number INTEGER)\n" +
+                "RETURNS INTEGER\n" +
+                "AS\n" +
+                "BEGIN\n" +
+                "  RETURN(@number * 2)\n" +
+                "END\n"
         );
-    }
-
-    @Override
-    protected void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
-        engine.executeUpdate("CREATE SCHEMA " + schema);
-    }
-
-    @Override
-    protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
-        engine.executeUpdate("DROP SCHEMA " + schema);
     }
 }

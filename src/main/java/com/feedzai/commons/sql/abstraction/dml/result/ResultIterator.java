@@ -96,7 +96,7 @@ public abstract class ResultIterator implements AutoCloseable {
                 columnNames.add(meta.getColumnLabel(i));
             }
 
-        } catch (final Exception e) {
+        } catch (Exception e) {
             close();
             throw new DatabaseEngineException("Could not process result set.", e);
         }
@@ -159,7 +159,7 @@ public abstract class ResultIterator implements AutoCloseable {
             }
 
             return temp;
-        } catch (final Exception e) {
+        } catch (Exception e) {
             close();
             throw new DatabaseEngineException("Could not fetch data.", e);
         }
@@ -201,7 +201,7 @@ public abstract class ResultIterator implements AutoCloseable {
                 temp[i] = createResultColumn(columnNames.get(i), resultSet.getObject(i + 1));
             }
             return temp;
-        } catch (final Exception e) {
+        } catch (Exception e) {
             close();
             throw new DatabaseEngineException("Could not fetch data.", e);
         }
@@ -236,13 +236,13 @@ public abstract class ResultIterator implements AutoCloseable {
                 if (resultSet != null) {
                     resultSet.close();
                 }
-            } catch (final Exception e) {
+            } catch (Exception e) {
                 logger.warn("Could not close result set.", e);
             }
             if (statementCloseable && statement != null) {
                 try {
                     statement.close();
-                } catch (final Exception e) {
+                } catch (Exception e) {
                     logger.warn("Could not close statement.", e);
                 }
             }

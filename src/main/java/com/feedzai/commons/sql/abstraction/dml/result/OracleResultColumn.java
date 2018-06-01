@@ -70,7 +70,7 @@ public class OracleResultColumn extends ResultColumn {
             ObjectInputStream ois = new ObjectInputStream(((Blob) val).getBinaryStream());
 
             return (T) ois.readObject();
-        } catch (final Exception e) {
+        } catch (Exception e) {
             throw new DatabaseEngineRuntimeException("Error converting blob to object", e);
         }
     }

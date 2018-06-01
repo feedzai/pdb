@@ -57,7 +57,6 @@ import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assume.assumeThat;
 
 /**
@@ -93,18 +92,19 @@ public abstract class AbstractEngineSchemaTest {
 
     private static final String IEE754_SUPPORT_MESSAGE = "Test not supported for this engine - skipped";
 
+    protected DatabaseEngine engine;
     protected Properties properties;
 
     @Parameterized.Parameter
     public DatabaseConfiguration config;
 
-    private static final String TABLE_NAME = "TEST_DOUBLE_COLUMN";
-    private static final String ID_COL = "ID";
-    private static final String DBL_COL = "DBL_COL";
-    private static final int PK_VALUE = 1;
+    private static String TABLE_NAME = "TEST_DOUBLE_COLUMN";
+    private static String ID_COL = "ID";
+    private static String DBL_COL = "DBL_COL";
+    private static int PK_VALUE = 1;
 
     @Before
-    public void init() {
+    public void init() throws Exception {
         properties = new Properties() {
             {
                 setProperty(JDBC, config.jdbc);
@@ -112,11 +112,17 @@ public abstract class AbstractEngineSchemaTest {
                 setProperty(PASSWORD, config.password);
                 setProperty(ENGINE, config.engine);
                 setProperty(SCHEMA_POLICY, "drop-create");
-                if (config.schema != null) {
-                    setProperty(SCHEMA, config.schema);
-                }
+                setProperty(SCHEMA, getDefaultSchema());
             }
         };
+    }
+
+    protected String getDefaultSchema() {
+        return "";
+    }
+
+    protected String getSchema() {
+        return "";
     }
 
     /**
@@ -131,17 +137,6 @@ public abstract class AbstractEngineSchemaTest {
         return UNSUPPORTED;
     }
 
-
-    /**
-     * Gets the test schema to be used in tests that need a schema other then the default/configured.
-     *
-     * @return The test schema.
-     * @since 2.1.13
-     */
-    protected String getTestSchema() {
-        return "myschema";
-    }
-
     /**
      * Tests a query including an UDF {@link com.feedzai.commons.sql.abstraction.dml.Expression},
      * using the default schema.
@@ -151,12 +146,11 @@ public abstract class AbstractEngineSchemaTest {
     @Test
     public void udfGetOneTest() throws Exception {
         // engine using the default schema
-        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
-            defineUDFGetOne(engine);
+        engine = DatabaseFactory.getConnection(properties);
+        defineUDFGetOne(engine);
 
-            final List<Map<String, ResultColumn>> query = engine.query(select(udf("GetOne").alias("ONE")));
-            assertEquals("result ok?", 1, (int) query.get(0).get("ONE").toInt());
-        }
+        List<Map<String, ResultColumn>> query = engine.query(select(udf("GetOne").alias("ONE")));
+        assertEquals("result ok?", 1, (int) query.get(0).get("ONE").toInt());
     }
 
     /**
@@ -167,18 +161,14 @@ public abstract class AbstractEngineSchemaTest {
      */
     @Test
     public void udfTimesTwoTest() throws Exception {
-        dropCreateTestSchema();
+        // engine using the default schema
+        this.properties.setProperty(SCHEMA, getSchema());
+        engine = DatabaseFactory.getConnection(properties);
 
-        final Properties otherProperties = (Properties) properties.clone();
-        otherProperties.setProperty(SCHEMA, getTestSchema());
+        defineUDFTimesTwo(engine);
 
-        // engine using the defined test schema
-        try (final DatabaseEngine engine = DatabaseFactory.getConnection(otherProperties)) {
-            defineUDFTimesTwo(engine);
-
-            final List<Map<String, ResultColumn>> query = engine.query(select(udf("TimesTwo", k(10)).alias("TIMESTWO")));
-            assertEquals("result ok?", 20, (int) query.get(0).get("TIMESTWO").toInt());
-        }
+        List<Map<String, ResultColumn>> query = engine.query(select(udf("TimesTwo", k(10)).alias("TIMESTWO")));
+        assertEquals("result ok?", 20, (int) query.get(0).get("TIMESTWO").toInt());
     }
 
     /**
@@ -420,13 +410,16 @@ public abstract class AbstractEngineSchemaTest {
      * @param columnValue The column value.
      */
     protected void testPersistSpecialValues(final Object columnValue) throws DatabaseEngineException, DatabaseFactoryException {
-        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+        final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
+        try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.addEntity(entity);
-
             final EntityEntry entry = createSpecialValueEntry(columnValue);
             engine.persist(entity.getName(), entry);
             checkResult(engine, entity.getName(), columnValue);
+        } finally {
+            engine.close();
         }
     }
 
@@ -590,101 +583,6 @@ public abstract class AbstractEngineSchemaTest {
     }
 
     /**
-     * Tests that an entity can be created/dropped/checked in different schemas without conflicts, and the operation
-     * works as expected.
-     *
-     * @throws DatabaseEngineException  If anything goes wrong with database operations.
-     * @throws DatabaseFactoryException If anything goes wrong connecting to the database.
-     * @since 2.1.13
-     */
-    @Test
-    public void testCreateSameEntityDifferentSchemas() throws DatabaseEngineException, DatabaseFactoryException {
-        assertNotEquals("Other 'test schema' and original schema should be different", config.schema, getTestSchema());
-
-        final DbEntity entity = dbEntity()
-            .name("TEST1")
-            .addColumn("COL1", INT)
-            .pkFields("COL1")
-            .build();
-
-        final DbEntity otherEntity = dbEntity()
-            .name("TEST2")
-            .addColumn("COL1", INT)
-            .pkFields("COL1")
-            .build();
-
-        dropCreateTestSchema();
-
-        final Properties otherProperties = (Properties) properties.clone();
-        otherProperties.setProperty(SCHEMA, getTestSchema());
-
-        try (final DatabaseEngine originalEngine = DatabaseFactory.getConnection(properties);
-             final DatabaseEngine otherEngine = DatabaseFactory.getConnection(otherProperties)) {
-            originalEngine.dropEntity(entity);
-            originalEngine.dropEntity(otherEntity);
-
-            checkEntity("* Asserting test1 table is not present in any schema...",
-                entity, originalEngine, otherEngine, false, false);
-
-            originalEngine.addEntity(entity);
-            checkEntity("* Created test1 table in original schema - asserting it is there and not in the other schema...",
-                entity, originalEngine, otherEngine, true, false);
-
-            otherEngine.addEntity(entity);
-            checkEntity("* Created test1 table in other schema - asserting it is there and still is in the original schema...",
-                entity, originalEngine, otherEngine, true, true);
-
-            otherEngine.addEntity(otherEntity);
-            checkEntity("* Created test2 table in other schema - asserting it is there and not in the original schema...",
-                otherEntity, originalEngine, otherEngine, false, true);
-
-            otherEngine.dropEntity(entity);
-            checkEntity("* Dropped test1 table in other schema - asserting it is not there, but is still in the original schema...",
-                entity, originalEngine, otherEngine, true, false);
-
-            originalEngine.dropEntity(entity);
-            checkEntity("* Dropped test1 table in original schema - asserting it is not present in any schema...",
-                entity, originalEngine, otherEngine, false, false);
-        }
-    }
-
-    private static void checkEntity(final String reasonMessage, final DbEntity entity,
-                                    final DatabaseEngine originalEngine,
-                                    final DatabaseEngine otherEngine,
-                                    final boolean isPresentOriginal,
-                                    final boolean isPresentOther) throws DatabaseEngineException {
-        final String name = entity.getName();
-
-        assertEquals(
-            String.format("%s\n--> Metadata for table '%s' should%s be present in original schema.",
-                reasonMessage, name, isPresentOriginal ? "" : " not"),
-            isPresentOriginal ? 1 : 0,
-            originalEngine.getMetadata(name).size()
-        );
-
-        assertEquals(
-            String.format("%s\n--> Table '%s' should%s be present in original schema.",
-                reasonMessage, name, isPresentOriginal ? "" : " not"),
-            isPresentOriginal,
-            originalEngine.getEntities().containsKey(name)
-        );
-
-        assertEquals(
-            String.format("%s\n--> Metadata for table '%s' should%s be present in other schema.",
-                reasonMessage, name, isPresentOther ? "" : " not"),
-            isPresentOther ? 1 : 0,
-            otherEngine.getMetadata(name).size()
-        );
-
-        assertEquals(
-            String.format("%s\n--> Table '%s' should%s be present in other schema.",
-                reasonMessage, name, isPresentOther ? "" : " not"),
-            isPresentOther,
-            otherEngine.getEntities().containsKey(name)
-        );
-    }
-
-    /**
      * Auxiliary method that checks that the inserted value is indeed the provided column value.
      *
      * @param engine      The database engine.
@@ -741,60 +639,9 @@ public abstract class AbstractEngineSchemaTest {
                 .build();
     }
 
-    /**
-     * Defines the UDF "GetOne" in the database engine.
-     *
-     * @param engine The database engine.
-     * @throws DatabaseEngineException If anything goes wrong creating the UDF.
-     */
-    protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
+    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
     }
 
-    /**
-     * Defines the UDF "TimesTwo" in the database engine.
-     *
-     * This UDF is supposed to be created in the {@link #getTestSchema() test schema} (if the database supports it).
-     *
-     * @param engine The database engine.
-     * @throws DatabaseEngineException If anything goes wrong creating the UDF.
-     */
-    protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
+    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
     }
-
-    /**
-     * Creates the {@link #getTestSchema() test schema} in the database, dropping it first if necessary.
-     *
-     * @throws DatabaseEngineException  If anything goes wrong creating the schema.
-     * @throws DatabaseFactoryException If anything goes wrong connecting to the database.
-     * @since 2.1.13
-     */
-    public void dropCreateTestSchema() throws DatabaseEngineException, DatabaseFactoryException {
-        try (final DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
-            dropSchema(engine, getTestSchema());
-            createSchema(engine, getTestSchema());
-        }
-    }
-
-    /**
-     * Creates a schema in the database.
-     *
-     * This method is expected to create the necessary permissions for the current user and/or the user associated
-     * with the schema to login and create tables in it.
-     *
-     * @param engine The database engine.
-     * @param schema The schema to create.
-     * @throws DatabaseEngineException If anything goes wrong creating the schema.
-     * @since 2.1.13
-     */
-    protected abstract void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException;
-
-    /**
-     * Drops a schema from the database (won't fail if schema doesn't exist or if it isn't empty).
-     *
-     * @param engine The database engine.
-     * @param schema The schema to drop.
-     * @throws DatabaseEngineException If anything goes wrong dropping the schema.
-     * @since 2.1.13
-     */
-    protected abstract void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException;
 }

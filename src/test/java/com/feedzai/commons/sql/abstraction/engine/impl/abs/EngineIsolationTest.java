@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -51,7 +52,7 @@ public class EngineIsolationTest {
     public DatabaseConfiguration config;
 
     @Before
-    public void init() {
+    public void init() throws DatabaseEngineException {
         this.properties = new Properties() {
             {
                 setProperty(JDBC, config.jdbc);
@@ -64,25 +65,25 @@ public class EngineIsolationTest {
     }
 
     @Test
-    public void readCommittedTest() throws DatabaseFactoryException {
+    public void readCommittedTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         properties.setProperty(ISOLATION_LEVEL, "read_committed");
         DatabaseFactory.getConnection(properties);
     }
 
     @Test
-    public void readUncommittedTest() throws DatabaseFactoryException {
+    public void readUncommittedTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
         DatabaseFactory.getConnection(properties);
     }
 
     @Test
-    public void repeatableReadTest() throws DatabaseFactoryException {
+    public void repeatableReadTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
         DatabaseFactory.getConnection(properties);
     }
 
     @Test
-    public void serializableTest() throws DatabaseFactoryException {
+    public void serializableTest() throws DatabaseEngineException, InterruptedException, DatabaseFactoryException {
         this.properties.setProperty(ISOLATION_LEVEL, "read_uncommitted");
         DatabaseFactory.getConnection(properties);
     }

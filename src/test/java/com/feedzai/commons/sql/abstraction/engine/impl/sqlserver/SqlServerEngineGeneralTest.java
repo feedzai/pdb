@@ -85,7 +85,7 @@ public class SqlServerEngineGeneralTest {
     public DatabaseConfiguration config;
 
     @Before
-    public void init() throws DatabaseFactoryException {
+    public void init() throws DatabaseEngineException, DatabaseFactoryException {
         properties = new Properties() {
 
             {

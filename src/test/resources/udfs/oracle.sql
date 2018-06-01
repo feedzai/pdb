@@ -1,5 +1,5 @@
 --
--- the following statements must be run separately
+-- the following statements must be run separetely
 --
 
 CREATE OR REPLACE FUNCTION GetOne
@@ -17,7 +17,7 @@ END GetOne;
 -- 1
 --
 
-CREATE OR REPLACE FUNCTION myschema.TimesTwo (n IN INTEGER)
+CREATE OR REPLACE FUNCTION TimesTwo (n IN INTEGER)
 RETURN INTEGER
 AS
 BEGIN
@@ -26,7 +26,7 @@ END TimesTwo;
 
 --
 -- Query:
--- SELECT myschema.TimesTwo(10) FROM dual;
+-- SELECT TimesTwo(10) FROM dual;
 --
 -- Output:
 -- 20

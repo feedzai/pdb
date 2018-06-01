@@ -15,20 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
-import com.feedzai.commons.sql.abstraction.ddl.Rename;
-import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.Function;
-import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
-import com.feedzai.commons.sql.abstraction.dml.Name;
-import com.feedzai.commons.sql.abstraction.dml.Query;
-import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
-import com.feedzai.commons.sql.abstraction.dml.Truncate;
-import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
@@ -120,13 +108,13 @@ public class DB2Translator extends AbstractTranslator {
         if (Function.AVG.equalsIgnoreCase(function)) {
            /* DB2 AVG is type sensitive - avg of int returns int (why IBM???)*/
             return "AVG(" + expTranslated + "+0.0)";
-        }
-
-        // if it is a user-defined function
-        if (f.isUDF() && properties.isSchemaSet()) {
-            return quotize(properties.getSchema(), translateEscape()) + "." + function + "(" + expTranslated + ")";
         } else {
-            return function + "(" + expTranslated + ")";
+            // if it is a user-defined function
+            if (f.isUDF() && properties.isSchemaSet()) {
+                return properties.getSchema() + "." + function + "(" + expTranslated + ")";
+            } else {
+                return function + "(" + expTranslated + ")";
+            }
         }
     }
 

@@ -15,20 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
-import com.feedzai.commons.sql.abstraction.ddl.Rename;
-import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.Function;
-import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
-import com.feedzai.commons.sql.abstraction.dml.Name;
-import com.feedzai.commons.sql.abstraction.dml.Query;
-import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
-import com.feedzai.commons.sql.abstraction.dml.Update;
-import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
@@ -110,10 +98,8 @@ public class SqlServerTranslator extends AbstractTranslator {
         }
 
         // if it is a user-defined function
-        if (f.isUDF()) {
-            // a schema must always be used for functions, use default SQL Server schema "dbo" if no schema is set
-            final String schema = properties.isSchemaSet() ? quotize(properties.getSchema(), translateEscape())  : "dbo";
-            return schema + "." + function + "(" + expTranslated + ")";
+        if (f.isUDF() && properties.isSchemaSet()) {
+            return properties.getSchema() + "." + function + "(" + expTranslated + ")";
         } else {
             return function + "(" + expTranslated + ")";
         }

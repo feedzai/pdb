@@ -97,7 +97,12 @@ public class PostgreSqlTranslator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        return function + "(" + expTranslated + ")";
+        // if it is a user-defined function
+        if (f.isUDF() && properties.isSchemaSet()) {
+            return properties.getSchema() + "." + function + "(" + expTranslated + ")";
+        } else {
+            return function + "(" + expTranslated + ")";
+        }
     }
 
     @Override

@@ -138,7 +138,7 @@ public abstract class ResultColumn implements Serializable {
             // are zero (e.g., 13.0), and in this case Long.parseLong() is ok.
             return Long.parseLong(val.toString());
 
-        } catch (final NumberFormatException e) {
+        } catch (NumberFormatException e) {
             // We get here if the double has decimal digits (e.g, 13.5) and in this
             // case there is no precision overflow on using an intermediate Double
             // before because it means the value was not stored as a long.
@@ -186,7 +186,7 @@ public abstract class ResultColumn implements Serializable {
         if (val instanceof Blob) {
             try {
                 is = ((Blob) val).getBinaryStream();
-            } catch (final SQLException e) {
+            } catch (SQLException e) {
                 throw new DatabaseEngineRuntimeException("Error getting blob input stream", e);
             }
         } else if (val instanceof byte[]) {
@@ -198,7 +198,7 @@ public abstract class ResultColumn implements Serializable {
         try {
             ObjectInputStream ois = new ObjectInputStream(is);
             return (T) ois.readObject();
-        } catch (final Exception e) {
+        } catch (Exception e) {
             throw new DatabaseEngineRuntimeException("Error converting blob to object", e);
         }
     }
@@ -218,7 +218,7 @@ public abstract class ResultColumn implements Serializable {
                 result.append(buff, 0, read);
             }
             return result.toString();
-        } catch (final Exception ex) {
+        } catch (Exception ex) {
             throw new DatabaseEngineRuntimeException("Unable to get string from clob", ex);
         }
     }

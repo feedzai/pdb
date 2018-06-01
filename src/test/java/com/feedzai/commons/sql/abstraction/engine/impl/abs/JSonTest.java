@@ -20,11 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -40,25 +36,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
-import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.*;
 import static org.hamcrest.core.AnyOf.anyOf;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  * Tests for JSON columns.
@@ -72,7 +54,7 @@ public class JSonTest {
     /*
      * Test table properties, a table with a PK and a json column.
      */
-    private static final String TEST_TABLE = "TEST_TBL";
+    private static String TEST_TABLE = "TEST_TBL";
     private static final String PK_COL = "PK_COL";
     private static final String JSON_COL = "JSON_COL";
 
@@ -128,7 +110,7 @@ public class JSonTest {
      * Scenario for an insert of a correct json value using persist().
      */
     @Test
-    public void normalInsertTest() throws DatabaseEngineException {
+    public void normalInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
         EntityEntry jsonTestEntry = getTestEntry();
         dbEngine.persist(TEST_TABLE, jsonTestEntry, false);
@@ -141,7 +123,7 @@ public class JSonTest {
      * engines that support JSON natively.
      */
     @Test
-    public void badValueInsertTest() {
+    public void badValueInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
         boolean exceptionThrown = false;
         try {
             dbEngine.beginTransaction();
@@ -151,7 +133,7 @@ public class JSonTest {
                     .build();
             dbEngine.persist(TEST_TABLE, jsonTestEntry, false);
             dbEngine.commit();
-        } catch (final DatabaseEngineException e) {
+        } catch (DatabaseEngineException e) {
             dbEngine.rollback();
             exceptionThrown = true;
         }
@@ -164,7 +146,7 @@ public class JSonTest {
      * Scenario for inserts in batch updates.
      */
     @Test
-    public void batchInsertTest() throws DatabaseEngineException {
+    public void batchInsertTest() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
@@ -176,7 +158,7 @@ public class JSonTest {
      * Scenario for an update of a JSON field using prepared statements
      */
     @Test
-    public void prepStmtUpdateTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
+    public void prepStmtUpdateTest() throws DatabaseEngineException, DatabaseFactoryException, NameAlreadyExistsException, ConnectionResetException {
         // Insert entry first
         normalInsertTest();
 
@@ -222,7 +204,8 @@ public class JSonTest {
     }
 
     @After
-    public void cleanup() {
+    public void cleanup() throws DatabaseEngineException {
         dbEngine.close();
     }
+
 }

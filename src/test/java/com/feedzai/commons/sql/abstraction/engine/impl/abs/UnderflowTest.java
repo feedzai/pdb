@@ -22,6 +22,7 @@ import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -64,7 +65,7 @@ public class UnderflowTest {
     /*
      * Test table properties, a table with a PK and two double columns.
      */
-    private static final String TEST_TABLE = "TEST_TBL";
+    private static String TEST_TABLE = "TEST_TBL";
     private static final String PK_COL = "PK_COL";
     private static final String ERROR_COL = "ERROR_COL";
     private static final String NORMAL_COL = "VALUE_COL";
@@ -122,7 +123,7 @@ public class UnderflowTest {
      * Scenario for an insert using persist().
      */
     @Test
-    public void testUnderflowNormal() throws DatabaseEngineException {
+    public void testUnderflowNormal() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
         dbEngine.persist(TEST_TABLE, getTestEntry());
         dbEngine.commit();
@@ -173,7 +174,7 @@ public class UnderflowTest {
      * Scenario for an insert using batch updates.
      */
     @Test
-    public void testUnderflowBatch() throws DatabaseEngineException {
+    public void testUnderflowBatch() throws DatabaseFactoryException, DatabaseEngineException {
         dbEngine.beginTransaction();
         dbEngine.addBatch(TEST_TABLE, getTestEntry());
         dbEngine.flush();
@@ -208,7 +209,7 @@ public class UnderflowTest {
     }
 
     @After
-    public void cleanup() {
+    public void cleanup() throws DatabaseEngineException {
         dbEngine.close();
     }
 

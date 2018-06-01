@@ -45,7 +45,7 @@ public class DB2ResultColumn extends ResultColumn {
         if (o instanceof Blob) {
             try {
                 return new ObjectInputStream(((Blob) o).getBinaryStream()).readObject();
-            } catch (final Exception e) {
+            } catch (Exception e) {
                 throw new DatabaseEngineRuntimeException("Error eagerly converting blob to object", e);
             }
         }

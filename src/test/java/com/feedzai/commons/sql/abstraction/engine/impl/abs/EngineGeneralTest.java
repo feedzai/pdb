@@ -36,6 +36,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.RecoveryException;
+import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -55,14 +57,15 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -148,7 +151,7 @@ public class EngineGeneralTest {
     }
 
     @Before
-    public void init() throws DatabaseFactoryException {
+    public void init() throws DatabaseEngineException, DatabaseFactoryException {
         properties = new Properties() {
 
             {
@@ -169,7 +172,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void createEntityTest() throws DatabaseEngineException {
+    public void createEntityTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -185,7 +188,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void createEntityWithTwoColumnsBeingPKTest() throws DatabaseEngineException {
+    public void createEntityWithTwoColumnsBeingPKTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -216,7 +219,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException e) {
+        } catch (DatabaseEngineException e) {
             assertEquals("", "Entity 'TEST' is already defined", e.getMessage());
             throw e;
         }
@@ -300,7 +303,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void createEntityWithSequencesTest() throws DatabaseEngineException {
+    public void createEntityWithSequencesTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -316,7 +319,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void createEntityWithIndexesTest() throws DatabaseEngineException {
+    public void createEntityWithIndexesTest() throws DatabaseEngineException, InterruptedException {
 
         DbEntity entity = dbEntity()
                 .name("TEST")
@@ -1321,7 +1324,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException de) {
+        } catch (DatabaseEngineException de) {
             assertEquals("exception ok?", "You have to define the entity name", de.getMessage());
             throw de;
         }
@@ -1337,7 +1340,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException de) {
+        } catch (DatabaseEngineException de) {
             assertEquals("exception ok?", "You have to define the entity name", de.getMessage());
             throw de;
         }
@@ -1353,7 +1356,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException de) {
+        } catch (DatabaseEngineException de) {
             assertEquals("exception ok?", "Entity '0123456789012345678901234567891' exceeds the maximum number of characters (30)", de.getMessage());
             throw de;
         }
@@ -1369,7 +1372,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException de) {
+        } catch (DatabaseEngineException de) {
             assertEquals("exception ok?", "Column in entity 'entname' must have a name", de.getMessage());
             throw de;
         }
@@ -1385,7 +1388,7 @@ public class EngineGeneralTest {
 
         try {
             engine.addEntity(entity);
-        } catch (final DatabaseEngineException de) {
+        } catch (DatabaseEngineException de) {
             assertEquals("exception ok?", "You can only define one auto incremented column", de.getMessage());
             throw de;
         }
@@ -1519,7 +1522,7 @@ public class EngineGeneralTest {
             engine.persist("TEST", ee);
 
             throw new Exception();
-        } catch (final Exception e) {
+        } catch (Exception e) {
 
         } finally {
             assertTrue("tx active?", engine.isTransactionActive());
@@ -1619,7 +1622,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void dropEntityThatDoesNotExistTest() {
+    public void dropEntityThatDoesNotExistTest() throws DatabaseEngineException {
         DbEntity removeEntity = engine.removeEntity("TABLETHATDOESNOTEXIST");
 
         assertNull(removeEntity);
@@ -1742,7 +1745,7 @@ public class EngineGeneralTest {
 
         try {
             engine.executeUpdate("DROP VIEW " + quotize("VN", engine.escapeCharacter()));
-        } catch (final Throwable a) {
+        } catch (Throwable a) {
         }
 
         engine.executeUpdate(
@@ -2353,7 +2356,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void testBlobJSON() throws DatabaseEngineException {
+    public void testBlobJSON() throws DatabaseEngineException, DatabaseFactoryException {
         DbEntity entity = dbEntity()
                 .name("TEST")
                 .addColumn("COL1", STRING)
@@ -2523,13 +2526,17 @@ public class EngineGeneralTest {
                 .set("COL5", "1")
                 .build();
 
+        boolean threwExpected = false;
+
         try {
             schemaNoneEngine.persist(entity.getName(), entry);
-            fail("Should throw an exception if trying to persist an entity before calling addEntity/updateEntity a first time");
-        } catch (final DatabaseEngineException e) {
-            assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance",
-                e.getCause().getMessage().contains("Unknown entity"));
+            fail("Should throw an exception if trying to persist an entity before calling addEntity/updateEntity a firs time");
+        } catch (DatabaseEngineException e) {
+            assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance", e.getCause().getMessage().contains("Unknown entity"));
+            threwExpected = true;
         }
+
+        assertTrue("Expected exception should have been thrown", threwExpected);
 
         schemaNoneEngine.updateEntity(entity);
 
@@ -2555,7 +2562,7 @@ public class EngineGeneralTest {
      * doesn't execute DDL.
      */
     @Test
-    public void updateEntityNoneSchemaPolicyDoesntExecuteDDL() throws DatabaseFactoryException {
+    public void updateEntityNoneSchemaPolicyDoesntExecuteDDL() throws DatabaseEngineException, DatabaseFactoryException {
         dropSilently("TEST");
 
         properties.setProperty(SCHEMA_POLICY, "none");
@@ -2575,7 +2582,7 @@ public class EngineGeneralTest {
             schemaNoneEngine.updateEntity(entity);
             schemaNoneEngine.query(select(all()).from(table(entity.getName())));
             fail("Should have failed because updateEntity with schema policy NONE doesn't execute DDL");
-        } catch (final DatabaseEngineException e) {
+        } catch (DatabaseEngineException e) {
             // Should fail because because updateEntity with schema policy NONE doesn't execute DDL
         }
     }
@@ -2958,7 +2965,7 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> resultSet = engine.query(select(all()).from(table(newName)));
         assertEquals("Count ok?", 1, resultSet.size());
 
-        assertEquals("Content ok?", 20, (int) resultSet.get(0).get("timestamp").toInt());
+        assertTrue("Content ok?", 20 == resultSet.get(0).get("timestamp").toInt());
 
         dropSilently(newName);
     }
@@ -2971,8 +2978,9 @@ public class EngineGeneralTest {
     private void dropSilently(String... tables) {
         for (String table : tables) {
             try {
-                engine.dropEntity(dbEntity().name(table).build());
-            } catch (final Throwable e) {
+                ((AbstractDatabaseEngine) engine).dropEntity(dbEntity().name(table).build());
+                //engine.executeUpdate(String.format("DROP TABLE %s", table));
+            } catch (Throwable e) {
             }
         }
     }
@@ -2989,9 +2997,7 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 5).set("COL5", "tesTte")
                 .build());
 
-        List<Map<String, ResultColumn>> query = engine.query(
-            select(all()).from(table("TEST")).where(like(udf("lower", column("COL5")), k("%teste%")))
-        );
+        List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table("TEST")).where(like(udf("lower", column("COL5")), k("%teste%"))));
         assertEquals(3, query.size());
         query = engine.query(select(all()).from(table("TEST")).where(like(udf("lower", column("COL5")), k("%tt%"))));
         assertEquals(1, query.size());
@@ -3027,7 +3033,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void fkTestRemoveRowPreviouslyReferencedByForeignKey() throws DatabaseEngineException, DatabaseFactoryException {
+    public void fkTestRemoveRowPreviouslyReferencedByForeignKey() throws DatabaseEngineException, DatabaseFactoryException, SQLException, RecoveryException, RetryLimitExceededException, InterruptedException {
         DbEntity e1 = dbEntity()
                 .name("TEST1")
                 .addColumn("COL1", INT)
@@ -3317,7 +3323,7 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void alterColumnWithConstraintTest() throws DatabaseEngineException {
+    public void alterColumnWithConstraintTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
         DbEntity entity =
                 dbEntity()
                         .name("TEST")
