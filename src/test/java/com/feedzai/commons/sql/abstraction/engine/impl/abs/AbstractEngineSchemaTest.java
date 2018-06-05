@@ -15,7 +15,9 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
@@ -27,6 +29,9 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.Sets;
+import mockit.Deencapsulation;
+import org.assertj.core.api.MapAssert;
+import org.assertj.core.data.MapEntry;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runners.Parameterized;
@@ -54,6 +59,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.UNSUPPORTED;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
@@ -654,34 +660,73 @@ public abstract class AbstractEngineSchemaTest {
                                     final boolean isPresentOriginal,
                                     final boolean isPresentOther) throws DatabaseEngineException {
         final String name = entity.getName();
+        final MapEntry[] tableEntry = {
+                MapEntry.entry(name, DbEntityType.TABLE),
+                // this second entry is needed because MySQL returns tables as SYSTEM_TABLEs (when they are created in default schema)
+                MapEntry.entry(name, DbEntityType.SYSTEM_TABLE)
+        };
+        final String originalSchema = Deencapsulation.getField(originalEngine, "currentSchema");
+        final String otherSchema = Deencapsulation.getField(otherEngine, "currentSchema");
 
-        assertEquals(
-            String.format("%s\n--> Metadata for table '%s' should%s be present in original schema.",
-                reasonMessage, name, isPresentOriginal ? "" : " not"),
-            isPresentOriginal ? 1 : 0,
-            originalEngine.getMetadata(name).size()
-        );
+        // check metadata in the schema of the "original engine"
+        final MapAssert<String, DbColumnType> originalMetadataAssert = assertThat(originalEngine.getMetadata(name))
+                .as("%s%n--> Metadata for table '%s' should%s be present in original schema.",
+                        reasonMessage, name, isPresentOriginal ? "" : " not");
 
-        assertEquals(
-            String.format("%s\n--> Table '%s' should%s be present in original schema.",
-                reasonMessage, name, isPresentOriginal ? "" : " not"),
-            isPresentOriginal,
-            originalEngine.getEntities().containsKey(name)
-        );
+        final MapAssert<String, DbColumnType> originalMetadataAssertOther = assertThat(otherEngine.getMetadata(originalSchema, name))
+                .as("%s%n--> Metadata for table '%s' when checked from other engine should match metadata checked from original engine.",
+                        reasonMessage, name);
 
-        assertEquals(
-            String.format("%s\n--> Metadata for table '%s' should%s be present in other schema.",
-                reasonMessage, name, isPresentOther ? "" : " not"),
-            isPresentOther ? 1 : 0,
-            otherEngine.getMetadata(name).size()
-        );
+        // check entities in the schema of the "original engine"
+        final MapAssert<String, DbEntityType> originalEntitiesAssert = assertThat(originalEngine.getEntities())
+                .as("%s%n--> Table '%s' should%s be present in original schema.",
+                        reasonMessage, name, isPresentOriginal ? "" : " not");
 
-        assertEquals(
-            String.format("%s\n--> Table '%s' should%s be present in other schema.",
-                reasonMessage, name, isPresentOther ? "" : " not"),
-            isPresentOther,
-            otherEngine.getEntities().containsKey(name)
-        );
+        final MapAssert<String, DbEntityType> originalEntitiesAssertOther = assertThat(otherEngine.getEntities(originalSchema))
+                .as("%s%n--> The presence of table '%s' when checked from other engine should match the info obtained from original engine.",
+                        reasonMessage, name);
+
+        if (isPresentOriginal) {
+            originalMetadataAssert.hasSize(1);
+            originalMetadataAssertOther.containsOnly(originalEngine.getMetadata(name).entrySet().toArray(new Map.Entry[0]));
+            originalEntitiesAssert.containsAnyOf(tableEntry);
+            originalEntitiesAssertOther.containsOnly(originalEngine.getEntities().entrySet().toArray(new Map.Entry[0]));
+        } else {
+            originalMetadataAssert.isEmpty();
+            originalMetadataAssertOther.isEmpty();
+            originalEntitiesAssert.doesNotContain(tableEntry);
+            originalEntitiesAssertOther.doesNotContain(tableEntry);
+        }
+
+        // check metadata in the schema of the "other engine"
+        final MapAssert<String, DbColumnType> otherMetadataAssert = assertThat(otherEngine.getMetadata(name))
+                .as("%s%n--> Metadata for table '%s' should%s be present in the other schema.",
+                        reasonMessage, name, isPresentOther ? "" : " not");
+
+        final MapAssert<String, DbColumnType> otherMetadataAssertOther = assertThat(originalEngine.getMetadata(otherSchema, name))
+                .as("%s%n--> Metadata for table '%s' when checked from original engine should match metadata checked from other engine.",
+                        reasonMessage, name);
+
+        // check entities in the schema of the "other engine"
+        final MapAssert<String, DbEntityType> otherEntitiesAssert = assertThat(otherEngine.getEntities())
+                .as("%s%n--> Table '%s' should%s be present in other schema.",
+                        reasonMessage, name, isPresentOther ? "" : " not");
+
+        final MapAssert<String, DbEntityType> otherEntitiesAssertOther = assertThat(originalEngine.getEntities(otherSchema))
+                .as("%s%n--> The presence of table '%s' when checked from original engine should match the info obtained from other engine.",
+                        reasonMessage, name);
+
+        if (isPresentOther) {
+            otherMetadataAssert.hasSize(1);
+            otherMetadataAssertOther.containsOnly(otherEngine.getMetadata(name).entrySet().toArray(new Map.Entry[0]));
+            otherEntitiesAssert.containsAnyOf(tableEntry);
+            otherEntitiesAssertOther.containsOnly(otherEngine.getEntities().entrySet().toArray(new Map.Entry[0]));
+        } else {
+            otherMetadataAssert.isEmpty();
+            otherMetadataAssertOther.isEmpty();
+            otherEntitiesAssert.doesNotContain(tableEntry);
+            otherEntitiesAssertOther.doesNotContain(tableEntry);
+        }
     }
 
     /**
