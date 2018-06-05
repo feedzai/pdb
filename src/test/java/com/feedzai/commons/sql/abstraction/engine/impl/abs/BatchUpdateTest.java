@@ -91,6 +91,11 @@ public class BatchUpdateTest {
     protected DatabaseEngine engine;
     protected Properties properties;
 
+    /**
+     * The {@link AbstractBatch} used in each test (extracted to a field so that it can be closed after the test).
+     */
+    protected AbstractBatch batch;
+
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
@@ -123,6 +128,10 @@ public class BatchUpdateTest {
     @After
     public void cleanup() {
         engine.close();
+        if (batch != null) {
+            batch.destroy();
+        }
+
     }
 
     /**
@@ -142,7 +151,7 @@ public class BatchUpdateTest {
 
         engine.addEntity(entity);
 
-        DefaultBatch batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, 100000, 1000000);
+        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, 100000, 1000000);
 
         // Add entries to batch no flush should take place because numEntries < batch size and batch timeout is huge
         for(int i = 0 ; i < numTestEntries; i++) {
@@ -164,7 +173,7 @@ public class BatchUpdateTest {
         final int numTestEntries = 5;
 
         addTestEntity();
-        DefaultBatch batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
+        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
 
         // Add entries to batch, no flush needed because #inserted entries = batch size
         for(int i = 0 ; i < numTestEntries; i++) {
@@ -186,7 +195,7 @@ public class BatchUpdateTest {
 
         addTestEntity();
         engine.getProperties().setProperty(PdbProperties.MAXIMUM_TIME_BATCH_SHUTDOWN, "1000000");
-        AbstractBatch batch = engine.createBatch(numTestEntries, 100000, "batchInsertWithDBConnDownTest");
+        batch = engine.createBatch(numTestEntries, 100000, "batchInsertWithDBConnDownTest");
         // Add entries to batch, no flush needed because #inserted entries = batch size
         for(int i = 0 ; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
@@ -205,7 +214,7 @@ public class BatchUpdateTest {
         final long batchTimeout = 1000;     // Flush after 1 sec
 
         addTestEntity();
-        DefaultBatch batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
+        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
         for(int i = 0 ; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
@@ -226,7 +235,7 @@ public class BatchUpdateTest {
 
         final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        MockedBatch batch = MockedBatch.create(
+        batch = MockedBatch.create(
                 engine,
                 "batchInsertWithDBConnDownTest",
                 numTestEntries,
@@ -259,7 +268,7 @@ public class BatchUpdateTest {
 
         final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        MockedBatch batch = MockedBatch.create(
+        batch = MockedBatch.create(
                 engine,
                 "batchInsertWithDBConnDownTest",
                 numTestEntries + 1,
@@ -296,7 +305,7 @@ public class BatchUpdateTest {
 
         final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        final DefaultBatch batch = DefaultBatch.create(
+        batch = DefaultBatch.create(
                 engine,
                 "batchInsertFlushRetryAfterDBErrorTest",
                 numTestEntries + 1,
@@ -351,7 +360,7 @@ public class BatchUpdateTest {
 
         final List<BatchEntry> failedEntries = new ArrayList<>();
         addTestEntity();
-        final DefaultBatch batch = DefaultBatch.create(
+        batch = DefaultBatch.create(
                 engine,
                 "batchInsertFlushRetryAfterDBErrorTest",
                 numTestEntries + 1,
@@ -398,7 +407,7 @@ public class BatchUpdateTest {
      */
     @Test
     public void flushFreesConnectionOnFailure() throws DatabaseEngineException {
-        final DefaultBatch batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);
+        batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);
         batch.add("unknown_table", entry().build()); // This will only fail when flushing
         batch.flush();
         assertFalse("Flush failed but the transaction is still active", engine.isTransactionActive());
@@ -433,7 +442,7 @@ public class BatchUpdateTest {
 
         engine.addEntity(entity);
 
-        DefaultBatch batch = DefaultBatch.create(engine, "test", 5, 1000000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
+        batch = DefaultBatch.create(engine, "test", 5, 1000000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
         batch.add("TEST", entry().set("COL1", 1).build());
 
         final ArrayList<String> resultOrder = new ArrayList<>();
