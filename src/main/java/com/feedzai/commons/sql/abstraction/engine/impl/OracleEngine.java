@@ -944,7 +944,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Map<String, DbColumnType> getMetadata(final String name) throws DatabaseEngineException {
+    public synchronized Map<String, DbColumnType> getMetadata(final String schemaPattern,
+                                                              final String tableNamePattern) throws DatabaseEngineException {
 
         final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
         Statement s = null;
@@ -955,8 +956,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
             s = conn.createStatement();
             rsColumns = s.executeQuery(format(
                 "SELECT COLUMN_NAME, DATA_TYPE, DATA_PRECISION FROM ALL_TAB_COLS WHERE TABLE_NAME = '%s' AND OWNER = '%s'",
-                name,
-                this.currentSchema
+                    tableNamePattern,
+                    schemaPattern
             ));
 
             while (rsColumns.next()) {

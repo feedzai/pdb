@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
 import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
@@ -730,6 +731,53 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
         } catch (final SQLException ex) {
             throw new DatabaseEngineException(format("Unable to drop foreign keys of the tables that depend on '%s'", entity.getName()), ex);
+        }
+    }
+
+    @Override
+    public synchronized Map<String, DbEntityType> getEntities(final String schemaPattern) throws DatabaseEngineException {
+        final Map<String, DbEntityType> entities = new LinkedHashMap<>();
+        ResultSet rs = null;
+
+        try {
+            getConnection();
+
+            // get the entities
+            rs = this.conn.getMetaData().getTables(schemaPattern, null, "%", null);
+
+            while (rs.next()) {
+                final String entityName = rs.getString("table_name");
+                final String entityType = rs.getString("table_type");
+
+                final DbEntityType type;
+
+                // tag the entities
+                if ("TABLE".equals(entityType)) {
+                    type = DbEntityType.TABLE;
+                } else if ("VIEW".equals(entityType)) {
+                    type = DbEntityType.VIEW;
+                } else if ("SYSTEM TABLE".equals(entityType)) {
+                    type = DbEntityType.SYSTEM_TABLE;
+                } else if ("SYSTEM VIEW".equals(entityType)) {
+                    type = DbEntityType.SYSTEM_VIEW;
+                } else {
+                    type = DbEntityType.UNMAPPED;
+                }
+
+                entities.put(entityName, type);
+            }
+
+            return entities;
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Could not get entities", e);
+        } finally {
+            try {
+                if (rs != null) {
+                    rs.close();
+                }
+            } catch (final Exception a) {
+                logger.trace("Error closing result set.", a);
+            }
         }
     }
 

@@ -1288,13 +1288,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             getConnection();
 
             // get the entities
-            rs = conn.getMetaData().getTables(null, schemaPattern, "%", null);
+            rs = this.conn.getMetaData().getTables(null, schemaPattern, "%", null);
 
             while (rs.next()) {
-                String entityName = rs.getString("table_name");
-                String entityType = rs.getString("table_type");
+                final String entityName = rs.getString("table_name");
+                final String entityType = rs.getString("table_type");
 
-                DbEntityType type;
+                final DbEntityType type;
 
                 // tag the entities
                 if ("TABLE".equals(entityType)) {
