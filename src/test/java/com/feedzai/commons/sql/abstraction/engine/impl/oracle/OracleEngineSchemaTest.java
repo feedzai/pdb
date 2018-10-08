@@ -25,6 +25,9 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+
+import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -37,6 +40,7 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.CLOB;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
@@ -205,6 +209,52 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         for (final Map<String, ResultColumn> result : results) {
             assertEquals("Check that compression is defined as MEDIUM", result.get(compression).toString(), "MEDIUM");
             assertEquals("Check that secure file is enabled", result.get(secureFile).toString(), "YES");
+        }
+    }
+
+    /**
+     * Tests that PDB stores and reads data from BLOB's with sizes greater than 2000 bytes.
+     *
+     * @throws Exception If anything goes wrong with the test.
+     * @since 2.2.2
+     */
+    @Test
+    public void testBlobWithGreaterSizes() throws Exception {
+        final String tableName = "TEST_TABLE_2";
+
+        final String idColumn = "ID";
+        final String blobColumn = "BLOB_COLUMN";
+        final String clobColumn = "CLOB_COLUMN";
+
+        try (DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+            final DbEntity entity = dbEntity()
+                    .name(tableName)
+                    .addColumn(idColumn, INT)
+                    .addColumn(blobColumn, BLOB)
+                    .addColumn(clobColumn, CLOB)
+                    .pkFields(idColumn)
+                    .build();
+
+            engine.addEntity(entity);
+
+            final char[] stringChars = new char[2500];
+            Arrays.fill(stringChars, '#');
+            final String longString = new String(stringChars);
+            final byte[] stringBytes = longString.getBytes();
+
+            engine.persist(tableName, new EntityEntry.Builder()
+                    .set(idColumn, 1)
+                    .set(blobColumn, stringBytes)
+                    .set(clobColumn, "testClob")
+                    .build());
+
+            final Expression query = select(all()).from(table(tableName));
+            final List<Map<String, ResultColumn>> result = engine.query(query);
+            assertEquals(1, result.size());
+            assertEquals(1L, (long) result.get(0).get(idColumn).toLong());
+            assertEquals("testClob", result.get(0).get(clobColumn).toString());
+            final byte[] blobResult = result.get(0).get(blobColumn).toBlob();
+            assertTrue(Arrays.equals(stringBytes, blobResult));
         }
     }
 
