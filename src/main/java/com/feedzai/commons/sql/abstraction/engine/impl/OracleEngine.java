@@ -140,9 +140,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement originalPs, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+        final OraclePreparedStatement ps = (OraclePreparedStatement) originalPs;
         int i = 1;
-        for (DbColumn column : entity.getColumns()) {
+        for (final DbColumn column : entity.getColumns()) {
             if (column.isAutoInc() && useAutoInc) {
                 continue;
             }
@@ -156,8 +157,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 }
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
-
+                        ps.setBytesForBlob(i, objectToArray(val));
                         break;
                     case JSON:
                     case CLOB:
@@ -167,7 +167,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                         }
 
                         if (val instanceof String) {
-                            ((OraclePreparedStatement) ps).setStringForClob(i, (String) val);
+                            ps.setStringForClob(i, (String) val);
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
