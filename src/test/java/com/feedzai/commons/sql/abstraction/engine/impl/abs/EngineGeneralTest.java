@@ -76,6 +76,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
@@ -89,6 +90,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.floor;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
@@ -1280,6 +1282,50 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> query = engine.query(select(min(column("COL1")).alias("MIN")).from(table("TEST")));
 
         assertEquals("result ok?", 0, (int) query.get(0).get("MIN").toInt());
+    }
+
+    @Test
+    public void floorTest() throws DatabaseEngineException {
+        test5Columns();
+
+        EntityEntry.Builder entry = entry()
+                .set("COL1", 2)
+                .set("COL2", false)
+                .set("COL3", 2.5D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS");
+
+        for (int i = 0; i < 10; i++) {
+            entry.set("COL1", i);
+            engine.persist("TEST", entry
+                    .build());
+        }
+
+        List<Map<String, ResultColumn>> query = engine.query(select(floor(column("COL3")).alias("FLOOR")).from(table("TEST")));
+
+        assertEquals("result ok?", 2.0, query.get(0).get("FLOOR").toDouble(), 0.1);
+    }
+
+    @Test
+    public void ceilingTest() throws DatabaseEngineException {
+        test5Columns();
+
+        EntityEntry.Builder entry = entry()
+                .set("COL1", 2)
+                .set("COL2", false)
+                .set("COL3", 2.5D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS");
+
+        for (int i = 0; i < 10; i++) {
+            entry.set("COL1", i);
+            engine.persist("TEST", entry
+                    .build());
+        }
+
+        List<Map<String, ResultColumn>> query = engine.query(select(ceiling(column("COL3")).alias("CEILING")).from(table("TEST")));
+
+        assertEquals("result ok?", 3.0, query.get(0).get("CEILING").toDouble(), 0.1);
     }
 
     @Test

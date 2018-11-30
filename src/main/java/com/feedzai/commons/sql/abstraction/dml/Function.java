@@ -64,7 +64,7 @@ public class Function extends Expression {
      */
     public static final String FLOOR = "FLOOR";
     /**
-     * The FLOOR function.
+     * The CEILING function.
      */
     public static final String CEILING = "CEILING";
     /**
