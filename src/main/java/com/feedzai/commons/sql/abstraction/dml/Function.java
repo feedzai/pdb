@@ -60,14 +60,6 @@ public class Function extends Expression {
      */
     public static final String LOWER = "lower";
     /**
-     * The FLOOR function.
-     */
-    public static final String FLOOR = "FLOOR";
-    /**
-     * The FLOOR function.
-     */
-    public static final String CEILING = "CEILING";
-    /**
      * The list of functions.
      */
     public static final Set<String> FUNCTIONS;
@@ -82,8 +74,6 @@ public class Function extends Expression {
                 .add(SUM)
                 .add(UPPER)
                 .add(LOWER)
-                .add(FLOOR)
-                .add(CEILING)
                 .build();
     }
 
