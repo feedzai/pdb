@@ -15,8 +15,20 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
@@ -289,7 +301,10 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                 }
 
             case STRING:
-                return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
+                return format(
+                        "VARCHAR(%s)",
+                        c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE)
+                );
 
             case CLOB:
                 return "TEXT";
@@ -301,7 +316,28 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                 return "JSONB";
 
             default:
-                throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+                throw new DatabaseEngineRuntimeException(format(
+                        "Mapping not found for '%s'. Please report this error.",
+                        c.getDbColumnType()
+                ));
+        }
+    }
+
+    @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        if (stringAgg.isDistinct()) {
+            return String.format(
+                    "string_agg(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        } else {
+            return String.format(
+                    "string_agg(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
         }
     }
 
@@ -319,4 +355,5 @@ public class PostgreSqlTranslator extends AbstractTranslator {
     public String translateFalse() {
         return "FALSE";
     }
+
 }

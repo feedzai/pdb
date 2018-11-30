@@ -276,6 +276,24 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        if (stringAgg.isDistinct()) {
+            return String.format(
+                    "GROUP_CONCAT(DISTINCT CAST (%s AS TEXT) SEPARATOR CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        } else {
+            return String.format(
+                    "GROUP_CONCAT(CAST (%s AS TEXT) SEPARATOR CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        }
+    }
+
+    @Override
     public String translateEscape() {
         return "`";
     }

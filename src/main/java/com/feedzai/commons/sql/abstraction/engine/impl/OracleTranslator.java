@@ -282,6 +282,24 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        if (stringAgg.isDistinct()) {
+            return String.format(
+                    "LISTAGG(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        } else {
+            return String.format(
+                    "LISTAGG(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        }
+    }
+
+    @Override
     public String translateEscape() {
         return "\"";
     }

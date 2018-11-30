@@ -27,6 +27,7 @@ import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
@@ -343,6 +344,24 @@ public class DB2Translator extends AbstractTranslator {
 
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+        }
+    }
+
+    @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        if (stringAgg.isDistinct()) {
+            return String.format(
+                    "LISTAGG(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
+        } else {
+            return String.format(
+                    "LISTAGG(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                    stringAgg.getColumn().translate(),
+                    stringAgg.getDelimiter()
+            );
         }
     }
 
