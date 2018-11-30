@@ -468,6 +468,16 @@ public final class SqlBuilder {
     }
 
     /**
+     * The StringAgg function.
+     *
+     * @param column The expression inside the operator.
+     * @return The StringAgg function.
+     */
+    public static Expression stringAgg(final Expression column) {
+        return StringAgg.stringAgg(column);
+    }
+
+    /**
      * The LOWER operator.
      *
      * @param exp The expression inside the operator.
