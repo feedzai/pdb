@@ -393,7 +393,7 @@ public abstract class AbstractTranslator {
 
         return String.format("CASE %s ELSE %s END",
                              caseBuilder(caseElse).toString(),
-                             caseElse.falseAction);
+                             caseElse.falseAction.translate());
     }
 
 
