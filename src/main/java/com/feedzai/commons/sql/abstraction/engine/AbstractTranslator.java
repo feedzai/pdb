@@ -425,6 +425,11 @@ public abstract class AbstractTranslator {
      */
     public abstract String translate(DbColumn dc);
 
-
+    /**
+     * Translates {@link StringAgg}.
+     *
+     * @param stringAgg The object to translate.
+     * @return The string representation of the given object.
+     */
     public abstract String translate(final StringAgg stringAgg);
 }

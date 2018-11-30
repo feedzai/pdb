@@ -102,6 +102,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetw
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
@@ -3282,6 +3283,81 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be teste", "teste", query.get(0).get("COL5").toString());
         assertEquals("COL1 must be 1", 4, query.get(1).get("COL1").toInt().intValue());
         assertEquals("COL5 must be teste", "tesTte", query.get(1).get("COL5").toString());
+    }
+
+    @Test
+    public void testStringAgg() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be teste,TESTE", "teste,TESTE", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
+    }
+
+    @Test
+    public void testStringAggDelimiter() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).delimiter(';').alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be teste;TESTE", "teste;TESTE", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE;tesTte", "TeStE;tesTte", query.get(1).get("agg").toString());
+    }
+
+    @Test
+    public void testStringAggDistinct() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
     }
 
     @Test

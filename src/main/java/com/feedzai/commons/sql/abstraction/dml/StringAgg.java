@@ -16,19 +16,22 @@ import javax.inject.Inject;
  * @author Francisco Santos (francisco.santos@feedzai.com)
  * @since 2.2.3
  */
-public final class StringAgg extends Expression {
+public class StringAgg extends Expression {
 
     /**
-     *
+     * The column to aggregate.
      */
     public final Expression column;
 
     /**
-     *
+     * The delimiter.
      */
     private char delimiter;
 
 
+    /**
+     * Is it distinct.
+     */
     private boolean distinct;
 
     /**
@@ -40,21 +43,38 @@ public final class StringAgg extends Expression {
     }
 
     /**
+     * Returns a new StringAgg.
+     *
      * @param column column to be aggregated.
-     * @return a new stringagg.
+     * @return a new StringAgg.
      */
     public static StringAgg stringAgg(final Expression column) {
         return new StringAgg(column);
     }
 
+    /**
+     * Returns the column to be aggregated.
+     *
+     * @return column to be aggregated.
+     */
     public Expression getColumn() {
         return column;
     }
 
+    /**
+     * Returns the delimiter.
+     *
+     * @return the delimiter.
+     */
     public char getDelimiter() {
         return delimiter;
     }
 
+    /**
+     * Returns if it should apply DISTINCT.
+     *
+     * @return if it should apply DISTINCT.
+     */
     public boolean isDistinct() {
         return distinct;
     }
@@ -64,14 +84,21 @@ public final class StringAgg extends Expression {
         return translator.translate(this);
     }
 
+    /**
+     * Apply distinct.
+     *
+     * @return this
+     */
     public StringAgg distinct(){
         this.distinct = true;
         return this;
     }
 
     /**
+     * Sets the delimiter.
+     *
      * @param delimiter char that splits records aggregated.
-     * @return
+     * @return this
      */
     public StringAgg delimiter(final char delimiter){
         this.delimiter = delimiter;
