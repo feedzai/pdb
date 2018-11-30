@@ -520,6 +520,30 @@ public final class SqlBuilder {
     }
 
     /**
+     * Creates a case expression.
+     *
+     * @param condition The name of the view.
+     * @param trueAction The name of the view.
+     * @return The case when representation.
+     */
+    public static Case caseWhen(final Expression condition, final Expression trueAction) {
+        return Case.caseWhen(condition, trueAction);
+    }
+
+    /**
+     * Creates a case when else expression.
+     *
+     * @param condition The name of the view.
+     * @param trueAction The name of the view.
+     * @param falseAction The name of the view.
+     * @return The case when representation.
+     */
+    public static CaseElse caseElse(final Expression condition, final Expression trueAction,
+                                    final Expression falseAction) {
+        return CaseElse.caseWhenElse(condition, trueAction, falseAction);
+    }
+
+    /**
      * The not equal expression.
      *
      * @param exps The expressions.
