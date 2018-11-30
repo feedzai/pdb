@@ -473,7 +473,7 @@ public final class SqlBuilder {
      * @param column The expression inside the operator.
      * @return The StringAgg function.
      */
-    public static Expression stringAgg(final Expression column) {
+    public static StringAgg stringAgg(final Expression column) {
         return StringAgg.stringAgg(column);
     }
 
