@@ -20,6 +20,8 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
+import com.feedzai.commons.sql.abstraction.dml.Case;
+import com.feedzai.commons.sql.abstraction.dml.CaseElse;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -34,6 +36,7 @@ import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
@@ -330,6 +333,45 @@ public abstract class AbstractTranslator {
 
         return join(temp, " ");
     }
+
+    public String translate(final When when) {
+        inject(when.condition);
+        inject(when.action);
+
+        return String.format("WHEN %s THEN %s",
+                             when.condition.translate(),
+                             when.action.translate());
+    }
+
+    public String translate(final Case aCase) {
+
+        return String.format("CASE %s END",
+                             getStringBuilder(aCase).toString());
+    }
+
+    private StringBuilder getStringBuilder(final Case aCase) {
+        List<When> whens = aCase.whens;
+
+        inject(whens);
+        StringBuilder builder = new StringBuilder();
+
+        for (int i = 0; i < whens.size(); i++) {
+            if (i > 0) {
+                builder.append(" ");
+            }
+            builder.append(whens.get(i).translate());
+        }
+        return builder;
+    }
+
+    public String translate(final CaseElse caseElse) {
+        inject(caseElse.falseAction);
+
+        return String.format("CASE %s ELSE %s END",
+                             getStringBuilder(caseElse).toString(),
+                             caseElse.falseAction);
+    }
+
 
     /**
      * Translates the escape character.
