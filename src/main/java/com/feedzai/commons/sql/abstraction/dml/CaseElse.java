@@ -23,12 +23,16 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 public class CaseElse extends Case {
 
     /**
-     *
+     * Action to be executed if the condition is false.
      */
     public final Expression falseAction;
 
     /**
+     * Creats a CaseElse.
      *
+     * @param condition condition to verify.
+     * @param trueAction action to be executed if the condition is true.
+     * @param falseAction action to be executed if the condition is false.
      */
     private CaseElse(final Expression condition, final Expression trueAction, final Expression falseAction) {
         super();

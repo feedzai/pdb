@@ -334,6 +334,12 @@ public abstract class AbstractTranslator {
         return join(temp, " ");
     }
 
+    /**
+     * Translates When.
+     *
+     * @param when a when.
+     * @return when translation.
+     */
     public String translate(final When when) {
         inject(when.condition);
         inject(when.action);
@@ -343,13 +349,25 @@ public abstract class AbstractTranslator {
                              when.action.translate());
     }
 
+    /**
+     * Translates Case .
+     *
+     * @param aCase a case.
+     * @return case translation.
+     */
     public String translate(final Case aCase) {
 
         return String.format("CASE %s END",
-                             getStringBuilder(aCase).toString());
+                             caseBuilder(aCase).toString());
     }
 
-    private StringBuilder getStringBuilder(final Case aCase) {
+    /**
+     * Translates a when inside a case expression.
+     *
+     * @param aCase a case expression.
+     * @return a translated when expression.
+     */
+    private StringBuilder caseBuilder(final Case aCase) {
         List<When> whens = aCase.whens;
 
         inject(whens);
@@ -364,11 +382,17 @@ public abstract class AbstractTranslator {
         return builder;
     }
 
+    /**
+     * Translates Case Else.
+     *
+     * @param caseElse a case else.
+     * @return case else translation.
+     */
     public String translate(final CaseElse caseElse) {
         inject(caseElse.falseAction);
 
         return String.format("CASE %s ELSE %s END",
-                             getStringBuilder(caseElse).toString(),
+                             caseBuilder(caseElse).toString(),
                              caseElse.falseAction);
     }
 

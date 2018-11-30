@@ -25,12 +25,12 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 public class Case extends Expression {
 
     /**
-     *
+     * List of when clauses.
      */
     public final List<When> whens;
 
     /**
-     *
+     * Creates an empty case.
      */
     protected Case() {
         this.whens = new ArrayList<>();

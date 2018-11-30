@@ -76,6 +76,8 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseElse;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
@@ -1925,6 +1927,50 @@ public class EngineGeneralTest {
                                 between(column("COL1"), k(1), k(2))
                         )
         );
+    }
+
+    @Test
+    public void testCaseWhen() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+                .build());
+
+        List<Map<String, ResultColumn>> query = engine.query(
+                select(all(), caseWhen(eq(column("COL5"), k("teste")), k("LOL")).alias("case"))
+                        .from(table("TEST"))
+        );
+
+        assertEquals("COL5 must be LOL", "LOL", query.get(0).get("case").toString());
+        assertEquals("COL5 must be LOL", "LOL", query.get(3).get("case").toString());
+    }
+
+    @Test
+    public void testCaseWhenElse() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+                .build());
+
+        List<Map<String, ResultColumn>> query = engine.query(
+                select(all(), caseElse(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL")).alias("case"))
+                        .from(table("TEST"))
+        );
+
+        assertEquals("COL5 must be LOL", "LOL", query.get(0).get("case").toString());
+        assertEquals("COL5 must be ROFL", "ROFL", query.get(1).get("case").toString());
+        assertEquals("COL5 must be ROFL", "ROFL", query.get(2).get("case").toString());
+        assertEquals("COL5 must be LOL", "LOL", query.get(3).get("case").toString());
     }
 
     @Test
