@@ -132,6 +132,8 @@ import static org.junit.Assert.fail;
 public class EngineGeneralTest {
 
 
+    private static final double DELTA = 1e-7;
+
     protected DatabaseEngine engine;
     protected Properties properties;
 
@@ -1303,7 +1305,7 @@ public class EngineGeneralTest {
 
         List<Map<String, ResultColumn>> query = engine.query(select(floor(column("COL3")).alias("FLOOR")).from(table("TEST")));
 
-        assertEquals("result ok?", 2.0, query.get(0).get("FLOOR").toDouble(), 0.1);
+        assertEquals("result ok?", 2.0, query.get(0).get("FLOOR").toDouble(), DELTA);
     }
 
     @Test
@@ -1325,7 +1327,7 @@ public class EngineGeneralTest {
 
         List<Map<String, ResultColumn>> query = engine.query(select(ceiling(column("COL3")).alias("CEILING")).from(table("TEST")));
 
-        assertEquals("result ok?", 3.0, query.get(0).get("CEILING").toDouble(), 0.1);
+        assertEquals("result ok?", 3.0, query.get(0).get("CEILING").toDouble(), DELTA);
     }
 
     @Test

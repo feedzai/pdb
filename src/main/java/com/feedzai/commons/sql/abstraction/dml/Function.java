@@ -66,7 +66,7 @@ public class Function extends Expression {
     /**
      * The CEILING function.
      */
-    public static final String CEILING = "CEILING";
+    public static final String CEILING = "CEIL";
     /**
      * The list of functions.
      */
