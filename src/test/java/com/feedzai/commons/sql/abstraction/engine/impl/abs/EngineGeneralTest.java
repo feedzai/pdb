@@ -3366,7 +3366,7 @@ public class EngineGeneralTest {
             assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
             assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
 
-        } catch (DatabaseEngineRuntimeException e){
+        } catch (DatabaseEngineRuntimeException e) {
             // Ignore for SQL Server and ORACLE since they do not support it.
             if (!this.engine.getDialect().equals(SQLSERVER) && !this.engine.getDialect().equals(ORACLE)) {
                 throw e;
