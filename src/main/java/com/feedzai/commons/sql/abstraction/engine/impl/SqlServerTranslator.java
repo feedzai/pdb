@@ -103,10 +103,10 @@ public class SqlServerTranslator extends AbstractTranslator {
 
         if (Function.STDDEV.equals(function)) {
             function = "STDEV";
-        }
-
-        if (Function.AVG.equals(function)) {
+        } else if (Function.AVG.equals(function)) {
             expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
+        } else if (Function.CEILING.equals(function)) {
+            function = "CEILING";
         }
 
         // if it is a user-defined function
