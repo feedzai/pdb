@@ -3360,9 +3360,6 @@ public class EngineGeneralTest {
                             .orderby(column("COL1").asc())
             );
 
-            System.out.println(query.get(0));
-            System.out.println(query.get(1));
-
             assertEquals("Resultset must have only 2 results", 2, query.size());
             assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
             assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
