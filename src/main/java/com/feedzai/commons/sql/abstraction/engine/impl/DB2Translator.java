@@ -354,7 +354,7 @@ public class DB2Translator extends AbstractTranslator {
 
         return String.format(
                 "LISTAGG(%s %s, '%c') WITHIN GROUP (ORDER BY %s)",
-                stringAgg.getDistinct(),
+                stringAgg.isDistinct() ? "DISTINCT" : "",
                 column,
                 stringAgg.getDelimiter(),
                 column

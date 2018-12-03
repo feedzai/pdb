@@ -325,7 +325,7 @@ public class PostgreSqlTranslator extends AbstractTranslator {
         inject(stringAgg.column);
         return String.format(
                 "STRING_AGG(%s CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                stringAgg.getDistinct(),
+                stringAgg.isDistinct() ? "DISTINCT" : "",
                 stringAgg.getColumn().translate(),
                 stringAgg.getDelimiter()
         );

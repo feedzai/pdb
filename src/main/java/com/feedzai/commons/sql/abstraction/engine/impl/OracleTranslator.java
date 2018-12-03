@@ -15,10 +15,23 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -283,8 +296,8 @@ public class OracleTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final StringAgg stringAgg) {
-        if (!stringAgg.getDistinct().isEmpty()) {
-            throw new DatabaseEngineRuntimeException("LISTAGG does not support distinct. If you really need it, " +
+        if (stringAgg.isDistinct()) {
+            throw new OperationNotSupportedRuntimeException("LISTAGG does not support distinct. If you really need it, " +
                                                              "you may do it using regex or a subquery. " +
                                                              "Check this: https://dba.stackexchange.com/a/8478 or this:" +
                                                              "https://stackoverflow.com/a/50589222");

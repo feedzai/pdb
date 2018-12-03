@@ -280,7 +280,7 @@ public class MySqlTranslator extends AbstractTranslator {
         inject(stringAgg.column);
         return String.format(
                 "GROUP_CONCAT(%s %s SEPARATOR '%c')",
-                stringAgg.getDistinct(),
+                stringAgg.isDistinct() ? "DISTINCT" : "",
                 stringAgg.getColumn().translate(),
                 stringAgg.getDelimiter()
         );

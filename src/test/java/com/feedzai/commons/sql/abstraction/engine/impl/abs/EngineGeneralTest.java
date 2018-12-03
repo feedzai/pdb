@@ -37,6 +37,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -3366,7 +3367,7 @@ public class EngineGeneralTest {
             assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
             assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
 
-        } catch (DatabaseEngineRuntimeException e) {
+        } catch (OperationNotSupportedRuntimeException e) {
             // Ignore for SQL Server and ORACLE since they do not support it.
             if (!this.engine.getDialect().equals(SQLSERVER) && !this.engine.getDialect().equals(ORACLE)) {
                 throw e;

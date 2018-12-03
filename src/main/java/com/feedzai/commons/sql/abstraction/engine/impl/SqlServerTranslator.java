@@ -32,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -350,8 +351,8 @@ public class SqlServerTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final StringAgg stringAgg) {
-        if (!stringAgg.getDistinct().isEmpty()) {
-            throw new DatabaseEngineRuntimeException("STRING_AGG does not support distinct. If you really need it, " +
+        if (stringAgg.isDistinct()) {
+            throw new OperationNotSupportedRuntimeException("STRING_AGG does not support distinct. If you really need it, " +
                                                              "you may do it using a subquery. " +
                                                              "Check this: https://stackoverflow.com/a/50589222");
         }
