@@ -25,7 +25,7 @@ public class StringAgg extends Expression {
     private char delimiter;
 
     /**
-     * Is it distinct.
+     * DISTINCT clause.
      */
     private String distinct;
 
@@ -67,9 +67,9 @@ public class StringAgg extends Expression {
     }
 
     /**
-     * Returns if it should apply DISTINCT.
+     * Returns DISTINCT clause.
      *
-     * @return if it should apply DISTINCT.
+     * @return DISTINCT clause.
      */
     public String getDistinct() {
         return distinct;
