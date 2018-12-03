@@ -4,13 +4,9 @@
  * transmitted in any form, or by any means electronic, mechanical,
  * photocopying, or otherwise, without the prior permission of the owner.
  *
- * (c) 2014 Feedzai, Strictly Confidential
+ * (c) 2018 Feedzai, Strictly Confidential
  */
 package com.feedzai.commons.sql.abstraction.dml;
-
-import com.google.inject.Injector;
-
-import javax.inject.Inject;
 
 /**
  * @author Francisco Santos (francisco.santos@feedzai.com)

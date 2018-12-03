@@ -4,17 +4,12 @@
  * transmitted in any form, or by any means electronic, mechanical,
  * photocopying, or otherwise, without the prior permission of the owner.
  *
- * (c) 2014 Feedzai, Strictly Confidential
+ * (c) 2018 Feedzai, Strictly Confidential
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import com.google.inject.Injector;
-
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 
 /**
  * Case SQL Expression.
@@ -37,6 +32,8 @@ public class Case extends Expression {
     }
 
     /**
+     * Returns a new empty case.
+     *
      * @return a new case.
      */
     public static Case caseWhen() {
@@ -44,6 +41,8 @@ public class Case extends Expression {
     }
 
     /**
+     * Returns a new "case when" that does the trueAction considering the condition.
+     *
      * @param condition condition to verify.
      * @param trueAction action to be executed if the condition is true.
      * @return a new "case when" that does the trueAction considering the condition.
@@ -58,6 +57,8 @@ public class Case extends Expression {
     }
 
     /**
+     * Adds a new when clause to this case.
+     *
      * @param condition condition to verify.
      * @param action action to be executed if the condition is true.
      * @return this case.
