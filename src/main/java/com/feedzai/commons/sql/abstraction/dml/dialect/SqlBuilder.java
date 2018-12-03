@@ -15,14 +15,60 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.dialect;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
+import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.All;
+import com.feedzai.commons.sql.abstraction.dml.Between;
+import com.feedzai.commons.sql.abstraction.dml.Case;
+import com.feedzai.commons.sql.abstraction.dml.Coalesce;
+import com.feedzai.commons.sql.abstraction.dml.Delete;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.InternalFunction;
+import com.feedzai.commons.sql.abstraction.dml.K;
+import com.feedzai.commons.sql.abstraction.dml.Literal;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.Truncate;
+import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.util.Collection;
 
-import static com.feedzai.commons.sql.abstraction.dml.Function.*;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.*;
+import static com.feedzai.commons.sql.abstraction.dml.Function.AVG;
+import static com.feedzai.commons.sql.abstraction.dml.Function.COUNT;
+import static com.feedzai.commons.sql.abstraction.dml.Function.LOWER;
+import static com.feedzai.commons.sql.abstraction.dml.Function.MAX;
+import static com.feedzai.commons.sql.abstraction.dml.Function.MIN;
+import static com.feedzai.commons.sql.abstraction.dml.Function.STDDEV;
+import static com.feedzai.commons.sql.abstraction.dml.Function.SUM;
+import static com.feedzai.commons.sql.abstraction.dml.Function.UPPER;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.AND;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.COMMA;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.DIV;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.EQ;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.GT;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.GTEQ;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.IN;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LIKE;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LT;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LTEQ;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.MINUS;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.MULT;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.NEQ;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.NOTIN;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.OR;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.PLUS;
 
 /**
  * The SQL Builder that allows representing SQL queries
@@ -520,6 +566,16 @@ public final class SqlBuilder {
     }
 
     /**
+     * Returns a new "case when" that returns true or false considering the condition.
+     *
+     * @param condition condition to verify.
+     * @return a new "case when" considering the condition.
+     */
+    public static Case caseWhen(final Expression condition) {
+        return Case.caseWhen(condition);
+    }
+
+    /**
      * Creates a case expression.
      *
      * @param condition The name of the view.
@@ -531,16 +587,14 @@ public final class SqlBuilder {
     }
 
     /**
-     * Creates a case when else expression.
-     *
-     * @param condition The name of the view.
-     * @param trueAction The name of the view.
-     * @param falseAction The name of the view.
-     * @return The case when representation.
+     * @param condition condition to verify.
+     * @param trueAction action to be executed if the condition is true.
+     * @param falseAction action to be executed if the condition is false.
+     * @return a new "case when" that does the trueAction if the condition is true. Otherwise it runs falseAction.
      */
-    public static CaseElse caseElse(final Expression condition, final Expression trueAction,
-                                    final Expression falseAction) {
-        return CaseElse.caseWhenElse(condition, trueAction, falseAction);
+    public static Case caseWhen(final Expression condition, final Expression trueAction,
+                                final Expression falseAction) {
+        return Case.caseWhen(condition, trueAction, falseAction);
     }
 
     /**

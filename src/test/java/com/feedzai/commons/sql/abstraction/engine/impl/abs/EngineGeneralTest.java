@@ -24,7 +24,6 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.K;
-import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -77,7 +76,6 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseElse;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
@@ -1963,7 +1961,7 @@ public class EngineGeneralTest {
                 .build());
 
         List<Map<String, ResultColumn>> result = engine.query(
-                select(caseElse(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL")).alias("case"))
+                select(caseWhen(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL")).alias("case"))
                         .from(table("TEST"))
         );
 
@@ -1988,7 +1986,7 @@ public class EngineGeneralTest {
                 .build());
 
         List<Map<String, ResultColumn>> result = engine.query(
-                select(caseElse(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL"))
+                select(caseWhen(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL"))
                                .when(eq(column("COL5"), k("pomme de terre")), k("KEK")).alias("case"))
                         .from(table("TEST"))
         );

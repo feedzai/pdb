@@ -21,7 +21,6 @@ import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
 import com.feedzai.commons.sql.abstraction.dml.Case;
-import com.feedzai.commons.sql.abstraction.dml.CaseElse;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -350,15 +349,20 @@ public abstract class AbstractTranslator {
     }
 
     /**
-     * Translates Case .
+     * Translates Case.
      *
      * @param aCase a case.
      * @return case translation.
      */
     public String translate(final Case aCase) {
-
-        return String.format("CASE %s END",
-                             caseBuilder(aCase).toString());
+        String elseString = "";
+        if (aCase.getFalseAction() != null) {
+            inject(aCase.getFalseAction());
+            elseString = String.format("ELSE %s", aCase.getFalseAction().translate());
+        }
+        return String.format("CASE %s %s END",
+                             caseBuilder(aCase).toString(),
+                             elseString);
     }
 
     /**
@@ -381,21 +385,6 @@ public abstract class AbstractTranslator {
         }
         return builder;
     }
-
-    /**
-     * Translates Case Else.
-     *
-     * @param caseElse a case else.
-     * @return case else translation.
-     */
-    public String translate(final CaseElse caseElse) {
-        inject(caseElse.falseAction);
-
-        return String.format("CASE %s ELSE %s END",
-                             caseBuilder(caseElse).toString(),
-                             caseElse.falseAction.translate());
-    }
-
 
     /**
      * Translates the escape character.
