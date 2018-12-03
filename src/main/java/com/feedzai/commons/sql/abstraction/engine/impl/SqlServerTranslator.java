@@ -103,9 +103,13 @@ public class SqlServerTranslator extends AbstractTranslator {
 
         if (Function.STDDEV.equals(function)) {
             function = "STDEV";
-        } else if (Function.AVG.equals(function)) {
+        }
+
+        if (Function.AVG.equals(function)) {
             expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
-        } else if (Function.CEILING.equals(function)) {
+        }
+
+        if (Function.CEILING.equals(function)) {
             function = "CEILING";
         }
 
