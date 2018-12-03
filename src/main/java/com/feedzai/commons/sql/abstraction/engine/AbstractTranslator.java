@@ -431,5 +431,5 @@ public abstract class AbstractTranslator {
      * @param stringAgg The object to translate.
      * @return The string representation of the given object.
      */
-    public abstract String translate(final StringAgg stringAgg);
+    public abstract String translate(StringAgg stringAgg);
 }

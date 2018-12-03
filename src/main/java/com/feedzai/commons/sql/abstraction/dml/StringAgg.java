@@ -8,10 +8,6 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import com.google.inject.Injector;
-
-import javax.inject.Inject;
-
 /**
  * @author Francisco Santos (francisco.santos@feedzai.com)
  * @since 2.2.3
@@ -28,11 +24,10 @@ public class StringAgg extends Expression {
      */
     private char delimiter;
 
-
     /**
      * Is it distinct.
      */
-    private boolean distinct;
+    private String distinct;
 
     /**
      * @param column column to be aggregated.
@@ -40,6 +35,7 @@ public class StringAgg extends Expression {
     private StringAgg(final Expression column) {
         this.column = column;
         this.delimiter = ',';
+        this.distinct = "";
     }
 
     /**
@@ -75,7 +71,7 @@ public class StringAgg extends Expression {
      *
      * @return if it should apply DISTINCT.
      */
-    public boolean isDistinct() {
+    public String getDistinct() {
         return distinct;
     }
 
@@ -89,8 +85,8 @@ public class StringAgg extends Expression {
      *
      * @return this
      */
-    public StringAgg distinct(){
-        this.distinct = true;
+    public StringAgg distinct() {
+        this.distinct = "DISTINCT";
         return this;
     }
 

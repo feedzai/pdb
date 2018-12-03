@@ -295,19 +295,12 @@ public class H2Translator extends AbstractTranslator {
     @Override
     public String translate(final StringAgg stringAgg) {
         inject(stringAgg.column);
-        if (stringAgg.isDistinct()) {
-            return String.format(
-                    "string_agg(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        } else {
-            return String.format(
-                    "string_agg(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        }
+        return String.format(
+                "STRING_AGG(%s CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                stringAgg.getDistinct(),
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
     }
 
     @Override

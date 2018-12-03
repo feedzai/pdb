@@ -32,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -72,6 +73,8 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.ORACLE;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.SQLSERVER;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
@@ -3288,9 +3291,9 @@ public class EngineGeneralTest {
     @Test
     public void testStringAgg() throws DatabaseEngineException {
         test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
-                .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
                 .build());
@@ -3301,11 +3304,12 @@ public class EngineGeneralTest {
                 select(column("COL1"), stringAgg(column("COL5")).alias("agg"))
                         .from(table("TEST"))
                         .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
         );
 
         assertEquals("Resultset must have only 2 results", 2, query.size());
         assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
-        assertEquals("COL5 must be teste,TESTE", "teste,TESTE", query.get(0).get("agg").toString());
+        assertEquals("COL5 must be TESTE,teste", "TESTE,teste", query.get(0).get("agg").toString());
         assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
         assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
     }
@@ -3313,9 +3317,9 @@ public class EngineGeneralTest {
     @Test
     public void testStringAggDelimiter() throws DatabaseEngineException {
         test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
-                .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
                 .build());
@@ -3326,11 +3330,12 @@ public class EngineGeneralTest {
                 select(column("COL1"), stringAgg(column("COL5")).delimiter(';').alias("agg"))
                         .from(table("TEST"))
                         .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
         );
 
         assertEquals("Resultset must have only 2 results", 2, query.size());
         assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
-        assertEquals("COL5 must be teste;TESTE", "teste;TESTE", query.get(0).get("agg").toString());
+        assertEquals("COL5 must be TESTE;teste", "TESTE;teste", query.get(0).get("agg").toString());
         assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
         assertEquals("COL5 must be TeStE;tesTte", "TeStE;tesTte", query.get(1).get("agg").toString());
     }
@@ -3347,17 +3352,29 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
                 .build());
 
-        final List<Map<String, ResultColumn>> query = engine.query(
-                select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
-                        .from(table("TEST"))
-                        .groupby(column("COL1"))
-        );
+        try {
+            final List<Map<String, ResultColumn>> query = engine.query(
+                    select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
+                            .from(table("TEST"))
+                            .groupby(column("COL1"))
+                            .orderby(column("COL1").asc())
+            );
 
-        assertEquals("Resultset must have only 2 results", 2, query.size());
-        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
-        assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
-        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
-        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
+            System.out.println(query.get(0));
+            System.out.println(query.get(1));
+
+            assertEquals("Resultset must have only 2 results", 2, query.size());
+            assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+            assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
+            assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+            assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
+
+        } catch (DatabaseEngineRuntimeException e){
+            // Ignore for SQL Server and ORACLE since they do not support it.
+            if (!this.engine.getDialect().equals(SQLSERVER) && !this.engine.getDialect().equals(ORACLE)) {
+                throw e;
+            }
+        }
     }
 
     @Test

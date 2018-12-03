@@ -350,19 +350,15 @@ public class DB2Translator extends AbstractTranslator {
     @Override
     public String translate(final StringAgg stringAgg) {
         inject(stringAgg.column);
-        if (stringAgg.isDistinct()) {
-            return String.format(
-                    "LISTAGG(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        } else {
-            return String.format(
-                    "LISTAGG(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        }
+        String column = stringAgg.getColumn().translate();
+
+        return String.format(
+                "LISTAGG(%s %s, '%c') WITHIN GROUP ( ORDER BY %s)",
+                stringAgg.getDistinct(),
+                column,
+                stringAgg.getDelimiter(),
+                column
+        );
     }
 
     @Override

@@ -301,10 +301,7 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                 }
 
             case STRING:
-                return format(
-                        "VARCHAR(%s)",
-                        c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE)
-                );
+                return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));
 
             case CLOB:
                 return "TEXT";
@@ -326,19 +323,12 @@ public class PostgreSqlTranslator extends AbstractTranslator {
     @Override
     public String translate(final StringAgg stringAgg) {
         inject(stringAgg.column);
-        if (stringAgg.isDistinct()) {
-            return String.format(
-                    "string_agg(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        } else {
-            return String.format(
-                    "string_agg(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        }
+        return String.format(
+                "STRING_AGG(%s CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
+                stringAgg.getDistinct(),
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
     }
 
     @Override

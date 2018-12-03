@@ -350,20 +350,17 @@ public class SqlServerTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final StringAgg stringAgg) {
-        inject(stringAgg.column);
-        if (stringAgg.isDistinct()) {
-            return String.format(
-                    "STRING_AGG(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        } else {
-            return String.format(
-                    "STRING_AGG(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
+        if (!stringAgg.getDistinct().isEmpty()) {
+            throw new DatabaseEngineRuntimeException("STRING_AGG does not support distinct. If you really need it, " +
+                                                             "you may do it using a subquery. " +
+                                                             "Check this: https://stackoverflow.com/a/50589222");
         }
+        inject(stringAgg.column);
+        return String.format(
+                "STRING_AGG (%s, '%c')",
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
     }
 
     @Override

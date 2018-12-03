@@ -283,20 +283,20 @@ public class OracleTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final StringAgg stringAgg) {
-        inject(stringAgg.column);
-        if (stringAgg.isDistinct()) {
-            return String.format(
-                    "LISTAGG(DISTINCT CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
-        } else {
-            return String.format(
-                    "LISTAGG(CAST (%s AS TEXT), CAST ('%c' AS TEXT))",
-                    stringAgg.getColumn().translate(),
-                    stringAgg.getDelimiter()
-            );
+        if (!stringAgg.getDistinct().isEmpty()) {
+            throw new DatabaseEngineRuntimeException("LISTAGG does not support distinct. If you really need it, " +
+                                                             "you may do it using regex or a subquery. " +
+                                                             "Check this: https://dba.stackexchange.com/a/8478 or this:" +
+                                                             "https://stackoverflow.com/a/50589222");
         }
+        inject(stringAgg.column);
+        String column = stringAgg.getColumn().translate();
+        return String.format(
+                "LISTAGG(%s, '%c') WITHIN GROUP ( ORDER BY %s)",
+                column,
+                stringAgg.getDelimiter(),
+                column
+        );
     }
 
     @Override
