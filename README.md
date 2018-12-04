@@ -643,6 +643,7 @@ results = engine.query(
 |[in]|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
 |[notIn]|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
 |[L]|Defines a list of elements represent by the passing expressions.|
+|[caseWhen]|Defines a test using a list of conditions by going through them and returning a value when the first condition is met. If none are met, it will return the otherwise clause or NULL if not defined.|
 [and]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#and(com.feedzai.commons.sql.abstraction.dml.Expression...)
 [or]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#or(com.feedzai.commons.sql.abstraction.dml.Expression...)
 [between]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#between(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
