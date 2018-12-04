@@ -1047,7 +1047,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     public boolean isStringAggDistinctCapable() {
-        return true;
+        // The current version of DB2 supported by PDB, does not allow for the use of distinct.
+        return false;
     }
 
     /**

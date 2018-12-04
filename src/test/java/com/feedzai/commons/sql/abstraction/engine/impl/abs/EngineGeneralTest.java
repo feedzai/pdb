@@ -3343,6 +3343,9 @@ public class EngineGeneralTest {
 
     @Test
     public void testStringAggDistinct() throws DatabaseEngineException {
+        if (!this.engine.isStringAggDistinctCapable()) {
+            return;
+        }
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
@@ -3353,26 +3356,18 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
                 .build());
 
-        try {
-            final List<Map<String, ResultColumn>> query = engine.query(
-                    select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
-                            .from(table("TEST"))
-                            .groupby(column("COL1"))
-                            .orderby(column("COL1").asc())
-            );
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
+        );
 
-            assertEquals("Resultset must have only 2 results", 2, query.size());
-            assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
-            assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
-            assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
-            assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
-
-        } catch (OperationNotSupportedRuntimeException e) {
-            // Ignore for SQL Server and ORACLE since they do not support it.
-            if (!this.engine.getDialect().equals(SQLSERVER) && !this.engine.getDialect().equals(ORACLE)) {
-                throw e;
-            }
-        }
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
     }
 
     @Test
