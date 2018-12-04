@@ -305,7 +305,7 @@ public class OracleTranslator extends AbstractTranslator {
         inject(stringAgg.column);
         String column = stringAgg.getColumn().translate();
         return String.format(
-                "LISTAGG(%s, '%c') WITHIN GROUP ( ORDER BY %s)",
+                "LISTAGG(%s, '%c') WITHIN GROUP (ORDER BY %s)",
                 column,
                 stringAgg.getDelimiter(),
                 column
