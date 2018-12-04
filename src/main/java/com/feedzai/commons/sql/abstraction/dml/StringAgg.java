@@ -103,7 +103,7 @@ public class StringAgg extends Expression {
      * @param delimiter char that splits records aggregated.
      * @return this
      */
-    public StringAgg delimiter(final char delimiter){
+    public StringAgg delimiter(final char delimiter) {
         this.delimiter = delimiter;
         return this;
     }

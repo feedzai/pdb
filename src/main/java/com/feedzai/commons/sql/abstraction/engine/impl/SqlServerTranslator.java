@@ -358,7 +358,7 @@ public class SqlServerTranslator extends AbstractTranslator {
         }
         inject(stringAgg.column);
         return String.format(
-                "STRING_AGG (%s, '%c')",
+                "STRING_AGG(%s, '%c')",
                 stringAgg.getColumn().translate(),
                 stringAgg.getDelimiter()
         );
