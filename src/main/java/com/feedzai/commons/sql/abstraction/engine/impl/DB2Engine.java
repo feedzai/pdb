@@ -1045,6 +1045,11 @@ public class DB2Engine extends AbstractDatabaseEngine {
         }
     }
 
+    @Override
+    public boolean isAbleToStringAggDistinct() {
+        return true;
+    }
+
     /**
      * DB2 does not support CLOB. The strategy here is to try and write the object. If the object is a {@link String} DB2 will not allow
      * and then we encapsulate the String in a {@link byte[]}. If it fails and the value is not a string then throw the error since it is

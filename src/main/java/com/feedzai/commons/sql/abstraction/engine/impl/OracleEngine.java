@@ -140,6 +140,11 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
+    public boolean isAbleToStringAggDistinct() {
+        return false;
+    }
+
+    @Override
     protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement originalPs, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
         final OraclePreparedStatement ps = (OraclePreparedStatement) originalPs;
         int i = 1;
