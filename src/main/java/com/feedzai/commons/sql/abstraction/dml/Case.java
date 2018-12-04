@@ -65,16 +65,6 @@ public class Case extends Expression {
     }
 
     /**
-     * Returns a new "case when" that returns true or false considering the condition.
-     *
-     * @param condition condition to verify.
-     * @return a new "case when" considering the condition.
-     */
-    public static Case caseWhen(final Expression condition) {
-        return caseWhen(condition, k(true), k(false));
-    }
-
-    /**
      * Returns a new "case when" that does the trueAction considering the condition.
      *
      * @param condition condition to verify.
@@ -83,17 +73,6 @@ public class Case extends Expression {
      */
     public static Case caseWhen(final Expression condition, final Expression trueAction) {
         return caseWhen().when(condition, trueAction);
-    }
-
-    /**
-     * @param condition condition to verify.
-     * @param trueAction action to be executed if the condition is true.
-     * @param falseAction action to be executed if the condition is false.
-     * @return a new "case when" that does the trueAction if the condition is true. Otherwise it runs falseAction.
-     */
-    public static Case caseWhen(final Expression condition, final Expression trueAction,
-                                    final Expression falseAction) {
-        return caseWhen().when(condition, trueAction).otherwise(falseAction);
     }
 
     @Override

@@ -529,16 +529,6 @@ public final class SqlBuilder {
     }
 
     /**
-     * Returns a new "case when" that returns true or false considering the condition.
-     *
-     * @param condition condition to verify.
-     * @return a new "case when" considering the condition.
-     */
-    public static Case caseWhen(final Expression condition) {
-        return Case.caseWhen(condition);
-    }
-
-    /**
      * Creates a case expression.
      *
      * @param condition The name of the view.
@@ -547,17 +537,6 @@ public final class SqlBuilder {
      */
     public static Case caseWhen(final Expression condition, final Expression trueAction) {
         return Case.caseWhen(condition, trueAction);
-    }
-
-    /**
-     * @param condition condition to verify.
-     * @param trueAction action to be executed if the condition is true.
-     * @param falseAction action to be executed if the condition is false.
-     * @return a new "case when" that does the trueAction if the condition is true. Otherwise it runs falseAction.
-     */
-    public static Case caseWhen(final Expression condition, final Expression trueAction,
-                                final Expression falseAction) {
-        return Case.caseWhen(condition, trueAction, falseAction);
     }
 
     /**
