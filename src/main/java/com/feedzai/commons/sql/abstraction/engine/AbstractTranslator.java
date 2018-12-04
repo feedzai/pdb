@@ -45,6 +45,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -360,30 +361,13 @@ public abstract class AbstractTranslator {
             inject(aCase.getFalseAction());
             elseString = String.format("ELSE %s", aCase.getFalseAction().translate());
         }
+
         return String.format("CASE %s %s END",
-                             caseBuilder(aCase).toString(),
+                             aCase.whens.stream()
+                                     .peek(this::inject)
+                                     .map(When::translate)
+                                     .collect(Collectors.joining(" ")),
                              elseString);
-    }
-
-    /**
-     * Translates a when inside a case expression.
-     *
-     * @param aCase a case expression.
-     * @return a translated when expression.
-     */
-    private StringBuilder caseBuilder(final Case aCase) {
-        List<When> whens = aCase.whens;
-
-        inject(whens);
-        StringBuilder builder = new StringBuilder();
-
-        for (int i = 0; i < whens.size(); i++) {
-            if (i > 0) {
-                builder.append(" ");
-            }
-            builder.append(whens.get(i).translate());
-        }
-        return builder;
     }
 
     /**

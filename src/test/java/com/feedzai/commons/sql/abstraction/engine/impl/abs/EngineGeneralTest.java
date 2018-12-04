@@ -1941,7 +1941,7 @@ public class EngineGeneralTest {
                 .build());
 
         List<Map<String, ResultColumn>> result = engine.query(
-                select(caseWhen(eq(column("COL5"), k("teste")), k("LOL")).alias("case"))
+                select(caseWhen().when(eq(column("COL5"), k("teste")), k("LOL")).alias("case"))
                         .from(table("TEST")));
 
         assertEquals("COL5 must be LOL", "LOL", result.get(0).get("case").toString());
@@ -1961,7 +1961,8 @@ public class EngineGeneralTest {
                 .build());
 
         List<Map<String, ResultColumn>> result = engine.query(
-                select(caseWhen(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL")).alias("case"))
+                select(caseWhen().when(eq(column("COL5"), k("teste")), k("LOL"))
+                               .otherwise(k("ROFL")).alias("case"))
                         .from(table("TEST"))
         );
 
@@ -1986,8 +1987,9 @@ public class EngineGeneralTest {
                 .build());
 
         List<Map<String, ResultColumn>> result = engine.query(
-                select(caseWhen(eq(column("COL5"), k("teste")), k("LOL"), k("ROFL"))
-                               .when(eq(column("COL5"), k("pomme de terre")), k("KEK")).alias("case"))
+                select(caseWhen().when(eq(column("COL5"), k("teste")), k("LOL"))
+                                .when(eq(column("COL5"), k("pomme de terre")), k("KEK"))
+                                .otherwise(k("ROFL")).alias("case"))
                         .from(table("TEST"))
         );
 
