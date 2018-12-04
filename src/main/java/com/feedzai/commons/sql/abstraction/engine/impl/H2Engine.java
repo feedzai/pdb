@@ -573,7 +573,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public boolean isAbleToStringAggDistinct() {
+    public boolean isStringAggDistinctCapable() {
         return true;
     }
 

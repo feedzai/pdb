@@ -140,7 +140,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public boolean isAbleToStringAggDistinct() {
+    public boolean isStringAggDistinctCapable() {
         return false;
     }
 

@@ -751,7 +751,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public boolean isAbleToStringAggDistinct() {
+    public boolean isStringAggDistinctCapable() {
         return false;
     }
 

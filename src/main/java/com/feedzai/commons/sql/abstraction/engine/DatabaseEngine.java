@@ -613,5 +613,5 @@ public interface DatabaseEngine extends AutoCloseable {
      *
      * @return true if the engine supports using DISTINCT inside a string aggregation, false otherwise.
      */
-    boolean isAbleToStringAggDistinct();
+    boolean isStringAggDistinctCapable();
 }
