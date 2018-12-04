@@ -676,6 +676,7 @@ results = engine.query(
 |[sum]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
 |[avg]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
 |[stddev]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[stringAgg]|Aggregation operator that aggregates data of a column into a string.|
 |[udf]|If you have defined your own sql function you may access it with udf.|
 [alias]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#alias(java.lang.String)
 [count]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#count(com.feedzai.commons.sql.abstraction.dml.Expression)
@@ -684,6 +685,7 @@ results = engine.query(
 [sum]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#sum(com.feedzai.commons.sql.abstraction.dml.Expression)
 [avg]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#avg(com.feedzai.commons.sql.abstraction.dml.Expression)
 [stddev]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stddev(com.feedzai.commons.sql.abstraction.dml.Expression)
+[stringAgg]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stringAgg(com.feedzai.commons.sql.abstraction.dml.Expression)
 [udf]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#udf(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
 
 Sometimes it is required to merge the content of more than one table.
