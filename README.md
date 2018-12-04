@@ -651,6 +651,7 @@ results = engine.query(
 [in]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#in(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
 [notIn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notIn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
 [L]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#L(com.feedzai.commons.sql.abstraction.dml.Expression...)
+[caseWhen]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#caseWhen(com.feedzai.commons.sql.abstraction.dml.Expression...)
 
 It is widely known that greater the id greater the Stream of data.
 For this purpose you just design a query that selects the maximum Stream id of data Type 4 from Provider 1.
