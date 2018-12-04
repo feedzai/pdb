@@ -362,11 +362,13 @@ public abstract class AbstractTranslator {
             elseString = String.format("ELSE %s", aCase.getFalseAction().translate());
         }
 
+        final String whens = aCase.whens.stream()
+                .peek(this::inject)
+                .map(When::translate)
+                .collect(Collectors.joining(" "));
+
         return String.format("CASE %s %s END",
-                             aCase.whens.stream()
-                                     .peek(this::inject)
-                                     .map(When::translate)
-                                     .collect(Collectors.joining(" ")),
+                             whens,
                              elseString);
     }
 

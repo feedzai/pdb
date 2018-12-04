@@ -18,8 +18,6 @@ package com.feedzai.commons.sql.abstraction.dml;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
-
 /**
  * Case SQL Expression.
  *
@@ -91,7 +89,6 @@ public class Case extends Expression {
         whens.add(When.when(condition, action));
         return this;
     }
-
 
     /**
      * Sets the false action.
