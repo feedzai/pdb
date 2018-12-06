@@ -109,6 +109,10 @@ public class SqlServerTranslator extends AbstractTranslator {
             expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
         }
 
+        if (Function.CEILING.equals(function)) {
+            function = "CEILING";
+        }
+
         // if it is a user-defined function
         if (f.isUDF()) {
             // a schema must always be used for functions, use default SQL Server schema "dbo" if no schema is set

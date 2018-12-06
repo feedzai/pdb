@@ -437,6 +437,26 @@ public final class SqlBuilder {
     }
 
     /**
+     * The FLOOR operator.
+     *
+     * @param exp The expression.
+     * @return The FLOOR representation.
+     */
+    public static Expression floor(final Expression exp) {
+        return new Function(FLOOR, exp);
+    }
+
+    /**
+     * The CEILING operator.
+     *
+     * @param exp The expression.
+     * @return The CEILING representation.
+     */
+    public static Expression ceiling(final Expression exp) {
+        return new Function(CEILING, exp);
+    }
+
+    /**
      * The Used Defined Function operator.
      *
      * @param udf The UDF name.

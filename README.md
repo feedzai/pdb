@@ -676,6 +676,8 @@ results = engine.query(
 |[sum]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
 |[avg]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
 |[stddev]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[floor]|Operator that returns the largest integer value that is smaller than or equal to a number. They are applicable to expression involving columns.|
+|[ceil]|Operator that returns the smallest integer value that is larger than or equal to a number. They are applicable to expression involving columns.|
 |[udf]|If you have defined your own sql function you may access it with udf.|
 [alias]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#alias(java.lang.String)
 [count]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#count(com.feedzai.commons.sql.abstraction.dml.Expression)
@@ -684,6 +686,8 @@ results = engine.query(
 [sum]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#sum(com.feedzai.commons.sql.abstraction.dml.Expression)
 [avg]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#avg(com.feedzai.commons.sql.abstraction.dml.Expression)
 [stddev]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stddev(com.feedzai.commons.sql.abstraction.dml.Expression)
+[floor]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#floor(com.feedzai.commons.sql.abstraction.dml.Expression)
+[ceil]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#ceil(com.feedzai.commons.sql.abstraction.dml.Expression)
 [udf]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#udf(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
 
 Sometimes it is required to merge the content of more than one table.
