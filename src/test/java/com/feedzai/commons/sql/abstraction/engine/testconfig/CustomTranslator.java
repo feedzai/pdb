@@ -87,4 +87,9 @@ public class CustomTranslator extends AbstractTranslator {
     public String translate(DbColumn dc) {
         return null;
     }
+
+    @Override
+    public String translate(final StringAgg stringAgg) {
+        return null;
+    }
 }

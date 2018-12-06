@@ -153,6 +153,11 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         super.setParameter(name, index, param);
     }
 
+    @Override
+    public boolean isStringAggDistinctCapable() {
+        return true;
+    }
+
     /**
      * Converts a String value into a PG JSON value ready to be assigned to bind variables in Prepared Statements.
      *

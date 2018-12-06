@@ -751,6 +751,11 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
+    public boolean isStringAggDistinctCapable() {
+        return false;
+    }
+
+    @Override
     protected boolean checkConnection(final Connection conn) {
         Statement s = null;
         try {

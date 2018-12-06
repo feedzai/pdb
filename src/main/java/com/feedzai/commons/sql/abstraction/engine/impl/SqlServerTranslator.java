@@ -27,10 +27,12 @@ import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -349,6 +351,21 @@ public class SqlServerTranslator extends AbstractTranslator {
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }
+    }
+
+    @Override
+    public String translate(final StringAgg stringAgg) {
+        if (stringAgg.isDistinct()) {
+            throw new OperationNotSupportedRuntimeException("STRING_AGG does not support distinct. If you really need it, " +
+                                                             "you may do it using a subquery. " +
+                                                             "Check this: https://stackoverflow.com/a/50589222");
+        }
+        inject(stringAgg.column);
+        return String.format(
+                "STRING_AGG(%s, '%c')",
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
     }
 
     @Override
