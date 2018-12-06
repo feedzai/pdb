@@ -293,6 +293,17 @@ public class H2Translator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        return String.format(
+                "STRING_AGG(%s %s, '%c')",
+                stringAgg.isDistinct() ? "DISTINCT" : "",
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
+    }
+
+    @Override
     public String translateEscape() {
         return "\"";
     }

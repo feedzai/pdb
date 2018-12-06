@@ -573,6 +573,11 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
+    public boolean isStringAggDistinctCapable() {
+        return true;
+    }
+
+    @Override
     protected void addFks(DbEntity entity) throws DatabaseEngineException {
         for (DbFk fk : entity.getFks()) {
             final List<String> quotizedLocalColumns = new ArrayList<>();

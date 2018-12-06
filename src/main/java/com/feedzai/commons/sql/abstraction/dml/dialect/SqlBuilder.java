@@ -437,6 +437,26 @@ public final class SqlBuilder {
     }
 
     /**
+     * The FLOOR operator.
+     *
+     * @param exp The expression.
+     * @return The FLOOR representation.
+     */
+    public static Expression floor(final Expression exp) {
+        return new Function(FLOOR, exp);
+    }
+
+    /**
+     * The CEILING operator.
+     *
+     * @param exp The expression.
+     * @return The CEILING representation.
+     */
+    public static Expression ceiling(final Expression exp) {
+        return new Function(CEILING, exp);
+    }
+
+    /**
      * The Used Defined Function operator.
      *
      * @param udf The UDF name.
@@ -465,6 +485,16 @@ public final class SqlBuilder {
      */
     public static Expression upper(final Expression exp) {
         return new Function(UPPER, exp);
+    }
+
+    /**
+     * The StringAgg function.
+     *
+     * @param column The expression inside the operator.
+     * @return The StringAgg function.
+     */
+    public static StringAgg stringAgg(final Expression column) {
+        return StringAgg.stringAgg(column);
     }
 
     /**

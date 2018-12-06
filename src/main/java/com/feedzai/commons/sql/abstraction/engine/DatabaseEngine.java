@@ -607,4 +607,11 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param eh The reference for exception callbacks.
      */
     void setExceptionHandler(ExceptionHandler eh);
+
+    /**
+     * Checks if the engine supports using DISTINCT inside a string aggregation.
+     *
+     * @return true if the engine supports using DISTINCT inside a string aggregation, false otherwise.
+     */
+    boolean isStringAggDistinctCapable();
 }

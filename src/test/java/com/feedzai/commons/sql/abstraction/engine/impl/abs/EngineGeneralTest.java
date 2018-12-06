@@ -32,10 +32,12 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -72,11 +74,14 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.ORACLE;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.SQLSERVER;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
@@ -90,6 +95,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.floor;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
@@ -103,6 +109,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetw
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
@@ -130,6 +137,8 @@ import static org.junit.Assert.fail;
 @RunWith(Parameterized.class)
 public class EngineGeneralTest {
 
+
+    private static final double DELTA = 1e-7;
 
     protected DatabaseEngine engine;
     protected Properties properties;
@@ -1281,6 +1290,50 @@ public class EngineGeneralTest {
         List<Map<String, ResultColumn>> query = engine.query(select(min(column("COL1")).alias("MIN")).from(table("TEST")));
 
         assertEquals("result ok?", 0, (int) query.get(0).get("MIN").toInt());
+    }
+
+    @Test
+    public void floorTest() throws DatabaseEngineException {
+        test5Columns();
+
+        EntityEntry.Builder entry = entry()
+                .set("COL1", 2)
+                .set("COL2", false)
+                .set("COL3", 2.5D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS");
+
+        for (int i = 0; i < 10; i++) {
+            entry.set("COL1", i);
+            engine.persist("TEST", entry
+                    .build());
+        }
+
+        List<Map<String, ResultColumn>> query = engine.query(select(floor(column("COL3")).alias("FLOOR")).from(table("TEST")));
+
+        assertEquals("result ok?", 2.0, query.get(0).get("FLOOR").toDouble(), DELTA);
+    }
+
+    @Test
+    public void ceilingTest() throws DatabaseEngineException {
+        test5Columns();
+
+        EntityEntry.Builder entry = entry()
+                .set("COL1", 2)
+                .set("COL2", false)
+                .set("COL3", 2.5D)
+                .set("COL4", 3L)
+                .set("COL5", "ADEUS");
+
+        for (int i = 0; i < 10; i++) {
+            entry.set("COL1", i);
+            engine.persist("TEST", entry
+                    .build());
+        }
+
+        List<Map<String, ResultColumn>> query = engine.query(select(ceiling(column("COL3")).alias("CEILING")).from(table("TEST")));
+
+        assertEquals("result ok?", 3.0, query.get(0).get("CEILING").toDouble(), DELTA);
     }
 
     @Test
@@ -3355,6 +3408,113 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be teste", "teste", query.get(0).get("COL5").toString());
         assertEquals("COL1 must be 1", 4, query.get(1).get("COL1").toInt().intValue());
         assertEquals("COL5 must be teste", "tesTte", query.get(1).get("COL5").toString());
+    }
+
+    @Test
+    public void testStringAgg() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TESTE,teste", "TESTE,teste", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
+    }
+
+    @Test
+    public void testStringAggDelimiter() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).delimiter(';').alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TESTE;teste", "TESTE;teste", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE;tesTte", "TeStE;tesTte", query.get(1).get("agg").toString());
+    }
+
+    @Test
+    public void testStringAggDistinct() throws DatabaseEngineException {
+        if (!this.engine.isStringAggDistinctCapable()) {
+            return;
+        }
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL5")).distinct().alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be teste", "teste", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be TeStE,tesTte", "TeStE,tesTte", query.get(1).get("agg").toString());
+    }
+
+    @Test
+    public void testStringAggNotStrings() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TeStE")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "tesTte")
+                .build());
+
+        final List<Map<String, ResultColumn>> query = engine.query(
+                select(column("COL1"), stringAgg(column("COL1")).alias("agg"))
+                        .from(table("TEST"))
+                        .groupby(column("COL1"))
+                        .orderby(column("COL1").asc())
+        );
+
+        assertEquals("Resultset must have only 2 results", 2, query.size());
+        assertEquals("COL1 must be 1", 1, query.get(0).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be 1,1", "1,1", query.get(0).get("agg").toString());
+        assertEquals("COL1 must be 2", 2, query.get(1).get("COL1").toInt().intValue());
+        assertEquals("COL5 must be 2,2", "2,2", query.get(1).get("agg").toString());
     }
 
     @Test

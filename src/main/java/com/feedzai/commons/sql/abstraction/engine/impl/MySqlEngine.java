@@ -875,6 +875,11 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
+    public boolean isStringAggDistinctCapable() {
+        return true;
+    }
+
+    @Override
     public String commentCharacter() {
         return "#";
     }

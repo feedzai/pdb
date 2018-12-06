@@ -276,6 +276,17 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final StringAgg stringAgg) {
+        inject(stringAgg.column);
+        return String.format(
+                "GROUP_CONCAT(%s %s SEPARATOR '%c')",
+                stringAgg.isDistinct() ? "DISTINCT" : "",
+                stringAgg.getColumn().translate(),
+                stringAgg.getDelimiter()
+        );
+    }
+
+    @Override
     public String translateEscape() {
         return "`";
     }

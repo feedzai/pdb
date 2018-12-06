@@ -27,10 +27,12 @@ import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -344,6 +346,24 @@ public class DB2Translator extends AbstractTranslator {
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }
+    }
+
+    @Override
+    public String translate(final StringAgg stringAgg) {
+        if (stringAgg.isDistinct()) {
+            throw new OperationNotSupportedRuntimeException("LISTAGG does not support distinct in this DB2 version. " +
+                                                                    "If you really need it, " +
+                                                                    "you may do it using regex or a subquery.");
+        }
+
+        inject(stringAgg.column);
+        String column = stringAgg.getColumn().translate();
+        return String.format(
+                "LISTAGG(%s, '%c') WITHIN GROUP(ORDER BY %s)",
+                column,
+                stringAgg.getDelimiter(),
+                column
+        );
     }
 
     @Override
