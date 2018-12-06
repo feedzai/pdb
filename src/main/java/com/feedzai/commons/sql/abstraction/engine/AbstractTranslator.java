@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
+import com.feedzai.commons.sql.abstraction.dml.Case;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -35,6 +36,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
@@ -44,6 +46,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -330,6 +333,44 @@ public abstract class AbstractTranslator {
         }
 
         return join(temp, " ");
+    }
+
+    /**
+     * Translates When.
+     *
+     * @param when a when.
+     * @return when translation.
+     */
+    public String translate(final When when) {
+        inject(when.condition);
+        inject(when.action);
+
+        return String.format("WHEN %s THEN %s",
+                             when.condition.translate(),
+                             when.action.translate());
+    }
+
+    /**
+     * Translates Case.
+     *
+     * @param aCase a case.
+     * @return case translation.
+     */
+    public String translate(final Case aCase) {
+        String elseString = "";
+        if (aCase.getFalseAction() != null) {
+            inject(aCase.getFalseAction());
+            elseString = String.format("ELSE %s", aCase.getFalseAction().translate());
+        }
+
+        final String whens = aCase.whens.stream()
+                .peek(this::inject)
+                .map(When::translate)
+                .collect(Collectors.joining(" "));
+
+        return String.format("CASE %s %s END",
+                             whens,
+                             elseString);
     }
 
     /**
