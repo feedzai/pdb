@@ -535,20 +535,13 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[select]|Expression defining the selection of columns or other manipulations of its values.|
-|[distinct]|Filter the query so it only returns distinct values.|
-|[from]|Defines what tables or combination of them the data must be fetched from. By default the listed sources will be joined together with an inner join.|
-|[all]|Defines a reference to all column the underlying query might return.|
-|[k]|Creates a Constant from obj.|
-|[lit]|Creates a Literal from obj.|
-|[column]|Defines a reference to a given column.|
-[select]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#select(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[distinct]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#distinct()
-[from]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#from(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[all]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#all()
-[k]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#k(java.lang.Object)
-[lit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lit(java.lang.Object)
-[column]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#column(java.lang.String)
+|[select](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#select(com.feedzai.commons.sql.abstraction.dml.Expression...))|Expression defining the selection of columns or other manipulations of its values.|
+|[distinct](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#distinct())|Filter the query so it only returns distinct values.|
+|[from](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#from(com.feedzai.commons.sql.abstraction.dml.Expression...))|Defines what tables or combination of them the data must be fetched from. By default the listed sources will be joined together with an inner join.|
+|[all](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#all())|Defines a reference to all column the underlying query might return.|
+|[k](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#k(java.lang.Object))|Creates a Constant from obj.|
+|[lit](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lit(java.lang.Object))|Creates a Literal from obj.|
+|[column](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#column(java.lang.String))|Defines a reference to a given column.|
 
 This is useful but not very interesting.
 We should proceed by filtering the results with some condition of our choice.
@@ -566,24 +559,15 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[where]|Defines a series of testes a entry must oblige in order to be part of the result set.|
-|[andWhere]|If there is already ab where clause it defines an and expression with the old clause.|
-|[eq]|Applies the equality condition to the expressions. It is also used in insertion queries to represent attribution.|
-|[neq]|Negation of the equality condition.|
-|[like]|Likelihood comparison between expression. Those expression must resolve to String constants or columns of the same type.|
-|[lt]|Predicate over numerical or alphanumerical values.|
-|[lteq]|Predicate over numerical or alphanumerical values.|
-|[gt]|Predicate over numerical or alphanumerical values.|
-|[gteq]|Predicate over numerical or alphanumerical values.|
-[where]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#where(com.feedzai.commons.sql.abstraction.dml.Expression)
-[andWhere]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#andWhere(com.feedzai.commons.sql.abstraction.dml.Expression)
-[eq]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#eq(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[neq]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#neq(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[like]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#like(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[lt]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lt(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[lteq]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lteq(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[gt]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#gt(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[gteq]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#gteq(com.feedzai.commons.sql.abstraction.dml.Expression...)
+|[where](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#where(com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a series of testes a entry must oblige in order to be part of the result set.|
+|[andWhere](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#andWhere(com.feedzai.commons.sql.abstraction.dml.Expression))|If there is already ab where clause it defines an and expression with the old clause.|
+|[eq](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#eq(com.feedzai.commons.sql.abstraction.dml.Expression...))|Applies the equality condition to the expressions. It is also used in insertion queries to represent attribution.|
+|[neq](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#neq(com.feedzai.commons.sql.abstraction.dml.Expression...))|Negation of the equality condition.|
+|[like](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#like(com.feedzai.commons.sql.abstraction.dml.Expression...))|Likelihood comparison between expression. Those expression must resolve to String constants or columns of the same type.|
+|[lt](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lt(com.feedzai.commons.sql.abstraction.dml.Expression...))|Predicate over numerical or alphanumerical values.|
+|[lteq](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lteq(com.feedzai.commons.sql.abstraction.dml.Expression...))|Predicate over numerical or alphanumerical values.|
+|[gt](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#gt(com.feedzai.commons.sql.abstraction.dml.Expression...))|Predicate over numerical or alphanumerical values.|
+|[gteq](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#gteq(com.feedzai.commons.sql.abstraction.dml.Expression...))|Predicate over numerical or alphanumerical values.|
 
 A more complex filter would be one that select Streams from a given range of data Types and a set of Providers.
 And we manage just that with the following query.
@@ -602,22 +586,14 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[and]|Computes the boolean result of the underlying expressions.|
-|[or]|Computes the boolean result of the underlying expressions.|
-|[between]|Defines a test condition that asserts if exp1 is part of the range of values from exp2 to exp3.|
-|[notBetween]|Defines a test condition that asserts if exp1 is part of the range of values from exp2 to exp3.|
-|[in]|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
-|[notIn]|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
-|[L]|Defines a list of elements represent by the passing expressions.|
-|[caseWhen]|Defines a test using a list of conditions by going through them and returning a value when the first condition is met. If none are met, it will return the otherwise clause or NULL if not defined.|
-[and]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#and(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[or]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#or(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[between]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#between(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[notBetween]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notBetween(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[in]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#in(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[notIn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notIn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[L]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#L(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[caseWhen]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#caseWhen(com.feedzai.commons.sql.abstraction.dml.Expression...)
+|[and](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#and(com.feedzai.commons.sql.abstraction.dml.Expression...))|Computes the boolean result of the underlying expressions.|
+|[or](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#or(com.feedzai.commons.sql.abstraction.dml.Expression...))|Computes the boolean result of the underlying expressions.|
+|[between](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#between(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a test condition that asserts if exp1 is part of the range of values from exp2 to exp3.|
+|[notBetween](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notBetween(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a test condition that asserts if exp1 is part of the range of values from exp2 to exp3.|
+|[in](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#in(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
+|[notIn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notIn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
+|[L](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#L(com.feedzai.commons.sql.abstraction.dml.Expression...))|Defines a list of elements represent by the passing expressions.|
+|[caseWhen](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#caseWhen(com.feedzai.commons.sql.abstraction.dml.Expression...))|Defines a test using a list of conditions by going through them and returning a value when the first condition is met. If none are met, it will return the otherwise clause or NULL if not defined.|
 
 It is widely known that greater the id greater the Stream of data.
 For this purpose you just design a query that selects the maximum Stream id of data Type 4 from Provider 1.
@@ -637,28 +613,17 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[alias]|Assigns an alias to the expression.|
-|[count]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[max]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[min]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[sum]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[avg]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[stddev]|Aggregation operator for numeric values. They are applicable to expression involving columns.|
-|[stringAgg]|Aggregation operator that aggregates data of a column into a string.|
-|[floor]|Operator that returns the largest integer value that is smaller than or equal to a number. They are applicable to expression involving columns.|
-|[ceil]|Operator that returns the smallest integer value that is larger than or equal to a number. They are applicable to expression involving columns.|
-|[udf]|If you have defined your own sql function you may access it with udf.|
-[alias]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#alias(java.lang.String)
-[count]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#count(com.feedzai.commons.sql.abstraction.dml.Expression)
-[max]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#min(com.feedzai.commons.sql.abstraction.dml.Expression)
-[min]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#max(com.feedzai.commons.sql.abstraction.dml.Expression)
-[sum]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#sum(com.feedzai.commons.sql.abstraction.dml.Expression)
-[avg]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#avg(com.feedzai.commons.sql.abstraction.dml.Expression)
-[stddev]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stddev(com.feedzai.commons.sql.abstraction.dml.Expression)
-[stringAgg]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stringAgg(com.feedzai.commons.sql.abstraction.dml.Expression)
-[floor]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#floor(com.feedzai.commons.sql.abstraction.dml.Expression)
-[ceil]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#ceil(com.feedzai.commons.sql.abstraction.dml.Expression)
-[udf]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#udf(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
+|[alias](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#alias(java.lang.String))|Assigns an alias to the expression.|
+|[count](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#count(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[max](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#min(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[min](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#max(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[sum](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#sum(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[avg](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#avg(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[stddev](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stddev(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator for numeric values. They are applicable to expression involving columns.|
+|[stringAgg](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#stringAgg(com.feedzai.commons.sql.abstraction.dml.Expression))|Aggregation operator that aggregates data of a column into a string.|
+|[floor](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#floor(com.feedzai.commons.sql.abstraction.dml.Expression))|Operator that returns the largest integer value that is smaller than or equal to a number. They are applicable to expression involving columns.|
+|[ceil](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#ceil(com.feedzai.commons.sql.abstraction.dml.Expression))|Operator that returns the smallest integer value that is larger than or equal to a number. They are applicable to expression involving columns.|
+|[udf](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#udf(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression))|If you have defined your own sql function you may access it with udf.|
 
 Sometimes it is required to merge the content of more than one table.
 For that purpose you can use joins.
@@ -680,16 +645,11 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[innerJoin]|Merges the table results of two expression regarding a condition.|
-|[leftOuterJoin]|Merges the table results of two expression regarding a condition.|
-|[rightOuterJoin]|Merges the table results of two expression regarding a condition.|
-|[fullOuterJoin]|Merges the table results of two expression regarding a condition.|
-|[join]|Applies the equality condition to the expressions.|
-[innerJoin]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#innerJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[leftOuterJoin]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#leftOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[rightOuterJoin]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#rightOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[fullOuterJoin]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#fullOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[join]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#join(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
+|[innerJoin](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#innerJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
+|[leftOuterJoin](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#leftOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
+|[rightOuterJoin](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#rightOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
+|[fullOuterJoin](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#fullOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
+|[join](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#join(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Applies the equality condition to the expressions.|
 
 The market is collapsing! The reason, some say, is that some provider messed up.
 In your contract it is stated that Provider with id 4 provides a given number of streams for each data_type.
@@ -711,14 +671,10 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[groupby]|Groups the result on some of the table columns.|
-|[orderby]|Orders the result according to some expression of the table columns.|
-|[asc]|Sets the ordering as ascendant.|
-|[desc]|Sets the ordering as descendant.|
-[groupby]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#groupby(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[orderby]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#orderby(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[asc]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#asc()
-[desc]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#desc()
+|[groupby](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#groupby(com.feedzai.commons.sql.abstraction.dml.Expression...))|Groups the result on some of the table columns.|
+|[orderby](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#orderby(com.feedzai.commons.sql.abstraction.dml.Expression...))|Orders the result according to some expression of the table columns.|
+|[asc](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#asc())|Sets the ordering as ascendant.|
+|[desc](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#desc())|Sets the ordering as descendant.|
 
 Some documents leaked online last week suggest that there are some hidden message in our data.
 To visualize this hidden message we need to do some arithmetic's with the ids of the provider and data_type on table Streams.
@@ -743,18 +699,12 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[minus]|Applies the subtraction operator to the list of value with left precedence.|
-|[mult]|Applies the multiplication operator to the list of value with left precedence.|
-|[plus]|Applies the addiction operator to the list of value with left precedence.|
-|[div]|Applies the division operator to the list of value with left precedence.|
-|[mod]|Applies the module operator to the list of value with left precedence.|
-|[coalesce]|Coalesce tests a given expression and returns its value if it is not null. If the primary expression is null, it will return the first alternative that is not.|
-[minus]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#minus(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[mult]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#mult(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[plus]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#plus(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[div]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#div(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[mod]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#mod(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[coalesce]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#coalesce(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression...)
+|[minus](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#minus(com.feedzai.commons.sql.abstraction.dml.Expression...))|Applies the subtraction operator to the list of value with left precedence.|
+|[mult](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#mult(com.feedzai.commons.sql.abstraction.dml.Expression...))|Applies the multiplication operator to the list of value with left precedence.|
+|[plus](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#plus(com.feedzai.commons.sql.abstraction.dml.Expression...))|Applies the addiction operator to the list of value with left precedence.|
+|[div](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#div(com.feedzai.commons.sql.abstraction.dml.Expression...))|Applies the division operator to the list of value with left precedence.|
+|[mod](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#mod(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Applies the module operator to the list of value with left precedence.|
+|[coalesce](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#coalesce(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression...))|Coalesce tests a given expression and returns its value if it is not null. If the primary expression is null, it will return the first alternative that is not.|
 
 For this next example, imagine you want to select all Streams for which the sum of data_type_id and provider_id is greater than 5.
 It might not be a very useful query, but when you had that you just want 10 rows of the result with and offset of 2, people might wonder what you are up to.
@@ -777,12 +727,9 @@ results = engine.query(
 ```
 |Function|Description|
 |:---|:---|
-|[having]|Query will select only the result rows where aggregate values meet the specified conditions.|
-|[limit]|Defines the number of rows that the query returns.|
-|[offset]|Defines the offset for the start position of the resulting rows.|
-[having]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#having(com.feedzai.commons.sql.abstraction.dml.Expression)
-[limit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#limit(java.lang.Integer)
-[offset]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#offset(java.lang.Integer)
+|[having](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#having(com.feedzai.commons.sql.abstraction.dml.Expression))|Query will select only the result rows where aggregate values meet the specified conditions.|
+|[limit](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#limit(java.lang.Integer))|Defines the number of rows that the query returns.|
+|[offset](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Query.html#offset(java.lang.Integer))|Defines the offset for the start position of the resulting rows.|
 
 ### Prepared Statements
 
@@ -832,20 +779,13 @@ int affectedEntries = engine.executePSUpdate("MyPS");
 
 |Function|Description|
 |:---|:---|
-|[createPreparedStatement]|Creates a prepared statement and assigns it to a given identifier.|
-|[clearParameters]|Clears the parameters of a given prepared statement.|
-|[setParameter]|Assigns a object to a given parameter of a prepared statement.|
-|[executePS]|Executes a given prepared statement.|
-|[executePSUpdate]|Executes a given update prepared statement and returns the number of affected rows.|
-|[getPSResultSet]|Returns the result set of the last executed query.|
-|[getPSIterator]|Returns an iterator to the result set of the last executed query.|
-[createPreparedStatement]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#createPreparedStatement(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression)
-[clearParameters]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#clearParameters(java.lang.String)
-[setParameter]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#setParameter(java.lang.String,%20int,%20java.lang.Object)
-[executePS]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePS(java.lang.String)
-[executePSUpdate]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePSUpdate(java.lang.String)
-[getPSResultSet]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSResultSet(java.lang.String)
-[getPSIterator]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSIterator(java.lang.String)
+|[createPreparedStatement](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#createPreparedStatement(java.lang.String,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Creates a prepared statement and assigns it to a given identifier.|
+|[clearParameters](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#clearParameters(java.lang.String))|Clears the parameters of a given prepared statement.|
+|[setParameter](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#setParameter(java.lang.String,%20int,%20java.lang.Object))|Assigns a object to a given parameter of a prepared statement.|
+|[executePS](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePS(java.lang.String))|Executes a given prepared statement.|
+|[executePSUpdate](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#executePSUpdate(java.lang.String))|Executes a given update prepared statement and returns the number of affected rows.|
+|[getPSResultSet](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSResultSet(java.lang.String))|Returns the result set of the last executed query.|
+|[getPSIterator](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#getPSIterator(java.lang.String))|Returns an iterator to the result set of the last executed query.|
 
 ### Create View
 
