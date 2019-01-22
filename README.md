@@ -517,8 +517,7 @@ The iterator closes automatically when it reaches the end of the result set, but
 
 |Function|Description|
 |:---|:---|
-|[query](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#query(com.feedzai.commons.sql.abstraction.dml.Expression))|Processes a given query and computes the corresponding result. It returns a List of results if any. For each column a result is a Map that maps
-column names to ResultColumn objects.|
+|[query](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#query(com.feedzai.commons.sql.abstraction.dml.Expression))|Processes a given query and computes the corresponding result. It returns a List of results if any. For each column a result is a Map that maps column names to ResultColumn objects.|
 |[iterator](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#iterator(com.feedzai.commons.sql.abstraction.dml.Expression))|Returns an iterator to cycle through the result set. Preferable when dealing with large result sets.|
 |[toXXX](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/result/ResultColumn.html)|ResultColumn provides methods to convert the data to the type of your preference. It throws an exception if you try to convert the underlying data to some incompatible type.|
 
