@@ -211,19 +211,15 @@ A foreign key is created with dbFk(), and it is defined using these methods:
 
 |Function|Description|
 |:---|:---|
-|[addColumn]|Define which columns will be part of this constraint.|
-|[foreignTable]|Define the foreign table we are referring to.|
-|[addForeignColumn]|Selects the affected columns in the foreign table.|
-[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)
-[foreignTable]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#foreignTable(java.lang.String)
-[addForeignColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)
+|[addColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...))|Define which columns will be part of this constraint.|
+|[foreignTable](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#foreignTable(java.lang.String))|Define the foreign table we are referring to.|
+|[addForeignColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)|Selects the affected columns in the foreign table.|
 
 Wait! Looks like we also created an index in the Stream table.
 
 |Function|Description|
 |:---|:---|
-|[addIndex]|Creates and index for the listed columns. If not specified, an index is not unique.|
-[addIndex]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#addIndex(boolean,%20java.lang.String...)
+|[addIndex](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#addIndex(boolean,%20java.lang.String...))|Creates and index for the listed columns. If not specified, an index is not unique.|
 
 The rest of the example case is created with the following code:
 
@@ -270,8 +266,7 @@ engine.dropEntity("stream_to_module");
 ```
 |Function|Description|
 |:---|:---|
-|[dropEntity]|Drops an entity given the name.|
-[dropEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropEntity(java.lang.String)
+|[dropEntity](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropEntity(java.lang.String))|Drops an entity given the name.|
 
 ### Alter Table
 
@@ -289,10 +284,8 @@ engine.updateEntity(data_type_table);
 ```
 |Function|Description|
 |:---|:---|
-|[removeColumn]|Removes a column from the local representation of the table.|
-|[updateEntity]|Synchronizes the entity representation with the table in the database. If schema policy is set to drop-create the whole table is dropped and created again.|
-[removeColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#removeColumn(java.lang.String)
-[updateEntity]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#updateEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity)
+|[removeColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#removeColumn(java.lang.String))|Removes a column from the local representation of the table.|
+|[updateEntity](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#updateEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity))|Synchronizes the entity representation with the table in the database. If schema policy is set to drop-create the whole table is dropped and created again.|
 
 Another mechanism to alter table is by using the AlterColumn expression creation and the executeUpdate method provided by the database engine.
 In this case changes are made to each column, one at a time.
