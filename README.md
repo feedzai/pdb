@@ -213,7 +213,7 @@ A foreign key is created with dbFk(), and it is defined using these methods:
 |:---|:---|
 |[addColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...))|Define which columns will be part of this constraint.|
 |[foreignTable](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#foreignTable(java.lang.String))|Define the foreign table we are referring to.|
-|[addForeignColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...)|Selects the affected columns in the foreign table.|
+|[addForeignColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbFk.Builder.html#addColumn(java.lang.String...))|Selects the affected columns in the foreign table.|
 
 Wait! Looks like we also created an index in the Stream table.
 
@@ -303,14 +303,10 @@ engine.executeUpdate(alterColumn);
 ```
 |Function|Description|
 |:---|:---|
-|[alterColumn]|Creates a expression of changing a given table schema affecting a column.|
-|[dbColumn]|Column definition. Provide new type and autoincrement behavior.|
-|[addConstraint]|Define the constraints you want the column to oblige to.|
-|[addConstraints]|Define the constraints you want the column to oblige to.|
-[alterColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#alterColumn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.ddl.DbColumn)
-[dbColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dbColumn(java.lang.String,%20com.feedzai.commons.sql.abstraction.ddl.DbColumnType)
-[addConstraint]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraint(com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint)
-[addConstraints]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraints(java.util.Collection)
+|[alterColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#alterColumn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.ddl.DbColumn))|Creates a expression of changing a given table schema affecting a column.|
+|[dbColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dbColumn(java.lang.String,%20com.feedzai.commons.sql.abstraction.ddl.DbColumnType))|Column definition. Provide new type and autoincrement behavior.|
+|[addConstraint](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraint(com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint))|Define the constraints you want the column to oblige to.|
+|[addConstraints](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbColumn.Builder.html#addConstraints(java.util.Collection))|Define the constraints you want the column to oblige to.|
 
 It is also possible to remove the the primary key constraint.
 
@@ -325,8 +321,7 @@ engine.executeUpdate(dropPrimaryKey);
 ```
 |Function|Description|
 |:---|:---|
-|[dropPK]|Drops the primary key constraint on the given table.|
-[dropPK]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dropPK(com.feedzai.commons.sql.abstraction.dml.Expression)
+|[dropPK](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dropPK(com.feedzai.commons.sql.abstraction.dml.Expression))|Drops the primary key constraint on the given table.|
 
 ### Insertion Queries
 
@@ -347,8 +342,7 @@ EntityEntry data_type_entry =
 ```
 |Function|Description|
 |:---|:---|
-|[set]|Define the value that will be assigned to a given column.|
-[set]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/entry/EntityEntry.Builder.html#set(java.lang.String,%20java.lang.Object)
+|[set](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/entry/EntityEntry.Builder.html#set(java.lang.String,%20java.lang.Object))|Define the value that will be assigned to a given column.|
 
 Notice that the values for each column were defined using the set method.
 A new entry for the database is persisted with engine's method persist.
@@ -358,8 +352,7 @@ engine.persist("data_type", data_type_entry, false);
 ```
 |Function|Description|
 |:---|:---|
-|[persist]|Select the table in which the new entity will be inserted. If the affected table has an autoincrement column you might want to activate this flag. In case that the autoincrement behaviour is active, this method returns the generated key.|
-[persist]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#persist(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
+|[persist](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#persist(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry))|Select the table in which the new entity will be inserted. If the affected table has an autoincrement column you might want to activate this flag. In case that the autoincrement behaviour is active, this method returns the generated key.|
 
 If you want to use the autoincrement behavior you must activate the autoincrement flag when defining the entity.
 
@@ -415,18 +408,12 @@ try {
 ```
 |Function|Description|
 |:---|:---|
-|[beginTransaction]|Starts a transaction.|
-|[addBatch]|Adds an entry to the current batch.|
-|[flush]|Executes all entries registered in the batch.|
-|[commit]|Commits the current transaction transaction.|
-|[isTransactionActive]|Tests if the transaction is active.|
-|[rollback]|Rolls back the transaction.|
-[beginTransaction]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#beginTransaction()
-[addBatch]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#addBatch(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry)
-[flush]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#flush()
-[commit]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#commit()
-[isTransactionActive]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#isTransactionActive()
-[rollback]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#rollback()
+|[beginTransaction](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#beginTransaction())|Starts a transaction.|
+|[addBatch](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#addBatch(java.lang.String,%20com.feedzai.commons.sql.abstraction.entry.EntityEntry))|Adds an entry to the current batch.|
+|[flush](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#flush())|Executes all entries registered in the batch.|
+|[commit](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#commit())|Commits the current transaction transaction.|
+|[isTransactionActive](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#isTransactionActive())|Tests if the transaction is active.|
+|[rollback](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#rollback())|Rolls back the transaction.|
 
 ### Updating and Deleting Queries
 
