@@ -152,12 +152,12 @@ A table is represented with a DbEntity and its properties can be defined with me
 
 |Function|Description|
 |:---|:---|
-|[name]|Select the name for this table.|
-|[addColumn]|Create a column with a given name and type. Additionally you can had autoincrement behaviour and define some extra constraints. There are two possible constraints available: UNIQUE and NOT_NULL.|
-|[pkFields]|Define which columns are part of the primary key.|
-[name]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#name(java.lang.String)
-[addColumn]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection)
-[pkFields]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection)
+|name|Select the name for this table.|
+|addColumn|Create a column with a given name and type. Additionally you can had autoincrement behaviour and define some extra constraints. There are two possible constraints available: UNIQUE and NOT_NULL.|
+|pkFields|Define which columns are part of the primary key.|
+[name](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#name(java.lang.String))
+[addColumn](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection))
+[pkFields](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/ddl/DbEntity.Builder.html#pkFields(java.util.Collection))
 
 To create the data_type_table you call addEntity method on the previously created database engine.
 Depending on the policy you chose existing tables might be dropped before creation.
