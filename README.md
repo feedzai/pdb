@@ -439,14 +439,10 @@ In this section we describe queries that make changes to the database, while in 
 
 |Function|Description|
 |:---|:---|
-|[update]|Creates an update query that will affect the table referred by the given expression.|
-|[set]|Expression that defines the values that will be assigned to each given column.|
-|[where]|Expression for filtering/selecting the affected entries.|
-|[table]|Creates a reference to a table of your choice.|
-[update]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#update(com.feedzai.commons.sql.abstraction.dml.Expression)
-[set]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#set(com.feedzai.commons.sql.abstraction.dml.Expression...)
-[where]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#where(com.feedzai.commons.sql.abstraction.dml.Expression)
-[table]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#table(java.lang.String)
+|[update](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#update(com.feedzai.commons.sql.abstraction.dml.Expression))|Creates an update query that will affect the table referred by the given expression.|
+|[set](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#set(com.feedzai.commons.sql.abstraction.dml.Expression...))|Expression that defines the values that will be assigned to each given column.|
+|[where](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#where(com.feedzai.commons.sql.abstraction.dml.Expression))|Expression for filtering/selecting the affected entries.|
+|[table](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#table(java.lang.String))|Creates a reference to a table of your choice.|
 
 Maybe you want to delete entries instead. In that case creating a delete query is required.
 
@@ -465,10 +461,8 @@ engine.executeUpdate(
 
 |Function|Description|
 |:---|:---|
-|[delete]|Creates a delete query that will affect the table referred by the given expression.|
-|[where]|Expression for filtering/selecting the affected entries.|
-[delete]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#delete(com.feedzai.commons.sql.abstraction.dml.Expression)
-[where]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Delete.html#where(com.feedzai.commons.sql.abstraction.dml.Expression)
+|[delete](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#delete(com.feedzai.commons.sql.abstraction.dml.Expression))|Creates a delete query that will affect the table referred by the given expression.|
+|[where](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Delete.html#where(com.feedzai.commons.sql.abstraction.dml.Expression))|Expression for filtering/selecting the affected entries.|
 
 ### Truncate Queries
 
@@ -484,8 +478,7 @@ engine.executeUpdate(truncate(table("stream")));
 
 |Function|Description|
 |:---|:---|
-|[truncate]|Creates a truncate query that will affect the table referred by the given expression.|
-[truncate]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#truncate(com.feedzai.commons.sql.abstraction.dml.Expression)
+|[truncate](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#truncate(com.feedzai.commons.sql.abstraction.dml.Expression))|Creates a truncate query that will affect the table referred by the given expression.|
 
 ### Selection Queries
 
@@ -524,13 +517,10 @@ The iterator closes automatically when it reaches the end of the result set, but
 
 |Function|Description|
 |:---|:---|
-|[query]|Processes a given query and computes the corresponding result. It returns a List of results if any. For each column a result is a Map that maps
+|[query](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#query(com.feedzai.commons.sql.abstraction.dml.Expression))|Processes a given query and computes the corresponding result. It returns a List of results if any. For each column a result is a Map that maps
 column names to ResultColumn objects.|
-|[iterator]|Returns an iterator to cycle through the result set. Preferable when dealing with large result sets.|
-|[toXXX]|ResultColumn provides methods to convert the data to the type of your preference. It throws an exception if you try to convert the underlying data to some incompatible type.|
-[query]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#query(com.feedzai.commons.sql.abstraction.dml.Expression)
-[iterator]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#iterator(com.feedzai.commons.sql.abstraction.dml.Expression)
-[toXXX]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/result/ResultColumn.html
+|[iterator](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#iterator(com.feedzai.commons.sql.abstraction.dml.Expression))|Returns an iterator to cycle through the result set. Preferable when dealing with large result sets.|
+|[toXXX](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/result/ResultColumn.html)|ResultColumn provides methods to convert the data to the type of your preference. It throws an exception if you try to convert the underlying data to some incompatible type.|
 
 Let's see this simple query in more detail.
 Where we list all entries in table Streams and return all columns.
@@ -876,12 +866,10 @@ engine.executeUpdate(view);
 ```
 |Function|Description|
 |:---|:---|
-|[createView]|Creates a view with the given name.|
-|[as]|Defines the query that provides the data for this view.|
-|[replace]|Whether or not the view creation is authorized to overwrite over existing views.|
-[createView]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#createView(java.lang.String)
-[as]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#as(com.feedzai.commons.sql.abstraction.dml.Expression)
-[replace]:http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#replace()
+|[createView](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#createView(java.lang.String))|Creates a view with the given name.|
+|[as](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#as(com.feedzai.commons.sql.abstraction.dml.Expression))|Defines the query that provides the data for this view.|
+|[replace](http://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#replace())|Whether or not the view creation is authorized to overwrite over existing views.|
+
 
 ## Further Documentation
 
