@@ -23,9 +23,13 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.K;
+import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
+import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -57,14 +61,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -113,6 +120,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringA
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
@@ -2051,6 +2059,89 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be ROFL", "ROFL", result.get(2).get("case").toString());
         assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
         assertEquals("COL5 must be KEK", "KEK", result.get(4).get("case").toString());
+    }
+
+    @Test
+    public void testUnion() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "c")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "d")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "d")
+                .build());
+
+        final String[] letters = new String[] {"a", "b", "c", "d", "d"};
+        final Collection<Expression> queries = Arrays.stream(letters)
+                .map(literal ->
+                        select(column("COL5"))
+                        .from(table("TEST"))
+                        .where(eq(column("COL5"), k(literal))))
+                .collect(Collectors.toList());
+
+        final Expression query = union(queries);
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        System.out.println(result.size());
+        assertEquals("Must return 4 results due to distinct property", 4, result.size());
+
+        System.out.println(result.get(0).get("COL5").toString());
+        System.out.println(result.get(1).get("COL5").toString());
+        System.out.println(result.get(2).get("COL5").toString());
+        System.out.println(result.get(3).get("COL5").toString());
+
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("COL5 must be a", "a", resultSorted.get(0));
+        assertEquals("COL5 must be b", "b", resultSorted.get(1));
+        assertEquals("COL5 must be c", "c", resultSorted.get(2));
+        assertEquals("COL5 must be d", "d", resultSorted.get(3));
+    }
+
+    @Test
+    public void testUnionAll() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "c")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "d")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "d")
+                .build());
+
+        final int[] ids = new int[] {1, 2, 3, 4, 5};
+        final Collection<Expression> queries = Arrays.stream(ids)
+                .mapToObj(literal ->
+                        select(column("COL5"))
+                        .from(table("TEST"))
+                        .where(eq(column("COL1"), k(literal))))
+                .collect(Collectors.toList());
+
+        final Expression query = union(queries).all();
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Must return 5 results", 5, result.size());
+
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("COL5 must be a", "a", resultSorted.get(0));
+        assertEquals("COL5 must be b", "b", resultSorted.get(1));
+        assertEquals("COL5 must be c", "c", resultSorted.get(2));
+        assertEquals("COL5 must be d", "d", resultSorted.get(3));
+        assertEquals("COL5 must be d", "d", resultSorted.get(4));
     }
 
     @Test
