@@ -650,6 +650,7 @@ results = engine.query(
 |[rightOuterJoin](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#rightOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
 |[fullOuterJoin](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Expression.html#fullOuterJoin(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Merges the table results of two expression regarding a condition.|
 |[join](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#join(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Applies the equality condition to the expressions.|
+|[union](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#union(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Unions the results of multiple expressions.|
 
 The market is collapsing! The reason, some say, is that some provider messed up.
 In your contract it is stated that Provider with id 4 provides a given number of streams for each data_type.
