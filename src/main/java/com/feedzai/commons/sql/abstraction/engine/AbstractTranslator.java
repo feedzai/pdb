@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
 import com.feedzai.commons.sql.abstraction.dml.Case;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -371,6 +372,19 @@ public abstract class AbstractTranslator {
         return String.format("CASE %s %s END",
                              whens,
                              elseString);
+    }
+
+    /**
+     * Translates Cast.
+     *
+     * @param cast a cast expression.
+     * @return cast translation.
+     */
+    public String translate(final Cast cast) {
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                this.translate(new DbColumn.Builder().type(cast.getType()).build()));
     }
 
     /**

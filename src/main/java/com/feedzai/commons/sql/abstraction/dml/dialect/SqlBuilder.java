@@ -550,6 +550,17 @@ public final class SqlBuilder {
     }
 
     /**
+     * Creates a cast expression.
+     *
+     * @param expression The expression.
+     * @param type the type to be converted.
+     * @return The cast representation.
+     */
+    public static Cast cast(final Expression expression, final DbColumnType type) {
+        return new Cast(expression, type);
+    }
+
+    /**
      * Returns a new "case when".
      *
      * @return a new "case when".
