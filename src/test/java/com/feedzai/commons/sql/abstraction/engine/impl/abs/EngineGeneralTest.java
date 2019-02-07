@@ -82,6 +82,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.cast;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
@@ -1994,13 +1995,12 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
                 .build());
 
-        final Query query = select(caseWhen().when(eq(column("COL5"), k("teste")), k("LOL")).alias("case"))
-                .from(table("TEST"));
+        final Query query = select(cast(k("22"), INT));
 
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
-        assertEquals("COL5 must be LOL", "LOL", result.get(0).get("case").toString());
-        assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
+        assertEquals("Result must be 22", new Integer(22),
+                result.get(0).get("case").toInt());
     }
 
     @Test
