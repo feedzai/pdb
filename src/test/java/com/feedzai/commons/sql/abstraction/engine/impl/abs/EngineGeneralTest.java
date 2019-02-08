@@ -2086,13 +2086,7 @@ public class EngineGeneralTest {
         final Expression query = union(queries);
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
-        System.out.println(result.size());
         assertEquals("Must return 4 results due to distinct property", 4, result.size());
-
-        System.out.println(result.get(0).get("COL5").toString());
-        System.out.println(result.get(1).get("COL5").toString());
-        System.out.println(result.get(2).get("COL5").toString());
-        System.out.println(result.get(3).get("COL5").toString());
 
         final List<String> resultSorted = result.stream()
                 .map(row -> row.get("COL5").toString())

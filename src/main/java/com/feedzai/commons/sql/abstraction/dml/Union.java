@@ -21,6 +21,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * The union clause.
+ *
  * @author Francisco Santos (francisco.santos@feedzai.com)
  * @since 2.3.1
  */
