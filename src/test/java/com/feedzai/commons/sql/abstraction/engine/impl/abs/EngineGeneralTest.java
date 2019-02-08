@@ -1995,12 +1995,26 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
                 .build());
 
-        final Query query = select(cast(k("22"), INT));
+        final Query query =
+                select(cast(k("22"), INT).alias("int"),
+                        cast(k(22), STRING).alias("string"),
+                        cast(k("true"), BOOLEAN).alias("bool"),
+                        cast(k("22.2"), DOUBLE).alias("double"),
+                        cast(k(22), LONG).alias("long"));
 
+        System.out.println("lalala");
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
         assertEquals("Result must be 22", new Integer(22),
-                result.get(0).get("case").toInt());
+                result.get(0).get("int").toInt());
+        assertEquals("Result must be '22'", "22",
+                result.get(0).get("string").toString());
+        assertEquals("Result must be true", true,
+                result.get(0).get("bool").toBoolean());
+        assertEquals("Result must be 22.2", new Double(22.2),
+                result.get(0).get("double").toDouble());
+        assertEquals("Result must be 22", new Long(22),
+                result.get(0).get("long").toLong());
     }
 
     @Test
