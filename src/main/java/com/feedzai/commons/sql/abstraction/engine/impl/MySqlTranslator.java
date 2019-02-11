@@ -276,8 +276,8 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translateToCast(DbColumn c) {
-        switch (c.getDbColumnType()) {
+    public String translateToCast(DbColumn dc) {
+        switch (dc.getDbColumnType()) {
             case BOOLEAN:
                 return "UNSIGNED";
 
@@ -299,7 +299,7 @@ public class MySqlTranslator extends AbstractTranslator {
                 return "BINARY";
 
             default:
-                throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+                throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", dc.getDbColumnType()));
         }
     }
 

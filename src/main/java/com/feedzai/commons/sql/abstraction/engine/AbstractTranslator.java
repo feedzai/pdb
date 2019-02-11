@@ -480,8 +480,14 @@ public abstract class AbstractTranslator {
      */
     public abstract String translate(DbColumn dc);
 
-    public String translateToCast(DbColumn columnType) {
-        return translate(columnType);
+    /**
+     * Translates {@link DbColumn} type to the cast type.
+     *
+     * @param dc The object to translate.
+     * @return The string representation of the given object.
+     */
+    public String translateToCast(DbColumn dc) {
+        return translate(dc);
     }
 
     /**

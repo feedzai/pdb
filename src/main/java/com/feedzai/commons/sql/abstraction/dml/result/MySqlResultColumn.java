@@ -38,7 +38,7 @@ public class MySqlResultColumn extends ResultColumn {
         try {
             return super.toBoolean();
         } catch (ClassCastException e) {
-            // Since booleans are represented using unsigned integers, we need to convert them.
+            // Since booleans are represented using unsigned integers, when casting, we need to convert them.
             return Long.parseLong(val.toString()) != 0;
         }
     }
