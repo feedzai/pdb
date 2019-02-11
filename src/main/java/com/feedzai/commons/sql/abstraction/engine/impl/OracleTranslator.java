@@ -331,17 +331,19 @@ public class OracleTranslator extends AbstractTranslator {
 
     @Override
     public String translate(Cast cast) {
+        final Expression expression = cast.getExpression();
+        inject(expression);
+
         if (cast.getType() == DbColumnType.BOOLEAN) {
-            final Expression expression = cast.getExpression();
-            inject(expression);
+            final DbColumn column = new DbColumn.Builder().type(DbColumnType.INT).build();
             final String translation = expression.translate()
                     .replaceAll("'", "")
                     .toLowerCase();
 
             if (translation.matches("t|true|1")) {
-                return "CAST(1 AS INT)";
+                return String.format("CAST(1 AS %s)", translateToCast(column));
             } else if (translation.matches("f|false|0")) {
-                return "CAST(0 AS INT)";
+                return String.format("CAST(0 AS %s)", translateToCast(column));
             } else {
                 throw new DatabaseEngineRuntimeException(translation + " is not a valid boolean expression.");
             }

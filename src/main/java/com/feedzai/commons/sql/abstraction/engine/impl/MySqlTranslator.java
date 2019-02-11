@@ -276,6 +276,34 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translateToCast(DbColumn c) {
+        switch (c.getDbColumnType()) {
+            case BOOLEAN:
+                return "UNSIGNED";
+
+            case DOUBLE:
+                return "DECIMAL";
+
+            case INT:
+            case LONG:
+                return "SIGNED";
+
+            case STRING:
+                return "CHAR";
+
+            case JSON:
+                return "JSON";
+
+            case CLOB:
+            case BLOB:
+                return "BINARY";
+
+            default:
+                throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+        }
+    }
+
+    @Override
     public String translate(final StringAgg stringAgg) {
         inject(stringAgg.column);
         return String.format(
@@ -299,5 +327,28 @@ public class MySqlTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "0";
+    }
+
+    @Override
+    public String translate(Cast cast) {
+        final Expression expression = cast.getExpression();
+        inject(expression);
+
+        if (cast.getType() == DbColumnType.BOOLEAN) {
+            final DbColumn column = new DbColumn.Builder().type(cast.getType()).build();
+            final String translation = expression.translate()
+                    .replaceAll("'", "")
+                    .toLowerCase();
+
+            if (translation.matches("t|true|1")) {
+                return String.format("CAST(1 AS %s)", translateToCast(column));
+            } else if (translation.matches("f|false|0")) {
+                return String.format("CAST(0 AS %s)", translateToCast(column));
+            } else {
+                throw new DatabaseEngineRuntimeException(translation + " is not a valid boolean expression.");
+            }
+        } else {
+            return super.translate(cast);
+        }
     }
 }

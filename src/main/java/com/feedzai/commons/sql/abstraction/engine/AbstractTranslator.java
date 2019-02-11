@@ -384,7 +384,7 @@ public abstract class AbstractTranslator {
         inject(cast.getExpression());
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
-                this.translate(new DbColumn.Builder().type(cast.getType()).build()));
+                this.translateToCast(new DbColumn.Builder().type(cast.getType()).build()));
     }
 
     /**
@@ -479,6 +479,10 @@ public abstract class AbstractTranslator {
      * @return The string representation of the given object.
      */
     public abstract String translate(DbColumn dc);
+
+    public String translateToCast(DbColumn columnType) {
+        return translate(columnType);
+    }
 
     /**
      * Translates {@link StringAgg}.

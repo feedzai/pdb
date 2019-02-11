@@ -32,4 +32,14 @@ public class MySqlResultColumn extends ResultColumn {
     public MySqlResultColumn(final String name, final Object val) {
         super(name, val);
     }
+
+    @Override
+    public Boolean toBoolean() {
+        try {
+            return super.toBoolean();
+        } catch (ClassCastException e) {
+            // Since booleans are represented using unsigned integers, we need to convert them.
+            return Long.parseLong(val.toString()) != 0;
+        }
+    }
 }
