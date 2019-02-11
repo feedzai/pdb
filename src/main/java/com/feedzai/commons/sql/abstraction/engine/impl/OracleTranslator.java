@@ -15,8 +15,22 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
@@ -320,11 +334,14 @@ public class OracleTranslator extends AbstractTranslator {
         if (cast.getType() == DbColumnType.BOOLEAN) {
             final Expression expression = cast.getExpression();
             inject(expression);
-            final String translation = expression.translate().replaceAll("'", "").toLowerCase();
+            final String translation = expression.translate()
+                    .replaceAll("'", "")
+                    .toLowerCase();
+
             if (translation.matches("t|true|1")) {
-                return "CAST(1 AS NUMBER(1))";
+                return "CAST(1 AS INT)";
             } else if (translation.matches("f|false|0")) {
-                return "CAST(0 AS NUMBER(1))";
+                return "CAST(0 AS INT)";
             } else {
                 throw new DatabaseEngineRuntimeException(translation + " is not a valid boolean expression.");
             }
