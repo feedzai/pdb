@@ -30,6 +30,7 @@ import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
+import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -123,6 +124,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -1987,6 +1989,89 @@ public class EngineGeneralTest {
                                 between(column("COL1"), k(1), k(2))
                         )
         );
+    }
+
+    @Test
+    public void testWith() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with = with("friends", select(all())
+                                                .from(table("TEST")))
+                .then(
+                        select(column("COL5").alias("name"))
+                        .from(table("friends"))
+                        .where(eq(column("COL1"), k(1))));
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        assertEquals("Name must be 'manuel'", "manuel", result.get(0).get("name").toString());
+    }
+
+    @Test
+    public void testWithAll() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with = with("friends", select(all())
+                                                .from(table("TEST")))
+                .then(
+                        select(column("COL5").alias("name"))
+                        .from(table("friends"))
+                        .orderby(column("COL5")));
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
+        assertEquals("Name must be 'manuel'", "manuel", result.get(1).get("name").toString());
+        assertEquals("Name must be 'rita'", "rita", result.get(2).get("name").toString());
+        assertEquals("Name must be 'rui'", "rui", result.get(3).get("name").toString());
+    }
+
+    @Test
+    public void testWithMultiple() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with =
+                with("friendsA", select(all())
+                                      .from(table("TEST"))
+                                      .where(or(eq(column("COL1"), k(1)), eq(column("COL1"), k(2)))))
+                .andWith("friendsB", select(all())
+                                          .from(table("TEST"))
+                                          .where(or(eq(column("COL1"), k(3)), eq(column("COL1"), k(4)))))
+                .then(
+                        select(column("COL5").alias("name"))
+                        .from(table("friends"))
+                        .orderby(column("COL5")));
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
+        assertEquals("Name must be 'manuel'", "manuel", result.get(1).get("name").toString());
+        assertEquals("Name must be 'rita'", "rita", result.get(2).get("name").toString());
+        assertEquals("Name must be 'rui'", "rui", result.get(3).get("name").toString());
     }
 
     @Test

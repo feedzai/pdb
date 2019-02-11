@@ -38,11 +38,14 @@ import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
+import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -334,6 +337,29 @@ public abstract class AbstractTranslator {
         }
 
         return join(temp, " ");
+    }
+
+    public String translate(final With with) {
+
+        final List<ImmutablePair<Name, Expression>> withs = with.getWiths();
+
+        withs.forEach(aWith -> {
+            injector.injectMembers(aWith.getLeft());
+            injector.injectMembers(aWith.getRight());
+        });
+
+        final String withStatements = withs.stream()
+                .map(aWith -> aWith.getLeft().translate() + " AS (" + aWith.getRight().translate() + ")")
+                .collect(Collectors.joining(", "));
+
+        final Expression then = with.getThen();
+
+        if (then != null) {
+            inject(then);
+            return String.format("WITH %s %s", withStatements, then.translate());
+        } else {
+            return String.format("WITH %s", withStatements);
+        }
     }
 
     /**
