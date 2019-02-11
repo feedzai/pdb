@@ -43,6 +43,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -1993,6 +1994,11 @@ public class EngineGeneralTest {
 
     @Test
     public void testWith() throws DatabaseEngineException {
+        if (this.engine instanceof MySqlEngine) {
+            // MySQL does not support With
+            return;
+        }
+
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
@@ -2017,6 +2023,11 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithAll() throws DatabaseEngineException {
+        if (this.engine instanceof MySqlEngine) {
+            // MySQL does not support With
+            return;
+        }
+
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
@@ -2044,6 +2055,11 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithMultiple() throws DatabaseEngineException {
+        if (this.engine instanceof MySqlEngine) {
+            // MySQL does not support With
+            return;
+        }
+
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
