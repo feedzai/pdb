@@ -2058,20 +2058,25 @@ public class EngineGeneralTest {
                 with("friendsA", select(all())
                                       .from(table("TEST"))
                                       .where(or(eq(column("COL1"), k(1)), eq(column("COL1"), k(2)))))
+
                 .andWith("friendsB", select(all())
                                           .from(table("TEST"))
                                           .where(or(eq(column("COL1"), k(3)), eq(column("COL1"), k(4)))))
                 .then(
-                        select(column("COL5").alias("name"))
-                        .from(table("friends"))
-                        .orderby(column("COL5")));
+                        union(select(all()).from(table("friendsA")),
+                              select(all()).from(table("friendsB"))));
 
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
-        assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
-        assertEquals("Name must be 'manuel'", "manuel", result.get(1).get("name").toString());
-        assertEquals("Name must be 'rita'", "rita", result.get(2).get("name").toString());
-        assertEquals("Name must be 'rui'", "rui", result.get(3).get("name").toString());
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("Name must be 'ana'", "ana", resultSorted.get(0));
+        assertEquals("Name must be 'manuel'", "manuel", resultSorted.get(1));
+        assertEquals("Name must be 'rita'", "rita", resultSorted.get(2));
+        assertEquals("Name must be 'rui'", "rui", resultSorted.get(3));
     }
 
     @Test
