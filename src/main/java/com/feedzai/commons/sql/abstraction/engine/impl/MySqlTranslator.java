@@ -278,7 +278,7 @@ public class MySqlTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final With with) {
-        throw new OperationNotSupportedRuntimeException("MySQL 5.7 does not support WITH");
+        throw new OperationNotSupportedRuntimeException("MySQL does not support WITH");
     }
 
     @Override
