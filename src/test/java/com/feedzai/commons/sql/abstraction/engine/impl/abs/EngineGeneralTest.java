@@ -56,7 +56,9 @@ import mockit.Verifications;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
@@ -153,6 +155,9 @@ public class EngineGeneralTest {
 
     protected DatabaseEngine engine;
     protected Properties properties;
+
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
@@ -1994,10 +1999,6 @@ public class EngineGeneralTest {
 
     @Test
     public void testWith() throws DatabaseEngineException {
-        if (this.engine instanceof MySqlEngine) {
-            // MySQL does not support With
-            return;
-        }
 
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
@@ -2016,6 +2017,11 @@ public class EngineGeneralTest {
                         .from(table("friends"))
                         .where(eq(column("COL1"), k(1))));
 
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
+
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
         assertEquals("Name must be 'manuel'", "manuel", result.get(0).get("name").toString());
@@ -2023,10 +2029,6 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithAll() throws DatabaseEngineException {
-        if (this.engine instanceof MySqlEngine) {
-            // MySQL does not support With
-            return;
-        }
 
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
@@ -2047,6 +2049,11 @@ public class EngineGeneralTest {
                         .from(table("friends"))
                         .orderby(column("COL5")));
 
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
+
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
         assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
@@ -2057,10 +2064,6 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithMultiple() throws DatabaseEngineException {
-        if (this.engine instanceof MySqlEngine) {
-            // MySQL does not support With
-            return;
-        }
 
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
@@ -2085,6 +2088,11 @@ public class EngineGeneralTest {
                 .then(
                         union(select(all()).from(table("friendsA")),
                               select(all()).from(table("friendsB"))));
+
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
 
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
