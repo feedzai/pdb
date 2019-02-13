@@ -45,7 +45,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -341,15 +340,15 @@ public abstract class AbstractTranslator {
 
     public String translate(final With with) {
 
-        final List<ImmutablePair<Name, Expression>> withs = with.getWiths();
+        final List<ImmutablePair<Name, Expression>> clauses = with.getClauses();
 
-        withs.forEach(aWith -> {
-            injector.injectMembers(aWith.getLeft());
-            injector.injectMembers(aWith.getRight());
+        clauses.forEach(clause -> {
+            injector.injectMembers(clause.getLeft());
+            injector.injectMembers(clause.getRight());
         });
 
-        final String withStatements = withs.stream()
-                .map(aWith -> aWith.getLeft().translate() + " AS (" + aWith.getRight().translate() + ")")
+        final String withStatements = clauses.stream()
+                .map(clause -> clause.getLeft().translate() + " AS (" + clause.getRight().translate() + ")")
                 .collect(Collectors.joining(", "));
 
         final Expression then = with.getThen();

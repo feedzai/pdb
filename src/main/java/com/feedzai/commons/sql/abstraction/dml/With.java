@@ -28,27 +28,62 @@ import java.util.List;
  */
 public class With extends Expression {
 
-    private final List<ImmutablePair<Name, Expression>> withs;
+    /**
+     * The clauses.
+     */
+    private final List<ImmutablePair<Name, Expression>> clauses;
 
+    /**
+     * Expression to execute given the with clauses.
+     */
     private Expression then;
 
+    /**
+     * Creates a new WITH expression.
+     *
+     * @param alias expression alias.
+     * @param expression expression to be aliased.
+     */
     public With(final String alias, final Expression expression) {
-        this.withs = Lists.newArrayList(new ImmutablePair<>(new Name(alias), expression));
+        this.clauses = Lists.newArrayList(new ImmutablePair<>(new Name(alias), expression));
     }
 
-    public List<ImmutablePair<Name, Expression>> getWiths() {
-        return withs;
+    /**
+     * Gets the clauses.
+     *
+     * @return the clauses.
+     */
+    public List<ImmutablePair<Name, Expression>> getClauses() {
+        return clauses;
     }
 
+    /**
+     * Gets the then expression.
+     *
+     * @return the then expression.
+     */
     public Expression getThen() {
         return then;
     }
 
+    /**
+     * Adds an alias and expression to the with clause.
+     *
+     * @param alias expression alias
+     * @param expression expression to be aliased.
+     * @return this object.
+     */
     public With andWith(final String alias, final Expression expression) {
-        this.withs.add(new ImmutablePair<>(new Name(alias), expression));
+        this.clauses.add(new ImmutablePair<>(new Name(alias), expression));
         return this;
     }
 
+    /**
+     * Sets the expression to be executed given the clauses.
+     *
+     * @param thenExpression expression to be executed given the clauses.
+     * @return this object.
+     */
     public With then(final Expression thenExpression) {
         this.then = thenExpression;
         return this;
