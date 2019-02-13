@@ -33,12 +33,11 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
-import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -75,8 +74,6 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.ORACLE;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.SQLSERVER;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
@@ -1985,15 +1982,10 @@ public class EngineGeneralTest {
 
     @Test
     public void testCast() throws DatabaseEngineException {
-        test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
-                .build());
+        if (engine instanceof MySqlEngine) {
+            // CAST not supported.
+            return;
+        }
 
         final Query query =
                 select(cast(k("22"), INT).alias("int"),
@@ -2014,6 +2006,49 @@ public class EngineGeneralTest {
                 result.get(0).get("double").toDouble());
         assertEquals("Result must be 22", new Long(22),
                 result.get(0).get("long").toLong());
+    }
+
+
+    @Test
+    public void testCastColumns() throws DatabaseEngineException {
+        if (engine instanceof MySqlEngine) {
+            // CAST not supported.
+            return;
+        }
+
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "1")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "2")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "3")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "4")
+                .build());
+
+        final Query query =
+                select(cast(column("COL1"), STRING).alias("string"),
+                        cast(column("COL5"), INT).alias("int"))
+                .from(table("TEST"));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Result must be 1", new Integer(1),
+                result.get(0).get("int").toInt());
+        assertEquals("Result must be 2", new Integer(2),
+                result.get(1).get("int").toInt());
+        assertEquals("Result must be 3", new Integer(3),
+                result.get(2).get("int").toInt());
+        assertEquals("Result must be 4", new Integer(4),
+                result.get(3).get("int").toInt());
+        assertEquals("Result must be '1'", "1",
+                result.get(0).get("string").toString());
+        assertEquals("Result must be '2'", "2",
+                result.get(1).get("string").toString());
+        assertEquals("Result must be '3'", "3",
+                result.get(2).get("string").toString());
+        assertEquals("Result must be '4'", "4",
+                result.get(3).get("string").toString());
     }
 
     @Test

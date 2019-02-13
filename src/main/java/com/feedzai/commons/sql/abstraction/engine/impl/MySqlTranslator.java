@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -276,31 +277,8 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translateToCast(DbColumn dc) {
-        switch (dc.getDbColumnType()) {
-            case BOOLEAN:
-                return "UNSIGNED";
-
-            case DOUBLE:
-                return "DECIMAL";
-
-            case INT:
-            case LONG:
-                return "SIGNED";
-
-            case STRING:
-                return "CHAR";
-
-            case JSON:
-                return "JSON";
-
-            case CLOB:
-            case BLOB:
-                return "BINARY";
-
-            default:
-                throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", dc.getDbColumnType()));
-        }
+    public String translate(final DbColumnType type) {
+        throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
     }
 
     @Override
@@ -331,24 +309,6 @@ public class MySqlTranslator extends AbstractTranslator {
 
     @Override
     public String translate(Cast cast) {
-        final Expression expression = cast.getExpression();
-        inject(expression);
-
-        if (cast.getType() == DbColumnType.BOOLEAN) {
-            final DbColumn column = new DbColumn.Builder().type(cast.getType()).build();
-            final String translation = expression.translate()
-                    .replaceAll("'", "")
-                    .toLowerCase();
-
-            if (translation.matches("t|true|1")) {
-                return String.format("CAST(1 AS %s)", translateToCast(column));
-            } else if (translation.matches("f|false|0")) {
-                return String.format("CAST(0 AS %s)", translateToCast(column));
-            } else {
-                throw new DatabaseEngineRuntimeException(translation + " is not a valid boolean expression.");
-            }
-        } else {
-            return super.translate(cast);
-        }
+        throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
     }
 }

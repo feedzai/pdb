@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -289,6 +290,29 @@ public class H2Translator extends AbstractTranslator {
 
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+        }
+    }
+
+    @Override
+    public String translate(final DbColumnType type) {
+        switch (type) {
+            case BOOLEAN:
+                return "BOOLEAN";
+
+            case DOUBLE:
+                return "DOUBLE";
+
+            case INT:
+                return "INTEGER";
+
+            case LONG:
+                return "BIGINT";
+
+            case STRING:
+                return "VARCHAR";
+
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
         }
     }
 

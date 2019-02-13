@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -31,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -317,6 +319,29 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                         "Mapping not found for '%s'. Please report this error.",
                         c.getDbColumnType()
                 ));
+        }
+    }
+
+    @Override
+    public String translate(final DbColumnType type) {
+        switch (type) {
+            case BOOLEAN:
+                return "BOOLEAN";
+
+            case DOUBLE:
+                return "DOUBLE PRECISION";
+
+            case INT:
+                return "INT";
+
+            case LONG:
+                return "BIGINT";
+
+            case STRING:
+                return "VARCHAR";
+
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
         }
     }
 

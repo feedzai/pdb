@@ -25,6 +25,7 @@ import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
@@ -297,6 +298,29 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final DbColumnType type) {
+        switch (type) {
+            case BOOLEAN:
+                return "NUMBER(1,0)";
+
+            case DOUBLE:
+                return "BINARY_DOUBLE";
+
+            case INT:
+                return "INT";
+
+            case LONG:
+                return "NUMBER(19,0)";
+
+            case STRING:
+                return "VARCHAR";
+
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
+        }
+    }
+
+    @Override
     public String translate(final StringAgg stringAgg) {
         if (stringAgg.isDistinct()) {
             throw new OperationNotSupportedRuntimeException("LISTAGG does not support distinct. If you really need it, " +
@@ -335,18 +359,21 @@ public class OracleTranslator extends AbstractTranslator {
         inject(expression);
 
         if (cast.getType() == DbColumnType.BOOLEAN) {
-            final DbColumn column = new DbColumn.Builder().type(DbColumnType.INT).build();
-            final String translation = expression.translate()
-                    .replaceAll("'", "")
-                    .toLowerCase();
+            if (expression instanceof K) {
+                final String translation = expression.translate()
+                        .replaceAll("'", "")
+                        .toLowerCase();
 
-            if (translation.matches("t|true|1")) {
-                return String.format("CAST(1 AS %s)", translateToCast(column));
-            } else if (translation.matches("f|false|0")) {
-                return String.format("CAST(0 AS %s)", translateToCast(column));
-            } else {
-                throw new DatabaseEngineRuntimeException(translation + " is not a valid boolean expression.");
+                if (translation.matches("t|true|1")) {
+                    return "CAST(1 AS INT)";
+                } else if (translation.matches("f|false|0")) {
+                    return "CAST(0 AS INT)";
+                }
             }
+            // If expression is a K, but it does not match the regex
+            // OR
+            // expression is not a K
+            return String.format("CAST(%s AS INT)", expression.translate());
         } else {
             return super.translate(cast);
         }

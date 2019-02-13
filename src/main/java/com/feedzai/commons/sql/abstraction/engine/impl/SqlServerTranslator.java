@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -350,6 +351,29 @@ public class SqlServerTranslator extends AbstractTranslator {
 
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
+        }
+    }
+
+    @Override
+    public String translate(final DbColumnType type) {
+        switch (type) {
+            case BOOLEAN:
+                return "BIT";
+
+            case DOUBLE:
+                return "DOUBLE PRECISION";
+
+            case INT:
+                return "INT";
+
+            case LONG:
+                return "BIGINT";
+
+            case STRING:
+                return "NVARCHAR";
+
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
         }
     }
 

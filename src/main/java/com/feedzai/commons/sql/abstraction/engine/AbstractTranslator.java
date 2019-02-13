@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
@@ -381,10 +382,16 @@ public abstract class AbstractTranslator {
      * @return cast translation.
      */
     public String translate(final Cast cast) {
+        // PDB does not support cast to JSON, CLOB and BLOB.
+        if (cast.getType() == DbColumnType.BLOB || cast.getType() == DbColumnType.CLOB
+                || cast.getType() == DbColumnType.JSON) {
+            throw new OperationNotSupportedRuntimeException("Cast to " + cast.getType() + " is not supported in PDB.");
+        }
+
         inject(cast.getExpression());
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
-                this.translateToCast(new DbColumn.Builder().type(cast.getType()).build()));
+                this.translate(cast.getType()));
     }
 
     /**
@@ -481,14 +488,12 @@ public abstract class AbstractTranslator {
     public abstract String translate(DbColumn dc);
 
     /**
-     * Translates {@link DbColumn} type to the cast type.
+     * Translates {@link DbColumnType}.
      *
-     * @param dc The object to translate.
+     * @param type The object to translate.
      * @return The string representation of the given object.
      */
-    public String translateToCast(DbColumn dc) {
-        return translate(dc);
-    }
+    public abstract String translate(DbColumnType type);
 
     /**
      * Translates {@link StringAgg}.
