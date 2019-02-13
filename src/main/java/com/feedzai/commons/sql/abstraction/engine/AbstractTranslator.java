@@ -37,6 +37,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
@@ -49,9 +50,11 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.singleQuotize;
@@ -422,6 +425,36 @@ public abstract class AbstractTranslator {
         return expressions.stream()
                 .map(Expression::translate)
                 .collect(Collectors.joining(delimiter));
+    }
+
+    /**
+     * Translates Values.
+     *
+     * @param values a values.
+     * @return values translation.
+     */
+    public String translate(final Values values) {
+        // By default, use UNION to express VALUES.
+        // This way, only engines that support VALUES will implement it.
+        final String[] names = values.getNames();
+        final List<Values.Row> rows = values.getRows();
+        final List<Expression> firstRowExpressions = rows.get(0).getExpressions();
+
+        for (int i = 0; i < firstRowExpressions.size() && i < names.length; i++) {
+            firstRowExpressions.get(i).alias(names[i]);
+        }
+
+        return union(new ArrayList<>(rows))
+                .all()
+                .translate();
+    }
+
+    public String translate(final Values.Row row) {
+        inject(row.getExpressions());
+        final String translation = row.getExpressions().stream()
+                .map(Expression::translate)
+                .collect(Collectors.joining(", "));
+        return "(" + translation + ")";
     }
 
     /**

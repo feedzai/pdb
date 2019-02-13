@@ -29,6 +29,7 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -117,6 +118,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.row;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
@@ -127,6 +129,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.values;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -2333,6 +2336,34 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be c", "c", resultSorted.get(2));
         assertEquals("COL5 must be d", "d", resultSorted.get(3));
         assertEquals("COL5 must be d", "d", resultSorted.get(4));
+    }
+
+    @Test
+    public void testValues() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+                .build());
+
+        final Values values = values("id", "name")
+                .rows(row(k(1), k("ana")));
+                //        row(k(2), k("fred")),
+                //        row(k(3), k("manuel")),
+                //        row(k(4), k("rita")));
+        System.out.println("LALA");
+        final List<Map<String, ResultColumn>> result = engine.query(values);
+        System.out.println("lol " + result.get(0).get("name").toString());
+
+
+        // assertEquals("COL5 must be LOL", "LOL", result.get(0).get("case").toString());
+        // assertEquals("COL5 must be ROFL", "ROFL", result.get(1).get("case").toString());
+        // assertEquals("COL5 must be ROFL", "ROFL", result.get(2).get("case").toString());
+        // assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
     }
 
     @Test
