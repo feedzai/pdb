@@ -37,6 +37,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -47,10 +48,13 @@ import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
 import mockit.Verifications;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
@@ -141,6 +145,9 @@ public class EngineGeneralTest {
 
     protected DatabaseEngine engine;
     protected Properties properties;
+
+    @Rule
+    public final ExpectedException exception = ExpectedException.none();
 
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
@@ -1980,12 +1987,10 @@ public class EngineGeneralTest {
         );
     }
 
+
+
     @Test
     public void testCast() throws DatabaseEngineException {
-        if (engine instanceof MySqlEngine) {
-            // CAST not supported.
-            return;
-        }
 
         final Query query =
                 select(cast(k("22"), INT).alias("int"),
@@ -1993,6 +1998,11 @@ public class EngineGeneralTest {
                         cast(k("true"), BOOLEAN).alias("bool"),
                         cast(k("22"), DOUBLE).alias("double"),
                         cast(k(22), LONG).alias("long"));
+
+        // CAST not supported.
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);
+        }
 
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
@@ -2008,13 +2018,8 @@ public class EngineGeneralTest {
                 result.get(0).get("long").toLong());
     }
 
-
     @Test
     public void testCastColumns() throws DatabaseEngineException {
-        if (engine instanceof MySqlEngine) {
-            // CAST not supported.
-            return;
-        }
 
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "1")
@@ -2030,6 +2035,11 @@ public class EngineGeneralTest {
                 select(cast(column("COL1"), STRING).alias("string"),
                         cast(column("COL5"), INT).alias("int"))
                 .from(table("TEST"));
+
+        // CAST not supported.
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);
+        }
 
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
@@ -2049,6 +2059,12 @@ public class EngineGeneralTest {
                 result.get(2).get("string").toString());
         assertEquals("Result must be '4'", "4",
                 result.get(3).get("string").toString());
+    }
+
+    @Test(expected = OperationNotSupportedRuntimeException.class)
+    public void testCastUnsupported() throws DatabaseEngineException {
+        // Check if exception is thrown when trying to cast for an unsupported type.
+        engine.query(select(cast(k("22"), BLOB)));
     }
 
     @Test

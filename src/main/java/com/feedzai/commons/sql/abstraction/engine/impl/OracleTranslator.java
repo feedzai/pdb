@@ -44,6 +44,7 @@ import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 import static java.lang.String.format;
 
 /**
@@ -313,7 +314,7 @@ public class OracleTranslator extends AbstractTranslator {
                 return "NUMBER(19,0)";
 
             case STRING:
-                return "VARCHAR";
+                return format("VARCHAR(%s)", properties.getProperty(VARCHAR_SIZE));
 
             default:
                 throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));

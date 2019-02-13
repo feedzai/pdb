@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.*;
@@ -85,6 +86,11 @@ public class CustomTranslator extends AbstractTranslator {
 
     @Override
     public String translate(DbColumn dc) {
+        return null;
+    }
+
+    @Override
+    public String translate(final DbColumnType type) {
         return null;
     }
 

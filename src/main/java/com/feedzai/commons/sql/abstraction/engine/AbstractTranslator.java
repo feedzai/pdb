@@ -383,11 +383,6 @@ public abstract class AbstractTranslator {
      */
     public String translate(final Cast cast) {
         // PDB does not support cast to JSON, CLOB and BLOB.
-        if (cast.getType() == DbColumnType.BLOB || cast.getType() == DbColumnType.CLOB
-                || cast.getType() == DbColumnType.JSON) {
-            throw new OperationNotSupportedRuntimeException("Cast to " + cast.getType() + " is not supported in PDB.");
-        }
-
         inject(cast.getExpression());
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),

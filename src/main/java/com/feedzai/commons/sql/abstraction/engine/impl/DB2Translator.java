@@ -367,7 +367,7 @@ public class DB2Translator extends AbstractTranslator {
                 return "NUMERIC(19,0)";
 
             case STRING:
-                return "VARCHAR";
+                return format("VARCHAR(%s)", properties.getProperty(VARCHAR_SIZE));
 
             default:
                 throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
