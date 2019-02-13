@@ -32,8 +32,8 @@ public class With extends Expression {
 
     private Expression then;
 
-    public With(final String name, final Expression expression) {
-        this.withs = Lists.newArrayList(new ImmutablePair<>(new Name(name), expression));
+    public With(final String alias, final Expression expression) {
+        this.withs = Lists.newArrayList(new ImmutablePair<>(new Name(alias), expression));
     }
 
     public List<ImmutablePair<Name, Expression>> getWiths() {
@@ -44,8 +44,8 @@ public class With extends Expression {
         return then;
     }
 
-    public With andWith(final String name, final Expression expression) {
-        this.withs.add(new ImmutablePair<>(new Name(name), expression));
+    public With andWith(final String alias, final Expression expression) {
+        this.withs.add(new ImmutablePair<>(new Name(alias), expression));
         return this;
     }
 
@@ -56,8 +56,6 @@ public class With extends Expression {
 
     @Override
     public String translate() {
-        final String translate = translator.translate(this);
-        System.out.println("lol "+ translate);
-        return translate;
+        return translator.translate(this);
     }
 }

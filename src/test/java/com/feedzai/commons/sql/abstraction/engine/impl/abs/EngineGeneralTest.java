@@ -2038,8 +2038,10 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
                 .build());
 
-        final With with = with("friends", select(all())
-                                                .from(table("TEST")))
+        final With with =
+                with("friends",
+                        select(all())
+                        .from(table("TEST")))
                 .then(
                         select(column("COL5").alias("name"))
                         .from(table("friends"))
@@ -2071,13 +2073,15 @@ public class EngineGeneralTest {
                 .build());
 
         final With with =
-                with("friendsA", select(all())
-                                      .from(table("TEST"))
-                                      .where(or(eq(column("COL1"), k(1)), eq(column("COL1"), k(2)))))
+                with("friendsA",
+                        select(all())
+                        .from(table("TEST"))
+                        .where(or(eq(column("COL1"), k(1)), eq(column("COL1"), k(2)))))
 
-                .andWith("friendsB", select(all())
-                                          .from(table("TEST"))
-                                          .where(or(eq(column("COL1"), k(3)), eq(column("COL1"), k(4)))))
+                .andWith("friendsB",
+                        select(all())
+                        .from(table("TEST"))
+                        .where(or(eq(column("COL1"), k(3)), eq(column("COL1"), k(4)))))
                 .then(
                         union(select(all()).from(table("friendsA")),
                               select(all()).from(table("friendsB"))));
