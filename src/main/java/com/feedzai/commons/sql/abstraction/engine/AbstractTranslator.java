@@ -383,10 +383,38 @@ public abstract class AbstractTranslator {
      */
     public String translate(final Cast cast) {
         // PDB does not support cast to JSON, CLOB and BLOB.
+        // An exception will be thrown when trying to translate the data type.
+
         inject(cast.getExpression());
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
                 this.translate(cast.getType()));
+    }
+
+    /**
+     * Translates the expression and tries to return its boolean value.
+     * If it can't, it returns null.
+     *
+     * @param expression the expression to translate the boolean value.
+     * @return the boolean value if possible, null otherwise.
+     */
+    protected String tryBooleanTranslate(final Expression expression) {
+
+        // Have the translation easier to match the regex below.
+        final String translation = expression.translate()
+                .replaceAll("'", "")
+                .toLowerCase();
+
+        // If matches a true value, then set the value to '1'.
+        // If matches a false value, then set the value to '0'.
+        // Else, just let it be.
+        if (translation.matches("t|true|1")) {
+            return translateTrue();
+        } else if (translation.matches("f|false|0")) {
+            return translateFalse();
+        } else {
+            return null;
+        }
     }
 
     /**

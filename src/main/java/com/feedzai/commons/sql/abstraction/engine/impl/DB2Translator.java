@@ -413,21 +413,16 @@ public class DB2Translator extends AbstractTranslator {
         inject(expression);
 
         if (cast.getType() == DbColumnType.BOOLEAN) {
-            if (expression instanceof K) {
-                final String translation = expression.translate()
-                        .replaceAll("'", "")
-                        .toLowerCase();
+            String translation = null;
 
-                if (translation.matches("t|true|1")) {
-                    return "CAST(1 AS INT)";
-                } else if (translation.matches("f|false|0")) {
-                    return "CAST(0 AS INT)";
-                }
+            // If expression is a K, then we may need to resolve its value.
+            if (expression instanceof K) {
+                translation = tryBooleanTranslate(expression);
             }
-            // If expression is a K, but it does not match the regex
-            // OR
-            // expression is not a K
-            return String.format("CAST(%s AS INT)", expression.translate());
+
+            return String.format("CAST(%s AS %s)",
+                    translation != null ? translation : expression.translate(),
+                    translate(cast.getType()));
         } else {
             return super.translate(cast);
         }
