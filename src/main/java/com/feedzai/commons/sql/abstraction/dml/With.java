@@ -24,7 +24,7 @@ import java.util.List;
  * With SQL Expression.
  *
  * @author Francisco Santos (francisco.santos@feedzai.com)
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class With extends Expression {
 
