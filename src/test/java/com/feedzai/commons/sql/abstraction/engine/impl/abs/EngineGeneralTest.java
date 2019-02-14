@@ -2351,19 +2351,22 @@ public class EngineGeneralTest {
                 .build());
 
         final Values values = values("id", "name")
-                .rows(row(k(1), k("ana")));
-                //        row(k(2), k("fred")),
-                //        row(k(3), k("manuel")),
-                //        row(k(4), k("rita")));
-        System.out.println("LALA");
+                .rows(row(k(1), k("ana")),
+                        row(k(2), k("fred")),
+                        row(k(3), k("manuel")),
+                        row(k(4), k("rita")));
+
         final List<Map<String, ResultColumn>> result = engine.query(values);
-        System.out.println("lol " + result.get(0).get("name").toString());
 
+        assertEquals("id must be 1", new Integer(1), result.get(0).get("id").toInt());
+        assertEquals("id must be 2", new Integer(2), result.get(1).get("id").toInt());
+        assertEquals("id must be 3", new Integer(3), result.get(2).get("id").toInt());
+        assertEquals("id must be 4", new Integer(4), result.get(3).get("id").toInt());
 
-        // assertEquals("COL5 must be LOL", "LOL", result.get(0).get("case").toString());
-        // assertEquals("COL5 must be ROFL", "ROFL", result.get(1).get("case").toString());
-        // assertEquals("COL5 must be ROFL", "ROFL", result.get(2).get("case").toString());
-        // assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
+        assertEquals("name must be 'ana'", "ana", result.get(0).get("name").toString());
+        assertEquals("name must be 'fred'", "fred", result.get(1).get("name").toString());
+        assertEquals("name must be 'manuel'", "manuel", result.get(2).get("name").toString());
+        assertEquals("name must be 'rita'", "rita", result.get(3).get("name").toString());
     }
 
     @Test

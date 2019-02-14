@@ -613,14 +613,42 @@ public final class SqlBuilder {
         return new Union(expressions);
     }
 
-    public static Values values(final String... alias) {
-        return new Values(alias);
+    /**
+     * Creates a values expression.
+     *
+     * @param aliases the columns' aliases.
+     * @return The values representation.
+     */
+    public static Values values(final String... aliases) {
+        return new Values(aliases);
     }
 
+    /**
+     * Creates a values expression.
+     *
+     * @param aliases the columns' aliases.
+     * @return The values representation.
+     */
+    public static Values values(final Collection<String> aliases) {
+        return new Values(aliases);
+    }
+
+    /**
+     * Creates a row expression.
+     *
+     * @param expressions the row's expressions.
+     * @return The row representation.
+     */
     public static Values.Row row(final Expression... expressions) {
         return new Values.Row(expressions);
     }
 
+    /**
+     * Creates a row expression.
+     *
+     * @param expressions the row's expressions.
+     * @return The row representation.
+     */
     public static Values.Row row(final Collection<Expression> expressions) {
         return new Values.Row(expressions);
     }

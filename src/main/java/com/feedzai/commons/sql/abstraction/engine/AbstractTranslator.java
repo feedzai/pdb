@@ -50,7 +50,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -434,9 +433,9 @@ public abstract class AbstractTranslator {
      * @return values translation.
      */
     public String translate(final Values values) {
-        // By default, use UNION to express VALUES.
+        // By default, use UNION ALL to express VALUES.
         // This way, only engines that support VALUES will implement it.
-        final String[] names = values.getNames();
+        final String[] names = values.getAliases();
         final List<Values.Row> rows = values.getRows();
         final List<Expression> firstRowExpressions = rows.get(0).getExpressions();
 
@@ -444,17 +443,25 @@ public abstract class AbstractTranslator {
             firstRowExpressions.get(i).alias(names[i]);
         }
 
-        return union(new ArrayList<>(rows))
-                .all()
-                .translate();
+        // Alias is mandatory after the sub query
+        return translate(union(new ArrayList<>(rows)).all());
     }
 
+    /**
+     * Translates Values.Row.
+     *
+     * @param row a values.row.
+     * @return values.row translation.
+     */
     public String translate(final Values.Row row) {
         inject(row.getExpressions());
         final String translation = row.getExpressions().stream()
-                .map(Expression::translate)
+                .map(expression -> {
+                    final String alias = expression.isAliased() ? " AS " + quotize(expression.getAlias()) : "";
+                    return expression.translate() + alias;
+                })
                 .collect(Collectors.joining(", "));
-        return "(" + translation + ")";
+        return "SELECT " + translation;
     }
 
     /**

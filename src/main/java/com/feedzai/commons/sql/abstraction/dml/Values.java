@@ -20,31 +20,60 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
-
 /**
- * The union clause.
+ * The Values clause.
  *
  * @author Francisco Santos (francisco.santos@feedzai.com)
  * @since 2.3.1
  */
 public class Values extends Expression {
 
+    /**
+     * The columns' aliases.
+     */
+    private final String[] aliases;
+
+    /**
+     * The rows.
+     */
     private final List<Row> rows;
 
-    private final String[] names;
-
-    public Values(String... names) {
-        this.names = names;
+    /**
+     * Creates a new Values.
+     * 
+     * @param aliases the columns' aliases.
+     */
+    public Values(final String... aliases) {
+        this.aliases = aliases;
         this.rows = new ArrayList<>();
     }
 
-    public List<Row> getRows() {
-        return rows;
+    /**
+     * Creates a new Values.
+     *
+     * @param aliases the columns' aliases.
+     */
+    public Values(final Collection<String> aliases) {
+        this.aliases = aliases.toArray(new String[0]);
+        this.rows = new ArrayList<>();
     }
 
-    public String[] getNames() {
-        return names;
+    /**
+     * Gets the columns' aliases.
+     *
+     * @return the columns' aliases.
+     */
+    public String[] getAliases() {
+        return aliases;
+    }
+
+    /**
+     * Gets the rows.
+     *
+     * @return the rows.
+     */
+    public List<Row> getRows() {
+        return rows;
     }
 
     @Override
@@ -85,28 +114,62 @@ public class Values extends Expression {
         }*/
     }
 
+    /**
+     * Adds rows to values.
+     *
+     * @param newRows new rows to be added.
+     * @return this values.
+     */
     public Values rows(final Row... newRows) {
         this.rows.addAll(Arrays.asList(newRows));
         return this;
     }
 
+    /**
+     * Adds rows to values.
+     *
+     * @param newRows new rows to be added.
+     * @return this values.
+     */
     public Values rows(final Collection<Row> newRows) {
         this.rows.addAll(newRows);
         return this;
     }
 
 
+    /**
+     * The internal Values expression Row
+     */
     public static class Row extends Expression {
+        
+        /**
+         * The list of expressions on the row.
+         */
         private final List<Expression> expressions;
 
+        /**
+         * Creates a new row.
+         * 
+         * @param expressions the expressions on the row.
+         */
         public Row(final Collection<Expression> expressions) {
             this.expressions = new ArrayList<>(expressions);
         }
 
+        /**
+         * Creates a new row.
+         *
+         * @param expressions the expressions on the row.
+         */
         public Row(final Expression... expressions) {
             this.expressions = Arrays.asList(expressions);
         }
 
+        /**
+         * Gets the list of expressions.
+         * 
+         * @return the list of expressions.
+         */
         public List<Expression> getExpressions() {
             return expressions;
         }
