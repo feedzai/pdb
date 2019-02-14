@@ -374,6 +374,12 @@ public abstract class AbstractTranslator {
                              elseString);
     }
 
+    /**
+     * Translates {@link Union}.
+     *
+     * @param union a union.
+     * @return union translation.
+     */
     public String translate(final Union union) {
         final List<Expression> expressions = union.getExpressions();
         final String delimiter = union.isAll() ? " UNION ALL " : " UNION ";
