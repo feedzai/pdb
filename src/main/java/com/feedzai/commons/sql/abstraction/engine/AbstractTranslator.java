@@ -452,6 +452,7 @@ public abstract class AbstractTranslator {
 
         return row.getExpressions().stream()
                 .map(expression -> {
+                    // Enforce aliases to be translated.
                     final String alias = expression.isAliased() ? " AS " + quotize(expression.getAlias()) : "";
                     return expression.translate() + alias;
                 })
