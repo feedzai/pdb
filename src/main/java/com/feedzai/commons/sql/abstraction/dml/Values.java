@@ -15,10 +15,14 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The Values clause.
@@ -36,7 +40,7 @@ public class Values extends Expression {
     /**
      * The rows.
      */
-    private final List<Row> rows;
+    private final List<Query> rows;
 
     /**
      * Creates a new Values.
@@ -72,7 +76,7 @@ public class Values extends Expression {
      *
      * @return the rows.
      */
-    public List<Row> getRows() {
+    public List<Query> getRows() {
         return rows;
     }
 
@@ -121,8 +125,27 @@ public class Values extends Expression {
      * @return this values.
      */
     public Values rows(final Row... newRows) {
-        this.rows.addAll(Arrays.asList(newRows));
+        this.rows.addAll(transformRows(Arrays.stream(newRows)));
         return this;
+    }
+
+    /**
+     * Given a stream of rows, apply aliases and select statements
+     * to them.
+     *
+     * @param rows a stream of rows.
+     * @return a list of each row corresponding select statement.
+     */
+    private List<Query> transformRows(final Stream<Row> rows) {
+        // Put the correct aliases.
+        return rows.peek(row -> {
+                    final List<Expression> expressions = row.getExpressions();
+                    for (int i = 0; i < expressions.size() && i < this.aliases.length; i++) {
+                        expressions.get(i).alias(this.aliases[i]);
+                    }
+                }) // Put each row on a select for union to work.
+                .map(SqlBuilder::select)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -132,10 +155,9 @@ public class Values extends Expression {
      * @return this values.
      */
     public Values rows(final Collection<Row> newRows) {
-        this.rows.addAll(newRows);
+        this.rows.addAll(transformRows(newRows.stream()));
         return this;
     }
-
 
     /**
      * The internal Values expression Row
@@ -177,22 +199,7 @@ public class Values extends Expression {
         @Override
         public String translate() {
             return translator.translate(this);
-            /*if (names != null) {
-                for (int i = 0; i < this.names.length && i < expressions.size(); i++) {
-                    expressions.get(i).alias(this.names[i]);
-                }
-            }
-            expressions.forEach(expression -> injector.injectMembers(expression));
-            final String translation = expressions.stream()
-                    .map(Expression::translate)
-                    .collect(Collectors.joining(", "));
-            if (isEnclosed()) {
-                return "(" + translation + ")";
-            } else {
-                return translation;
-            }*/
         }
-
 
     }
 }

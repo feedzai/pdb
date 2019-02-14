@@ -43,6 +43,7 @@ import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
@@ -433,18 +434,11 @@ public abstract class AbstractTranslator {
      * @return values translation.
      */
     public String translate(final Values values) {
+        final ImmutableList<Expression> rows = ImmutableList.copyOf(values.getRows());
+
         // By default, use UNION ALL to express VALUES.
         // This way, only engines that support VALUES will implement it.
-        final String[] names = values.getAliases();
-        final List<Values.Row> rows = values.getRows();
-        final List<Expression> firstRowExpressions = rows.get(0).getExpressions();
-
-        for (int i = 0; i < firstRowExpressions.size() && i < names.length; i++) {
-            firstRowExpressions.get(i).alias(names[i]);
-        }
-
-        // Alias is mandatory after the sub query
-        return translate(union(new ArrayList<>(rows)).all());
+        return translate(union(rows).all());
     }
 
     /**
@@ -455,13 +449,13 @@ public abstract class AbstractTranslator {
      */
     public String translate(final Values.Row row) {
         inject(row.getExpressions());
-        final String translation = row.getExpressions().stream()
+
+        return row.getExpressions().stream()
                 .map(expression -> {
                     final String alias = expression.isAliased() ? " AS " + quotize(expression.getAlias()) : "";
                     return expression.translate() + alias;
                 })
                 .collect(Collectors.joining(", "));
-        return "SELECT " + translation;
     }
 
     /**

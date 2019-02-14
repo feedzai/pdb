@@ -2350,6 +2350,7 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
                 .build());
 
+        System.out.println("ola");
         final Values values = values("id", "name")
                 .rows(row(k(1), k("ana")),
                         row(k(2), k("fred")),
@@ -2358,15 +2359,25 @@ public class EngineGeneralTest {
 
         final List<Map<String, ResultColumn>> result = engine.query(values);
 
-        assertEquals("id must be 1", new Integer(1), result.get(0).get("id").toInt());
-        assertEquals("id must be 2", new Integer(2), result.get(1).get("id").toInt());
-        assertEquals("id must be 3", new Integer(3), result.get(2).get("id").toInt());
-        assertEquals("id must be 4", new Integer(4), result.get(3).get("id").toInt());
+        final List<Integer> ids = result.stream()
+                .map(row -> row.get("id").toInt())
+                .sorted()
+                .collect(Collectors.toList());
 
-        assertEquals("name must be 'ana'", "ana", result.get(0).get("name").toString());
-        assertEquals("name must be 'fred'", "fred", result.get(1).get("name").toString());
-        assertEquals("name must be 'manuel'", "manuel", result.get(2).get("name").toString());
-        assertEquals("name must be 'rita'", "rita", result.get(3).get("name").toString());
+        final List<String> names = result.stream()
+                .map(row -> row.get("name").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("id must be 1", new Integer(1), ids.get(0));
+        assertEquals("id must be 2", new Integer(2), ids.get(1));
+        assertEquals("id must be 3", new Integer(3), ids.get(2));
+        assertEquals("id must be 4", new Integer(4), ids.get(3));
+
+        assertEquals("name must be 'ana'", "ana", names.get(0));
+        assertEquals("name must be 'fred'", "fred", names.get(1));
+        assertEquals("name must be 'manuel'", "manuel", names.get(2));
+        assertEquals("name must be 'rita'", "rita", names.get(3));
     }
 
     @Test
