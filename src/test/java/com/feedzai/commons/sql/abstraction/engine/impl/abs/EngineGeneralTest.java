@@ -2340,17 +2340,6 @@ public class EngineGeneralTest {
 
     @Test
     public void testValues() throws DatabaseEngineException {
-        test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
-                .build());
-
-        System.out.println("ola");
         final Values values = values("id", "name")
                 .rows(row(k(1), k("ana")),
                         row(k(2), k("fred")),

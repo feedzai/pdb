@@ -41,9 +41,9 @@ import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
@@ -434,11 +434,29 @@ public abstract class AbstractTranslator {
      * @return values translation.
      */
     public String translate(final Values values) {
-        final ImmutableList<Expression> rows = ImmutableList.copyOf(values.getRows());
+        final ArrayList<Values.Row> rows = new ArrayList<>(values.getRows());
+        final String[] aliases = values.getAliases();
+
+        // Given a list of rows and if aliases exist, apply them.
+        if (aliases != null) {
+            rows.forEach(row -> {
+                final List<Expression> expressions = row.getExpressions();
+                for (int i = 0; i < expressions.size() && i < aliases.length; i++) {
+                    expressions.get(i).alias(aliases[i]);
+                }
+            });
+        }
+
+        // Put each row on a select for union operator to work.
+        final List<Expression> rowsWithSelect = rows.stream()
+                .map(SqlBuilder::select)
+                .collect(Collectors.toList());
 
         // By default, use UNION ALL to express VALUES.
         // This way, only engines that support VALUES will implement it.
-        return translate(union(rows).all());
+        final Union union = union(rowsWithSelect)
+                .all();
+        return translate(union);
     }
 
     /**
@@ -450,13 +468,15 @@ public abstract class AbstractTranslator {
     public String translate(final Values.Row row) {
         inject(row.getExpressions());
 
-        return row.getExpressions().stream()
+        final String translation = row.getExpressions().stream()
                 .map(expression -> {
                     // Enforce aliases to be translated.
                     final String alias = expression.isAliased() ? " AS " + quotize(expression.getAlias()) : "";
                     return expression.translate() + alias;
                 })
                 .collect(Collectors.joining(", "));
+
+        return row.isEnclosed() ? "(" + translation + ")": translation;
     }
 
     /**

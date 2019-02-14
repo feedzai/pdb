@@ -15,14 +15,10 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The Values clause.
@@ -40,7 +36,7 @@ public class Values extends Expression {
     /**
      * The rows.
      */
-    private final List<Query> rows;
+    private final List<Row> rows;
 
     /**
      * Creates a new Values.
@@ -76,46 +72,13 @@ public class Values extends Expression {
      *
      * @return the rows.
      */
-    public List<Query> getRows() {
+    public List<Row> getRows() {
         return rows;
     }
 
     @Override
     public String translate() {
         return translator.translate(this);
-        /*if (this.translator instanceof PostgreSqlTranslator) {
-            // Engines that support VALUES.
-            this.rows.forEach(expression -> injector.injectMembers(expression));
-            final String translation = "VALUES " + this.rows.stream()
-                    .map(row -> {
-                        row.enclose();
-                        return row.translate();
-                    })
-                    .collect(Collectors.joining(", "));
-
-            if (this.names != null && this.names.length > 0) {
-                final String namesTranslation = Arrays.stream(this.names)
-                        .map(StringUtils::quotize)
-                        .collect(Collectors.joining(", "));
-                return "SELECT * FROM (" + translation + ") as \"temp\"(" + namesTranslation + ")";
-            } else {
-                return translation;
-            }
-
-        } else {
-
-            if (this.names != null && this.names.length > 0) {
-                this.rows.forEach(row -> row.names(this.names));
-            }
-            final Set<Expression> literals = this.rows.stream()
-                    .map(SqlBuilder::select)
-                    .collect(Collectors.toSet());
-
-            final Union union = union(literals).all();
-
-            injector.injectMembers(union);
-            return "SELECT * FROM (" + union.translate() + ") as \"temp\"";
-        }*/
     }
 
     /**
@@ -125,27 +88,8 @@ public class Values extends Expression {
      * @return this values.
      */
     public Values rows(final Row... newRows) {
-        this.rows.addAll(transformRows(Arrays.stream(newRows)));
+        this.rows.addAll(Arrays.asList(newRows));
         return this;
-    }
-
-    /**
-     * Given a stream of rows, apply aliases and select statements
-     * to them.
-     *
-     * @param rows a stream of rows.
-     * @return a list of each row corresponding select statement.
-     */
-    private List<Query> transformRows(final Stream<Row> rows) {
-        // Put the correct aliases.
-        return rows.peek(row -> {
-                    final List<Expression> expressions = row.getExpressions();
-                    for (int i = 0; i < expressions.size() && i < this.aliases.length; i++) {
-                        expressions.get(i).alias(this.aliases[i]);
-                    }
-                }) // Put each row on a select for union to work.
-                .map(SqlBuilder::select)
-                .collect(Collectors.toList());
     }
 
     /**
@@ -155,12 +99,12 @@ public class Values extends Expression {
      * @return this values.
      */
     public Values rows(final Collection<Row> newRows) {
-        this.rows.addAll(transformRows(newRows.stream()));
+        this.rows.addAll(newRows);
         return this;
     }
 
     /**
-     * The internal Values expression Row
+     * A Row belonging to a Values clause.
      */
     public static class Row extends Expression {
         
