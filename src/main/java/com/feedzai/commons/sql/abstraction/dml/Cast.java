@@ -15,14 +15,13 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 
 /**
  * The cast expression.
  *
  * @author Francisco Santos (francisco.santos@feedzai.com)
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class Cast extends Expression {
 
