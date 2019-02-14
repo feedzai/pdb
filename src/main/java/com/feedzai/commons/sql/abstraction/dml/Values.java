@@ -24,7 +24,7 @@ import java.util.List;
  * The Values clause.
  *
  * @author Francisco Santos (francisco.santos@feedzai.com)
- * @since 2.3.1
+ * @since 2.4.0
  */
 public class Values extends Expression {
 
@@ -105,6 +105,9 @@ public class Values extends Expression {
 
     /**
      * A Row belonging to a Values clause.
+     *
+     * @author Francisco Santos (francisco.santos@feedzai.com)
+     * @since 2.4.0
      */
     public static class Row extends Expression {
         
