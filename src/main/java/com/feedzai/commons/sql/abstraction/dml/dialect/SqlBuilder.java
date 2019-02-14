@@ -501,12 +501,12 @@ public final class SqlBuilder {
     /**
      * The With clause.
      *
-     * @param name The name to be assigned to the expression.
+     * @param alias The name to be assigned to the expression.
      * @param expression The expression.
      * @return The With clause.
      */
-    public static With with(final String name, final Expression expression) {
-        return new With(name, expression);
+    public static With with(final String alias, final Expression expression) {
+        return new With(alias, expression);
     }
 
     /**
