@@ -352,6 +352,8 @@ public class DB2Translator extends AbstractTranslator {
     @Override
     public String translate(final Cast cast) {
         final String type;
+
+        // Cast to type.
         switch (cast.getType()) {
             case BOOLEAN:
                 type = "CHAR";
