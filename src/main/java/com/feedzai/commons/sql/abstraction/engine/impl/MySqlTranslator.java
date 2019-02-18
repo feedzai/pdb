@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
@@ -273,6 +274,11 @@ public class MySqlTranslator extends AbstractTranslator {
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }
+    }
+
+    @Override
+    public String translate(final With with) {
+        throw new OperationNotSupportedRuntimeException("MySQL does not support WITH.");
     }
 
     @Override

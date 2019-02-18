@@ -542,6 +542,7 @@ results = engine.query(
 |[k](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#k(java.lang.Object))|Creates a Constant from obj.|
 |[lit](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#lit(java.lang.Object))|Creates a Literal from obj.|
 |[column](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#column(java.lang.String))|Defines a reference to a given column.|
+|[with](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#with(com.feedzai.commons.sql.abstraction.dml.Expression))|Provides a way to write auxiliary statements for use in a larger query.|
 
 This is useful but not very interesting.
 We should proceed by filtering the results with some condition of our choice.
