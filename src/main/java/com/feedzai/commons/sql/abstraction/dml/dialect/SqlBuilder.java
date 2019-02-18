@@ -551,6 +551,8 @@ public final class SqlBuilder {
 
     /**
      * Creates a cast expression.
+     * PDB does not support cast to JSON, CLOB and BLOB.
+     * An exception will be thrown when trying to translate the data type.
      *
      * @param expression The expression.
      * @param type the type to be converted.

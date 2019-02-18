@@ -382,9 +382,6 @@ public abstract class AbstractTranslator {
      * @return cast translation.
      */
     public String translate(final Cast cast) {
-        // PDB does not support cast to JSON, CLOB and BLOB.
-        // An exception will be thrown when trying to translate the data type.
-
         inject(cast.getExpression());
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),

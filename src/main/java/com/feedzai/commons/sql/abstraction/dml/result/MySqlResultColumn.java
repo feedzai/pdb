@@ -32,5 +32,4 @@ public class MySqlResultColumn extends ResultColumn {
     public MySqlResultColumn(final String name, final Object val) {
         super(name, val);
     }
-
 }
