@@ -294,26 +294,32 @@ public class H2Translator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final DbColumnType type) {
-        switch (type) {
+    public String translate(final Cast cast) {
+        final String type;
+        switch (cast.getType()) {
             case BOOLEAN:
-                return "BOOLEAN";
-
+                type = "BOOLEAN";
+                break;
             case DOUBLE:
-                return "DOUBLE";
-
+                type = "DOUBLE";
+                break;
             case INT:
-                return "INTEGER";
-
+                type = "INTEGER";
+                break;
             case LONG:
-                return "BIGINT";
-
+                type = "BIGINT";
+                break;
             case STRING:
-                return "VARCHAR";
-
+                type = "VARCHAR";
+                break;
             default:
-                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
         }
+
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
     }
 
     @Override

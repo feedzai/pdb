@@ -18,14 +18,12 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
@@ -298,26 +296,32 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final DbColumnType type) {
-        switch (type) {
+    public String translate(final Cast cast) {
+        final String type;
+        switch (cast.getType()) {
             case BOOLEAN:
-                return "NUMBER(1,0)";
-
+                type = "CHAR";
+                break;
             case DOUBLE:
-                return "BINARY_DOUBLE";
-
+                type = "BINARY_DOUBLE";
+                break;
             case INT:
-                return "INT";
-
+                type = "INT";
+                break;
             case LONG:
-                return "NUMBER(19,0)";
-
+                type = "NUMBER(19,0)";
+                break;
             case STRING:
-                return format("VARCHAR(%s)", properties.getProperty(VARCHAR_SIZE));
-
+                type = format("VARCHAR(%s)", properties.getProperty(VARCHAR_SIZE));
+                break;
             default:
-                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
         }
+
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
     }
 
     @Override
@@ -351,26 +355,5 @@ public class OracleTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "'0'";
-    }
-
-    @Override
-    public String translate(Cast cast) {
-        final Expression expression = cast.getExpression();
-        inject(expression);
-
-        if (cast.getType() == DbColumnType.BOOLEAN) {
-            String translation = null;
-
-            // If expression is a K, then we may need to resolve its value.
-            if (expression instanceof K) {
-                translation = tryBooleanTranslate(expression);
-            }
-
-            return String.format("CAST(%s AS %s)",
-                    translation != null ? translation : expression.translate(),
-                    translate(cast.getType()));
-        } else {
-            return super.translate(cast);
-        }
     }
 }

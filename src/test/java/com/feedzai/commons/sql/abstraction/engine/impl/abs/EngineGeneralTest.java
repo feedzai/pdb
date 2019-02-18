@@ -38,7 +38,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
-import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -1995,7 +1994,7 @@ public class EngineGeneralTest {
         final Query query =
                 select(cast(k("22"), INT).alias("int"),
                         cast(k(22), STRING).alias("string"),
-                        cast(k("true"), BOOLEAN).alias("bool"),
+                        cast(k("1"), BOOLEAN).alias("bool"),
                         cast(k("22"), DOUBLE).alias("double"),
                         cast(k(22), LONG).alias("long"));
 

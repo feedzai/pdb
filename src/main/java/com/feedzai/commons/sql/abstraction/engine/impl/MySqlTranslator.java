@@ -277,7 +277,7 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final DbColumnType type) {
+    public String translate(final Cast cast) {
         throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
     }
 
@@ -305,10 +305,5 @@ public class MySqlTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "0";
-    }
-
-    @Override
-    public String translate(Cast cast) {
-        throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
     }
 }

@@ -17,7 +17,6 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
@@ -381,38 +380,7 @@ public abstract class AbstractTranslator {
      * @param cast a cast expression.
      * @return cast translation.
      */
-    public String translate(final Cast cast) {
-        inject(cast.getExpression());
-        return String.format("CAST(%s AS %s)",
-                cast.getExpression().translate(),
-                this.translate(cast.getType()));
-    }
-
-    /**
-     * Translates the expression and tries to return its boolean value.
-     * If it can't, it returns null.
-     *
-     * @param expression the expression to translate the boolean value.
-     * @return the boolean value if possible, null otherwise.
-     */
-    protected String tryBooleanTranslate(final Expression expression) {
-
-        // Have the translation easier to match the regex below.
-        final String translation = expression.translate()
-                .replaceAll("'", "")
-                .toLowerCase();
-
-        // If matches a true value, then set the value to '1'.
-        // If matches a false value, then set the value to '0'.
-        // Else, just let it be.
-        if (translation.matches("t|true|1")) {
-            return translateTrue();
-        } else if (translation.matches("f|false|0")) {
-            return translateFalse();
-        } else {
-            return null;
-        }
-    }
+    public abstract String translate(Cast cast);
 
     /**
      * Translates the escape character.
@@ -506,14 +474,6 @@ public abstract class AbstractTranslator {
      * @return The string representation of the given object.
      */
     public abstract String translate(DbColumn dc);
-
-    /**
-     * Translates {@link DbColumnType}.
-     *
-     * @param type The object to translate.
-     * @return The string representation of the given object.
-     */
-    public abstract String translate(DbColumnType type);
 
     /**
      * Translates {@link StringAgg}.

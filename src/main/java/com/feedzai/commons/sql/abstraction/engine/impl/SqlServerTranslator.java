@@ -18,9 +18,9 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -355,26 +355,32 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final DbColumnType type) {
-        switch (type) {
+    public String translate(final Cast cast) {
+        final String type;
+        switch (cast.getType()) {
             case BOOLEAN:
-                return "BIT";
-
+                type = "BIT";
+                break;
             case DOUBLE:
-                return "DOUBLE PRECISION";
-
+                type = "DOUBLE PRECISION";
+                break;
             case INT:
-                return "INT";
-
+                type = "INT";
+                break;
             case LONG:
-                return "BIGINT";
-
+                type = "BIGINT";
+                break;
             case STRING:
-                return "NVARCHAR";
-
+                type = "NVARCHAR";
+                break;
             default:
-                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", type));
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
         }
+
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
     }
 
     @Override
