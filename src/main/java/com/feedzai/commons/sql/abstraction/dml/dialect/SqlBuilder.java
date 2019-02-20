@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.Function.*;
 import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.*;
@@ -498,6 +499,17 @@ public final class SqlBuilder {
     }
 
     /**
+     * The With clause.
+     *
+     * @param alias The name to be assigned to the expression.
+     * @param expression The expression.
+     * @return The With clause.
+     */
+    public static With with(final String alias, final Expression expression) {
+        return new With(alias, expression);
+    }
+
+    /**
      * The LOWER operator.
      *
      * @param exp The expression inside the operator.
@@ -580,6 +592,26 @@ public final class SqlBuilder {
      */
     public static Case caseWhen(final Expression condition, final Expression trueAction) {
         return Case.caseWhen(condition, trueAction);
+    }
+
+    /**
+     * Creates a union expression.
+     *
+     * @param expressions expressions to union.
+     * @return The union representation.
+     */
+    public static Union union(final Expression... expressions) {
+        return new Union(expressions);
+    }
+
+    /**
+     * Creates a union expression.
+     *
+     * @param expressions expressions to union.
+     * @return The union representation.
+     */
+    public static Union union(final Collection<Expression> expressions) {
+        return new Union(expressions);
     }
 
     /**

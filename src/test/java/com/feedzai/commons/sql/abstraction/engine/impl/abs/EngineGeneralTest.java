@@ -23,10 +23,14 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
+import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
+import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -38,6 +42,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -60,14 +65,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -115,8 +123,10 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringA
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -2067,6 +2077,116 @@ public class EngineGeneralTest {
     }
 
     @Test
+    public void testWith() throws DatabaseEngineException {
+
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with = with("friends", select(all())
+                                                .from(table("TEST")))
+                .then(
+                        select(column("COL5").alias("name"))
+                        .from(table("friends"))
+                        .where(eq(column("COL1"), k(1))));
+
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        assertEquals("Name must be 'manuel'", "manuel", result.get(0).get("name").toString());
+    }
+
+    @Test
+    public void testWithAll() throws DatabaseEngineException {
+
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with =
+                with("friends",
+                        select(all())
+                        .from(table("TEST")))
+                .then(
+                        select(column("COL5").alias("name"))
+                        .from(table("friends"))
+                        .orderby(column("COL5")));
+
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
+        assertEquals("Name must be 'manuel'", "manuel", result.get(1).get("name").toString());
+        assertEquals("Name must be 'rita'", "rita", result.get(2).get("name").toString());
+        assertEquals("Name must be 'rui'", "rui", result.get(3).get("name").toString());
+    }
+
+    @Test
+    public void testWithMultiple() throws DatabaseEngineException {
+
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "rita")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "rui")
+                .build());
+
+        final With with =
+                with("friendsA",
+                        select(all())
+                        .from(table("TEST"))
+                        .where(or(eq(column("COL1"), k(1)), eq(column("COL1"), k(2)))))
+
+                .andWith("friendsB",
+                        select(all())
+                        .from(table("TEST"))
+                        .where(or(eq(column("COL1"), k(3)), eq(column("COL1"), k(4)))))
+                .then(
+                        union(select(all()).from(table("friendsA")),
+                              select(all()).from(table("friendsB"))));
+
+        // MySQL does not support With
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);;
+        }
+
+        final List<Map<String, ResultColumn>> result = engine.query(with);
+
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("Name must be 'ana'", "ana", resultSorted.get(0));
+        assertEquals("Name must be 'manuel'", "manuel", resultSorted.get(1));
+        assertEquals("Name must be 'rita'", "rita", resultSorted.get(2));
+        assertEquals("Name must be 'rui'", "rui", resultSorted.get(3));
+    }
+
+    @Test
     public void testCaseWhen() throws DatabaseEngineException {
         test5Columns();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -2136,6 +2256,83 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be ROFL", "ROFL", result.get(2).get("case").toString());
         assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
         assertEquals("COL5 must be KEK", "KEK", result.get(4).get("case").toString());
+    }
+
+    @Test
+    public void testUnion() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "c")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "d")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "d")
+                .build());
+
+        final String[] letters = new String[] {"a", "b", "c", "d", "d"};
+        final Collection<Expression> queries = Arrays.stream(letters)
+                .map(literal ->
+                        select(column("COL5"))
+                        .from(table("TEST"))
+                        .where(eq(column("COL5"), k(literal))))
+                .collect(Collectors.toList());
+
+        final Expression query = union(queries);
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Must return 4 results due to distinct property", 4, result.size());
+
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("COL5 must be a", "a", resultSorted.get(0));
+        assertEquals("COL5 must be b", "b", resultSorted.get(1));
+        assertEquals("COL5 must be c", "c", resultSorted.get(2));
+        assertEquals("COL5 must be d", "d", resultSorted.get(3));
+    }
+
+    @Test
+    public void testUnionAll() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "c")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "d")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "d")
+                .build());
+
+        final int[] ids = new int[] {1, 2, 3, 4, 5};
+        final Collection<Expression> queries = Arrays.stream(ids)
+                .mapToObj(literal ->
+                        select(column("COL5"))
+                        .from(table("TEST"))
+                        .where(eq(column("COL1"), k(literal))))
+                .collect(Collectors.toList());
+
+        final Expression query = union(queries).all();
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Must return 5 results", 5, result.size());
+
+        final List<String> resultSorted = result.stream()
+                .map(row -> row.get("COL5").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("COL5 must be a", "a", resultSorted.get(0));
+        assertEquals("COL5 must be b", "b", resultSorted.get(1));
+        assertEquals("COL5 must be c", "c", resultSorted.get(2));
+        assertEquals("COL5 must be d", "d", resultSorted.get(3));
+        assertEquals("COL5 must be d", "d", resultSorted.get(4));
     }
 
     @Test

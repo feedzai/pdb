@@ -282,6 +282,11 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final With with) {
+        throw new OperationNotSupportedRuntimeException("MySQL does not support WITH.");
+    }
+
+    @Override
     public String translate(final StringAgg stringAgg) {
         inject(stringAgg.column);
         return String.format(
