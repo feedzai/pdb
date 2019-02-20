@@ -371,14 +371,15 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                 })
                 .collect(Collectors.joining(", "));
 
-        // If aliases exist, apply them to the columns.
-        if (aliases != null) {
+        // If aliases does not exist, throw an exception.
+        // Otherwise, apply them to the columns.
+        if (aliases == null || aliases.length == 0) {
+            throw new DatabaseEngineRuntimeException("Values requires aliases to avoid ambiguous columns names.");
+        } else {
             final String namesTranslation = Arrays.stream(aliases)
                     .map(StringUtils::quotize)
                     .collect(Collectors.joining(", "));
             return "SELECT * FROM (" + translation + ") as \"temp\"(" + namesTranslation + ")";
-        } else {
-            return translation;
         }
     }
 

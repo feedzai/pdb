@@ -118,7 +118,6 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.row;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
@@ -2340,11 +2339,12 @@ public class EngineGeneralTest {
 
     @Test
     public void testValues() throws DatabaseEngineException {
-        final Values values = values("id", "name")
-                .rows(row(k(1), k("ana")),
-                        row(k(2), k("fred")),
-                        row(k(3), k("manuel")),
-                        row(k(4), k("rita")));
+        final Values values =
+                values("id", "name")
+                    .row(k(1), k("ana"))
+                    .row(k(2), k("fred"))
+                    .row(k(3), k("manuel"))
+                    .row(k(4), k("rita"));
 
         final List<Map<String, ResultColumn>> result = engine.query(values);
 
@@ -2367,6 +2367,22 @@ public class EngineGeneralTest {
         assertEquals("name must be 'fred'", "fred", names.get(1));
         assertEquals("name must be 'manuel'", "manuel", names.get(2));
         assertEquals("name must be 'rita'", "rita", names.get(3));
+    }
+
+    @Test(expected = DatabaseEngineRuntimeException.class)
+    public void testValuesNoAliases() throws DatabaseEngineException {
+        final Values values =
+                values()
+                    .row(k(1), k("ana"))
+                    .row(k(2), k("fred"))
+                    .row(k(3), k("manuel"))
+                    .row(k(4), k("rita"));
+        try {
+            engine.query(values);
+        } catch (DatabaseEngineRuntimeException e) {
+            assertEquals("Values requires aliases to avoid ambiguous columns names.", e.getMessage());
+            throw e;
+        }
     }
 
     @Test

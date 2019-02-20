@@ -76,31 +76,20 @@ public class Values extends Expression {
         return rows;
     }
 
+    /**
+     * Add a row to values.
+     *
+     * @param expressions row expressions.
+     * @return this values.
+     */
+    public Values row(final Expression... expressions) {
+        this.rows.add(new Row(expressions));
+        return this;
+    }
+
     @Override
     public String translate() {
         return translator.translate(this);
-    }
-
-    /**
-     * Adds rows to values.
-     *
-     * @param newRows new rows to be added.
-     * @return this values.
-     */
-    public Values rows(final Row... newRows) {
-        this.rows.addAll(Arrays.asList(newRows));
-        return this;
-    }
-
-    /**
-     * Adds rows to values.
-     *
-     * @param newRows new rows to be added.
-     * @return this values.
-     */
-    public Values rows(final Collection<Row> newRows) {
-        this.rows.addAll(newRows);
-        return this;
     }
 
     /**
@@ -118,19 +107,10 @@ public class Values extends Expression {
 
         /**
          * Creates a new row.
-         * 
-         * @param expressions the expressions on the row.
-         */
-        public Row(final Collection<Expression> expressions) {
-            this.expressions = new ArrayList<>(expressions);
-        }
-
-        /**
-         * Creates a new row.
          *
          * @param expressions the expressions on the row.
          */
-        public Row(final Expression... expressions) {
+        private Row(final Expression... expressions) {
             this.expressions = Arrays.asList(expressions);
         }
 
@@ -147,6 +127,5 @@ public class Values extends Expression {
         public String translate() {
             return translator.translate(this);
         }
-
     }
 }

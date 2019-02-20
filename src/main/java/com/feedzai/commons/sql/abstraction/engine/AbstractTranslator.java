@@ -437,8 +437,11 @@ public abstract class AbstractTranslator {
         final ArrayList<Values.Row> rows = new ArrayList<>(values.getRows());
         final String[] aliases = values.getAliases();
 
-        // Given a list of rows and if aliases exist, apply them.
-        if (aliases != null) {
+        // If aliases does not exist, throw an exception.
+        // Otherwise, apply them to the columns.
+        if (aliases == null || aliases.length == 0) {
+            throw new DatabaseEngineRuntimeException("Values requires aliases to avoid ambiguous columns names.");
+        } else {
             rows.forEach(row -> {
                 final List<Expression> expressions = row.getExpressions();
                 for (int i = 0; i < expressions.size() && i < aliases.length; i++) {
@@ -476,7 +479,7 @@ public abstract class AbstractTranslator {
                 })
                 .collect(Collectors.joining(", "));
 
-        return row.isEnclosed() ? "(" + translation + ")": translation;
+        return row.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     /**

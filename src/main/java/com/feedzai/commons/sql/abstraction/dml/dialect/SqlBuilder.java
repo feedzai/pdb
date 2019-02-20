@@ -634,26 +634,6 @@ public final class SqlBuilder {
     }
 
     /**
-     * Creates a row expression.
-     *
-     * @param expressions the row's expressions.
-     * @return The row representation.
-     */
-    public static Values.Row row(final Expression... expressions) {
-        return new Values.Row(expressions);
-    }
-
-    /**
-     * Creates a row expression.
-     *
-     * @param expressions the row's expressions.
-     * @return The row representation.
-     */
-    public static Values.Row row(final Collection<Expression> expressions) {
-        return new Values.Row(expressions);
-    }
-
-    /**
      * The not equal expression.
      *
      * @param exps The expressions.
