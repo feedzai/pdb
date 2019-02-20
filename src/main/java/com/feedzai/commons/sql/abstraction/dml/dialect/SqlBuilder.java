@@ -20,7 +20,6 @@ import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.Function.*;
 import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.*;
@@ -612,6 +611,26 @@ public final class SqlBuilder {
      */
     public static Union union(final Collection<Expression> expressions) {
         return new Union(expressions);
+    }
+
+    /**
+     * Creates a values expression.
+     *
+     * @param aliases the columns' aliases.
+     * @return The values representation.
+     */
+    public static Values values(final String... aliases) {
+        return new Values(aliases);
+    }
+
+    /**
+     * Creates a values expression.
+     *
+     * @param aliases the columns' aliases.
+     * @return The values representation.
+     */
+    public static Values values(final Collection<String> aliases) {
+        return new Values(aliases);
     }
 
     /**

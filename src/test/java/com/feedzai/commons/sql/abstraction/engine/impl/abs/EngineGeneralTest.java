@@ -29,6 +29,7 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -37,6 +38,7 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -127,6 +129,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.values;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -2333,6 +2336,54 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be c", "c", resultSorted.get(2));
         assertEquals("COL5 must be d", "d", resultSorted.get(3));
         assertEquals("COL5 must be d", "d", resultSorted.get(4));
+    }
+
+    @Test
+    public void testValues() throws DatabaseEngineException {
+        final Values values =
+                values("id", "name")
+                    .row(k(1), k("ana"))
+                    .row(k(2), k("fred"))
+                    .row(k(3), k("manuel"))
+                    .row(k(4), k("rita"));
+
+        final List<Map<String, ResultColumn>> result = engine.query(values);
+
+        final List<Integer> ids = result.stream()
+                .map(row -> row.get("id").toInt())
+                .sorted()
+                .collect(Collectors.toList());
+
+        final List<String> names = result.stream()
+                .map(row -> row.get("name").toString())
+                .sorted()
+                .collect(Collectors.toList());
+
+        assertEquals("id must be 1", new Integer(1), ids.get(0));
+        assertEquals("id must be 2", new Integer(2), ids.get(1));
+        assertEquals("id must be 3", new Integer(3), ids.get(2));
+        assertEquals("id must be 4", new Integer(4), ids.get(3));
+
+        assertEquals("name must be 'ana'", "ana", names.get(0));
+        assertEquals("name must be 'fred'", "fred", names.get(1));
+        assertEquals("name must be 'manuel'", "manuel", names.get(2));
+        assertEquals("name must be 'rita'", "rita", names.get(3));
+    }
+
+    @Test(expected = DatabaseEngineRuntimeException.class)
+    public void testValuesNoAliases() throws DatabaseEngineException {
+        final Values values =
+                values()
+                    .row(k(1), k("ana"))
+                    .row(k(2), k("fred"))
+                    .row(k(3), k("manuel"))
+                    .row(k(4), k("rita"));
+        try {
+            engine.query(values);
+        } catch (DatabaseEngineRuntimeException e) {
+            assertEquals("Values requires aliases to avoid ambiguous columns names.", e.getMessage());
+            throw e;
+        }
     }
 
     @Test

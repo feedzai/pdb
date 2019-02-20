@@ -29,6 +29,7 @@ import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
@@ -38,7 +39,9 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -351,6 +354,33 @@ public class PostgreSqlTranslator extends AbstractTranslator {
         return String.format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
                 type);
+    }
+
+    @Override
+    public String translate(final Values values) {
+        final String[] aliases = values.getAliases();
+        final List<Values.Row> rows = values.getRows();
+
+        inject(rows);
+
+        // Enclose all rows and join them using a comma.
+        final String translation = "VALUES " + rows.stream()
+                .map(row -> {
+                    row.enclose();
+                    return row.translate();
+                })
+                .collect(Collectors.joining(", "));
+
+        // If aliases does not exist, throw an exception.
+        // Otherwise, apply them to the columns.
+        if (aliases == null || aliases.length == 0) {
+            throw new DatabaseEngineRuntimeException("Values requires aliases to avoid ambiguous columns names.");
+        } else {
+            final String namesTranslation = Arrays.stream(aliases)
+                    .map(StringUtils::quotize)
+                    .collect(Collectors.joining(", "));
+            return "SELECT * FROM (" + translation + ") as \"temp\"(" + namesTranslation + ")";
+        }
     }
 
     @Override

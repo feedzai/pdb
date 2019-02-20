@@ -37,9 +37,11 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
@@ -52,6 +54,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.singleQuotize;
@@ -422,6 +425,62 @@ public abstract class AbstractTranslator {
         return expressions.stream()
                 .map(Expression::translate)
                 .collect(Collectors.joining(delimiter));
+    }
+
+    /**
+     * Translates Values.
+     *
+     * @param values a values.
+     * @return values translation.
+     */
+    public String translate(final Values values) {
+        final ArrayList<Values.Row> rows = new ArrayList<>(values.getRows());
+        final String[] aliases = values.getAliases();
+
+        // If aliases does not exist, throw an exception.
+        // Otherwise, apply them to the columns.
+        if (aliases == null || aliases.length == 0) {
+            throw new DatabaseEngineRuntimeException("Values requires aliases to avoid ambiguous columns names.");
+        } else {
+            rows.forEach(row -> {
+                final List<Expression> expressions = row.getExpressions();
+                for (int i = 0; i < expressions.size() && i < aliases.length; i++) {
+                    // DISCLAIMER : May have side-effects because will change the state of the row's expressions.
+                    expressions.get(i).alias(aliases[i]);
+                }
+            });
+        }
+
+        // Put each row on a select for union operator to work.
+        final List<Expression> rowsWithSelect = rows.stream()
+                .map(SqlBuilder::select)
+                .collect(Collectors.toList());
+
+        // By default, use UNION ALL to express VALUES.
+        // This way, only engines that support VALUES will implement it.
+        final Union union = union(rowsWithSelect)
+                .all();
+        return translate(union);
+    }
+
+    /**
+     * Translates Values.Row.
+     *
+     * @param row a values.row.
+     * @return values.row translation.
+     */
+    public String translate(final Values.Row row) {
+        inject(row.getExpressions());
+
+        final String translation = row.getExpressions().stream()
+                .map(expression -> {
+                    // Enforce aliases to be translated.
+                    final String alias = expression.isAliased() ? " AS " + quotize(expression.getAlias()) : "";
+                    return expression.translate() + alias;
+                })
+                .collect(Collectors.joining(", "));
+
+        return row.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     /**
