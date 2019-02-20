@@ -89,6 +89,11 @@ public class CustomTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final Cast cast) {
+        return null;
+    }
+
+    @Override
     public String translate(final StringAgg stringAgg) {
         return null;
     }

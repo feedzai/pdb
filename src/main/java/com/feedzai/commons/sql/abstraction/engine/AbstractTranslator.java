@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
 import com.feedzai.commons.sql.abstraction.dml.Case;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
@@ -398,6 +399,14 @@ public abstract class AbstractTranslator {
                              whens,
                              elseString);
     }
+
+    /**
+     * Translates Cast.
+     *
+     * @param cast a cast expression.
+     * @return cast translation.
+     */
+    public abstract String translate(Cast cast);
 
     /**
      * Translates {@link Union}.

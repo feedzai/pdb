@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -346,6 +347,37 @@ public class DB2Translator extends AbstractTranslator {
             default:
                 throw new DatabaseEngineRuntimeException(format("Mapping not found for '%s'. Please report this error.", c.getDbColumnType()));
         }
+    }
+
+    @Override
+    public String translate(final Cast cast) {
+        final String type;
+
+        // Cast to type.
+        switch (cast.getType()) {
+            case BOOLEAN:
+                type = "CHAR";
+                break;
+            case DOUBLE:
+                type = "DOUBLE PRECISION";
+                break;
+            case INT:
+                type = "INT";
+                break;
+            case LONG:
+                type = "NUMERIC(19,0)";
+                break;
+            case STRING:
+                type = format("VARCHAR(%s)", properties.getProperty(VARCHAR_SIZE));
+                break;
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
+        }
+
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
     }
 
     @Override

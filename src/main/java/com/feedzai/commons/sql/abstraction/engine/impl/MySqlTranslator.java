@@ -277,6 +277,11 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    public String translate(final Cast cast) {
+        throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
+    }
+
+    @Override
     public String translate(final With with) {
         throw new OperationNotSupportedRuntimeException("MySQL does not support WITH.");
     }

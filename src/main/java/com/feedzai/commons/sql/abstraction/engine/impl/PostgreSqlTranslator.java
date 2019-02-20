@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -31,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -318,6 +320,37 @@ public class PostgreSqlTranslator extends AbstractTranslator {
                         c.getDbColumnType()
                 ));
         }
+    }
+
+    @Override
+    public String translate(final Cast cast) {
+        final String type;
+
+        // Cast to type.
+        switch (cast.getType()) {
+            case BOOLEAN:
+                type = "BOOLEAN";
+                break;
+            case DOUBLE:
+                type = "DOUBLE PRECISION";
+                break;
+            case INT:
+                type = "INT";
+                break;
+            case LONG:
+                type = "BIGINT";
+                break;
+            case STRING:
+                type = "VARCHAR";
+                break;
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
+        }
+
+        inject(cast.getExpression());
+        return String.format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
     }
 
     @Override

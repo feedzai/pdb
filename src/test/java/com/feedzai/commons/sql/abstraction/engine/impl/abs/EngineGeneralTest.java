@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -53,6 +52,7 @@ import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
 import mockit.Verifications;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -85,13 +85,12 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.ORACLE;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.Dialect.SQLSERVER;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.cast;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
@@ -1995,6 +1994,86 @@ public class EngineGeneralTest {
                                 between(column("COL1"), k(1), k(2))
                         )
         );
+    }
+
+
+
+    @Test
+    public void testCast() throws DatabaseEngineException {
+
+        final Query query =
+                select(cast(k("22"), INT).alias("int"),
+                        cast(k(22), STRING).alias("string"),
+                        cast(k("1"), BOOLEAN).alias("bool"),
+                        cast(k("22"), DOUBLE).alias("double"),
+                        cast(k(22), LONG).alias("long"));
+
+        // CAST not supported.
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);
+        }
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Result must be 22", new Integer(22),
+                result.get(0).get("int").toInt());
+        assertEquals("Result must be '22'", "22",
+                result.get(0).get("string").toString());
+        assertEquals("Result must be true", true,
+                result.get(0).get("bool").toBoolean());
+        assertEquals("Result must be 22.0", new Double(22),
+                result.get(0).get("double").toDouble());
+        assertEquals("Result must be 22", new Long(22),
+                result.get(0).get("long").toLong());
+    }
+
+    @Test
+    public void testCastColumns() throws DatabaseEngineException {
+
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "1")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "2")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "3")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "4")
+                .build());
+
+        final Query query =
+                select(cast(column("COL1"), STRING).alias("string"),
+                        cast(column("COL5"), INT).alias("int"))
+                .from(table("TEST"));
+
+        // CAST not supported.
+        if (config.engine.contains("MySqlEngine")) {
+            exception.expect(OperationNotSupportedRuntimeException.class);
+        }
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Result must be 1", new Integer(1),
+                result.get(0).get("int").toInt());
+        assertEquals("Result must be 2", new Integer(2),
+                result.get(1).get("int").toInt());
+        assertEquals("Result must be 3", new Integer(3),
+                result.get(2).get("int").toInt());
+        assertEquals("Result must be 4", new Integer(4),
+                result.get(3).get("int").toInt());
+        assertEquals("Result must be '1'", "1",
+                result.get(0).get("string").toString());
+        assertEquals("Result must be '2'", "2",
+                result.get(1).get("string").toString());
+        assertEquals("Result must be '3'", "3",
+                result.get(2).get("string").toString());
+        assertEquals("Result must be '4'", "4",
+                result.get(3).get("string").toString());
+    }
+
+    @Test(expected = OperationNotSupportedRuntimeException.class)
+    public void testCastUnsupported() throws DatabaseEngineException {
+        // Check if exception is thrown when trying to cast for an unsupported type.
+        engine.query(select(cast(k("22"), BLOB)));
     }
 
     @Test

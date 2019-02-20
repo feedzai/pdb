@@ -595,6 +595,7 @@ results = engine.query(
 |[notIn](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#notIn(com.feedzai.commons.sql.abstraction.dml.Expression,%20com.feedzai.commons.sql.abstraction.dml.Expression))|Defines a test condition that asserts if exp1 is part of exp2. Expression exp2 might be a List of constants or the result of a sub query.|
 |[L](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#L(com.feedzai.commons.sql.abstraction.dml.Expression...))|Defines a list of elements represent by the passing expressions.|
 |[caseWhen](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#caseWhen(com.feedzai.commons.sql.abstraction.dml.Expression...))|Defines a test using a list of conditions by going through them and returning a value when the first condition is met. If none are met, it will return the otherwise clause or NULL if not defined.|
+|[cast](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#cast(com.feedzai.commons.sql.abstraction.dml.Expression...))|Specifies how to perform a conversion between two data types.|
 
 It is widely known that greater the id greater the Stream of data.
 For this purpose you just design a query that selects the maximum Stream id of data Type 4 from Provider 1.
