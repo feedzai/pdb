@@ -445,6 +445,7 @@ public abstract class AbstractTranslator {
             rows.forEach(row -> {
                 final List<Expression> expressions = row.getExpressions();
                 for (int i = 0; i < expressions.size() && i < aliases.length; i++) {
+                    // DISCLAIMER : May have side-effects because will change the state of the row's expressions.
                     expressions.get(i).alias(aliases[i]);
                 }
             });
