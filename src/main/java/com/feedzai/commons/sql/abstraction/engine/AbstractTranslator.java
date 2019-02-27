@@ -357,12 +357,15 @@ public abstract class AbstractTranslator {
 
         final Expression then = with.getThen();
 
+        final String translation;
         if (then != null) {
             inject(then);
-            return String.format("WITH %s %s", withStatements, then.translate());
+            translation =  String.format("WITH %s %s", withStatements, then.translate());
         } else {
-            return String.format("WITH %s", withStatements);
+            translation = String.format("WITH %s", withStatements);
         }
+
+        return with.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     /**
@@ -422,9 +425,10 @@ public abstract class AbstractTranslator {
         final String delimiter = union.isAll() ? " UNION ALL " : " UNION ";
 
         inject(expressions);
-        return expressions.stream()
+        final String translation = expressions.stream()
                 .map(Expression::translate)
                 .collect(Collectors.joining(delimiter));
+        return union.isEnclosed() ? "(" + translation + ")": translation;
     }
 
     /**
@@ -460,6 +464,11 @@ public abstract class AbstractTranslator {
         // This way, only engines that support VALUES will implement it.
         final Union union = union(rowsWithSelect)
                 .all();
+
+        if (values.isEnclosed()) {
+            union.enclose();
+        }
+
         return translate(union);
     }
 
