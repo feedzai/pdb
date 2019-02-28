@@ -375,9 +375,11 @@ public class DB2Translator extends AbstractTranslator {
         }
 
         inject(cast.getExpression());
-        return String.format("CAST(%s AS %s)",
+        final String translation = format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
                 type);
+
+        return cast.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     @Override

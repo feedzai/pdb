@@ -351,9 +351,11 @@ public class PostgreSqlTranslator extends AbstractTranslator {
         }
 
         inject(cast.getExpression());
-        return String.format("CAST(%s AS %s)",
+        final String translation = format("CAST(%s AS %s)",
                 cast.getExpression().translate(),
                 type);
+
+        return cast.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     @Override
@@ -379,7 +381,11 @@ public class PostgreSqlTranslator extends AbstractTranslator {
             final String namesTranslation = Arrays.stream(aliases)
                     .map(StringUtils::quotize)
                     .collect(Collectors.joining(", "));
-            return "SELECT * FROM (" + translation + ") as \"temp\"(" + namesTranslation + ")";
+
+            final String translationWithNames =
+                    "SELECT * FROM (" + translation + ") as \"temp\"(" + namesTranslation + ")";
+
+            return values.isEnclosed() ? "(" + translationWithNames + ")" : translationWithNames;
         }
     }
 
