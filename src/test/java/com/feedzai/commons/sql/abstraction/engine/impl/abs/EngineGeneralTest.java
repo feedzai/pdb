@@ -75,6 +75,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -2389,13 +2390,11 @@ public class EngineGeneralTest {
 
     @Test
     public void testLargeValues() throws DatabaseEngineException {
-        final Values values = values("id", "name");
+        final Values values = values("long", "uuid");
 
-        final String paddingString = "abcdefghijklmnopqrs";
-
-        for (int i = 0 ; i < 10000 ; i++) {
+        for (int i = 0 ; i < 2048 ; i++) {
             values.row(k(ThreadLocalRandom.current().nextLong()),
-                    k(paddingString));
+                    k(UUID.randomUUID().toString()));
         }
 
         // If it crashes, the test will fail.
