@@ -462,8 +462,9 @@ public abstract class AbstractTranslator {
 
         // By default, use UNION ALL to express VALUES.
         // This way, only engines that support VALUES will implement it.
-        final Union union = union(rowsWithSelect)
-                .all();
+        // Since the amount of values can be quite large, a linear UNION can cause Stack Overflow.
+        // To avoid it, we model this UNION as a binary tree.
+        final Union union = rowsToUnion(rowsWithSelect);
 
         if (values.isEnclosed()) {
             union.enclose();
@@ -490,6 +491,54 @@ public abstract class AbstractTranslator {
                 .collect(Collectors.joining(", "));
 
         return row.isEnclosed() ? "(" + translation + ")" : translation;
+    }
+
+    /**
+     * Transform values' rows into a union.
+     *
+     * @param rows the values' rows
+     * @return the resulting union
+     */
+    protected Union rowsToUnion(final List<Expression> rows) {
+        return toUnionTree(rows);
+    }
+
+    /**
+     * Create an union in form of a binary tree from a list of rows.
+     * The tree shape is to prevent stack overflow on some
+     * database engines when the list of rows is too big.
+     *
+     * @param rows the list of rows.
+     * @return an union in form of a binary tree.
+     */
+    private Union toUnionTree(final List<Expression> rows) {
+
+        List<Expression> rowsWithSelect = new ArrayList<>(rows);
+        
+        while (rowsWithSelect.size() > 2) {
+            final List<Expression> newRowsWithSelect = new ArrayList<>();
+
+            // Put the first and second rowsWithSelect together forming an UNION ALL.
+            // Then the third and forth, and so on.
+            for (int i = 1; i < rowsWithSelect.size(); i++) {
+                if ((i - 1) % 2 == 0) {
+                    final Expression left = rowsWithSelect.get(i - 1);
+                    final Expression right = rowsWithSelect.get(i);
+
+                    newRowsWithSelect.add(union(left, right).all().enclose());
+                }
+            }
+
+            // If the number of rowsWithSelect is odd, it will remain an expression at the end.
+            // In this case, this last expression will be the right leaf of the root of the union tree.
+            if (rowsWithSelect.size() % 2 == 1) {
+                newRowsWithSelect.add(rowsWithSelect.get(rowsWithSelect.size() - 1));
+            }
+
+            rowsWithSelect = newRowsWithSelect;
+        }
+
+        return union(rowsWithSelect).all();
     }
 
     /**

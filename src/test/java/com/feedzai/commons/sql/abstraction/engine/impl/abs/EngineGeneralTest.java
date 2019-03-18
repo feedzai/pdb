@@ -76,6 +76,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -2384,6 +2385,21 @@ public class EngineGeneralTest {
             assertEquals("Values requires aliases to avoid ambiguous columns names.", e.getMessage());
             throw e;
         }
+    }
+
+    @Test
+    public void testLargeValues() throws DatabaseEngineException {
+        final Values values = values("id", "name");
+
+        final String paddingString = "abcdefghijklmnopqrs";
+
+        for (int i = 0 ; i < 10000 ; i++) {
+            values.row(k(ThreadLocalRandom.current().nextLong()),
+                    k(paddingString));
+        }
+
+        // If it crashes, the test will fail.
+        engine.query(values);
     }
 
     @Test
