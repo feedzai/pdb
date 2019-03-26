@@ -2392,7 +2392,7 @@ public class EngineGeneralTest {
     public void testLargeValues() throws DatabaseEngineException {
         final Values values = values("long", "uuid");
 
-        for (int i = 0 ; i < 2048 ; i++) {
+        for (int i = 0 ; i < 256 ; i++) {
             values.row(k(ThreadLocalRandom.current().nextLong()),
                     k(UUID.randomUUID().toString()));
         }

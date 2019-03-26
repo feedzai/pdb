@@ -500,33 +500,23 @@ public abstract class AbstractTranslator {
      * @return the resulting union
      */
     protected Union rowsToUnion(final List<Expression> rows) {
-        return toUnionTree(rows);
-    }
-
-    /**
-     * Create an union in form of a binary tree from a list of rows.
-     * The tree shape is to prevent stack overflow on some
-     * database engines when the list of rows is too big.
-     *
-     * @param rows the list of rows.
-     * @return an union in form of a binary tree.
-     */
-    private Union toUnionTree(final List<Expression> rows) {
+        // Create an union in form of a binary tree from a list of rows.
+        // The tree shape is to prevent stack overflow on some
+        // database engines when the list of rows is too big.
 
         List<Expression> rowsWithSelect = new ArrayList<>(rows);
-        
+
         while (rowsWithSelect.size() > 2) {
             final List<Expression> newRowsWithSelect = new ArrayList<>();
 
             // Put the first and second rowsWithSelect together forming an UNION ALL.
             // Then the third and forth, and so on.
-            for (int i = 1; i < rowsWithSelect.size(); i++) {
-                if ((i - 1) % 2 == 0) {
-                    final Expression left = rowsWithSelect.get(i - 1);
-                    final Expression right = rowsWithSelect.get(i);
+            // To do this, we move though the rows with a delta of 2, to group the rows in pairs.
+            for (int i = 1; i < rowsWithSelect.size(); i+=2) {
+                final Expression left = rowsWithSelect.get(i - 1);
+                final Expression right = rowsWithSelect.get(i);
 
-                    newRowsWithSelect.add(union(left, right).all().enclose());
-                }
+                newRowsWithSelect.add(union(left, right).all().enclose());
             }
 
             // If the number of rowsWithSelect is odd, it will remain an expression at the end.
