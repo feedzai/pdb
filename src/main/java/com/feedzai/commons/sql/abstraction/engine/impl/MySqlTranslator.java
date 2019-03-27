@@ -27,6 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
@@ -284,6 +285,14 @@ public class MySqlTranslator extends AbstractTranslator {
     @Override
     public String translate(final With with) {
         throw new OperationNotSupportedRuntimeException("MySQL does not support WITH.");
+    }
+
+    @Override
+    protected Union rowsToUnion(final List<Expression> rows) {
+        // By default, use UNION ALL to express VALUES.
+        // MySQL does not support modeling UNION using binary tree due to a bug prior to 8.0
+        // https://bugs.mysql.com/bug.php?id=25734
+        return union(rows).all();
     }
 
     @Override
