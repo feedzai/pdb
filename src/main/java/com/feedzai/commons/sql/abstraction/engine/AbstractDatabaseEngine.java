@@ -355,8 +355,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
                 // return it.
                 return conn;
+            } catch (final InterruptedException ex) {
+                logger.debug("Thread interrupted.");
+                throw new InterruptedException();
             } catch (final SQLException ex) {
-
                 logger.debug("Connection failed.");
 
                 if (maximumNumberOfTries > 0 && retries > maximumNumberOfTries) {

@@ -362,8 +362,12 @@ public abstract class AbstractBatch implements Runnable {
                     processBatch(temp);
 
                     success = true;
-                } catch (final Exception exc) {
-                    logger.warn(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, exc);
+                } catch (final InterruptedException ex) {
+                    logger.debug("Interrupted while trying to flush batch. Stopping retries.");
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (final Exception ex) {
+                    logger.warn(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, ex);
                 }
             }
 
