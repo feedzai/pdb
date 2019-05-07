@@ -1035,13 +1035,30 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             PreparedStatement ps = me.getInsert();
-            entityToPreparedStatement(me.getEntity(), ps, entry, true);
+            entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
 
             ps.addBatch();
         } catch (final Exception ex) {
             throw new DatabaseEngineException("Error adding to batch", ex);
         }
 
+    }
+
+    /**
+     * Translates the given entry entity to the prepared statement when used in the context of
+     * batch updates. This is to be overriden on engines where a distinct treatment is required
+     * for these situations.
+     *
+     * @param entity The entity.
+     * @param ps     The prepared statement.
+     * @param entry  The entry.
+     * @return The prepared statement filled in.
+     * @throws DatabaseEngineException if something occurs during the translation.
+     *
+     * @since 2.4.2
+     */
+    protected int entityToPreparedStatementForBatch(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException {
+        return entityToPreparedStatement(entity, ps, entry, useAutoIncs);
     }
 
     /**

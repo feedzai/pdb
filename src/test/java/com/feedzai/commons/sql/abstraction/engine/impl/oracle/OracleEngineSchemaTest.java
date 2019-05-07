@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -27,6 +28,8 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,10 +42,12 @@ import java.util.Map;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.CLOB;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
@@ -255,6 +260,57 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             assertEquals("testClob", result.get(0).get(clobColumn).toString());
             final byte[] blobResult = result.get(0).get(blobColumn).toBlob();
             assertTrue(Arrays.equals(stringBytes, blobResult));
+        }
+    }
+
+    /**
+     * This is a regression test for https://github.com/feedzai/pdb/issues/114. It inserts
+     * 10 rows using the batch update interface and ensures that no temp lOBs are left.
+     *
+     * @throws Exception Should not be thrown.
+     * @since 2.4.2
+     */
+    @Test
+    public void testBlobBatchInsertClearsResources() throws Exception {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", STRING)
+                .addColumn("COL2", BLOB)
+                .build();
+
+        try (DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
+            engine.addEntity(entity);
+
+            // Bach with huge size and timeout, so we control it explicitly
+            final AbstractBatch batch = engine.createBatch(1000000, 2000000L, "Testing");
+
+            // Add 10 rows with a large CLOB
+            for (int rowIdx = 0; rowIdx < 10; rowIdx++) {
+                final StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < 4000; i++) {
+                    sb.append("a");
+                }
+                final String bigString = sb.toString();
+                final EntityEntry entry = entry().set("COL1", "CENINHAS").set("COL2", bigString)
+                        .build();
+                batch.add("TEST", entry);
+            }
+
+            // Flush the batch
+            batch.flush();
+
+            // Get the cache_lobs value for the session that corresponds to the current DB connection
+            final Connection conn = engine.getConnection();
+            final String myCachedLobsQuery =
+                    "select CACHE_LOBS " +
+                    "from V$TEMPORARY_LOBS " +
+                    "where sid = (SELECT s.sid FROM v$session s, v$process p WHERE p.addr = s.paddr and s.sid in (select distinct sid from v$mystat))";
+
+            // Just get the query results need to release resources here
+            final ResultSet rs = conn.createStatement().executeQuery(myCachedLobsQuery);
+            rs.next();
+            final int cachedLobs = rs.getInt(1);
+            assertEquals("No cached lobs after batch update", 0, cachedLobs);
         }
     }
 
