@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableList;
 import oracle.jdbc.OraclePreparedStatement;
 import oracle.jdbc.OracleTypes;
 
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -45,9 +47,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -117,6 +121,27 @@ public class OracleEngine extends AbstractDatabaseEngine {
     private static final Double ZERO = 0.0;
 
     /**
+     * The size (in bytes) of a column after which {@link Blob blobs} are used for batch inserts.
+     *
+     * @since 2.4.2
+     */
+    private static final int MIN_SIZE_FOR_BLOB = 3900;
+
+    /**
+     * The size (in characters) of a column after which {@link Clob clobs} are used for batch inserts.
+     *
+     * @since 2.4.2
+     */
+    private static final int MIN_SIZE_FOR_CLOB = 35000;
+
+    /**
+     * The actions that need to be performed after the current batch is flushed.
+     *
+     * @since 2.4.2
+     */
+    private Deque<Action0> postFlushActions = new ConcurrentLinkedDeque<>();
+
+    /**
      * Creates a new Oracle connection.
      *
      * @param properties The properties for the database connection.
@@ -145,7 +170,46 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
+    public synchronized void flush() throws DatabaseEngineException {
+        super.flush();
+        while (!postFlushActions.isEmpty()) {
+            try {
+                postFlushActions.pop().apply();
+            } catch (Exception e) {
+                logger.error("Error on post flush action", e);
+            }
+        }
+    }
+
+    @Override
+    protected int entityToPreparedStatementForBatch(final DbEntity entity, final PreparedStatement originalPs, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+        return entityToPreparedStatement(entity, originalPs, entry, useAutoInc, true);
+    }
+
+    @Override
     protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement originalPs, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+        return entityToPreparedStatement(entity, originalPs, entry, useAutoInc, false);
+    }
+
+    /**
+     * Translates the given entry entity to the prepared statement.
+     *
+     * @param entity        The entity.
+     * @param originalPs    The prepared statement.
+     * @param entry         The entry.
+     * @param fromBatch     Indicates if this is being requested in the context of a
+     *                      batch update or not.
+     *
+     * @return The prepared statement filled in.
+     * @throws DatabaseEngineException if something occurs during the translation.
+     *
+     * @since 2.4.2
+     */
+    private int entityToPreparedStatement(final DbEntity entity,
+                                          final PreparedStatement originalPs,
+                                          final EntityEntry entry,
+                                          final boolean useAutoInc,
+                                          final boolean fromBatch) throws DatabaseEngineException {
         final OraclePreparedStatement ps = (OraclePreparedStatement) originalPs;
         int i = 1;
         for (final DbColumn column : entity.getColumns()) {
@@ -162,7 +226,19 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 }
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytesForBlob(i, objectToArray(val));
+                        final byte[] valArray = objectToArray(val);
+                        if (fromBatch && valArray.length > MIN_SIZE_FOR_BLOB) {
+                            // Use a blob for columns greater than 4K when inside a batch
+                            // update because the Oracle driver creates one and only releases
+                            // it when the PreparedStatement is closed. This will be closed
+                            // explicitly when the batch is flushed.
+                            final Blob blob = ps.getConnection().createBlob();
+                            blob.setBytes(1, valArray);
+                            ps.setBlob(i, blob);
+                            postFlushActions.add(blob::free);
+                        } else {
+                            ps.setBytesForBlob(i, valArray);
+                        }
                         break;
                     case JSON:
                     case CLOB:
@@ -170,9 +246,20 @@ public class OracleEngine extends AbstractDatabaseEngine {
                             ps.setNull(i, Types.CLOB);
                             break;
                         }
-
                         if (val instanceof String) {
-                            ps.setStringForClob(i, (String) val);
+                            final String valString = (String) val;
+                            if (fromBatch && valString.length() > MIN_SIZE_FOR_CLOB) {
+                                // Use a clob for columns greater than 35K when inside a batch
+                                // update because the Oracle driver creates one and only releases
+                                // it when the PreparedStatement is closed. This will be closed
+                                // explicitly when the batch is flushed.
+                                final Clob clob = ps.getConnection().createClob();
+                                clob.setString(1, valString);
+                                ps.setClob(i, clob);
+                                postFlushActions.add(clob::free);
+                            } else {
+                                ps.setStringForClob(i, valString);
+                            }
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                         }
@@ -1046,4 +1133,17 @@ public class OracleEngine extends AbstractDatabaseEngine {
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new OracleResultIterator(ps);
     }
+
+    /**
+     * Represents an action that can throw any exception.
+     * Has no parameters and returns void.
+     */
+    @FunctionalInterface
+    public interface Action0 {
+        /**
+         * Executes the action.
+         */
+        void apply() throws Exception;
+    }
+
 }
