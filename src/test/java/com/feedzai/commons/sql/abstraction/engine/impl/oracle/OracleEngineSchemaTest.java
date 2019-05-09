@@ -266,45 +266,19 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
     /**
      * This is a regression test for https://github.com/feedzai/pdb/issues/114. It inserts
-     * 10 rows containing a BLOB column using the batch update interface and ensures that
-     * no temp lOBs are left.
+     * 10 rows using the batch update interface and ensures that no temp LOBs are left.
      *
      * @throws Exception Should not be thrown.
      * @since 2.4.2
      */
     @Test
-    public void testBlobBatchInsertClearsResources() throws Exception {
-        testLobBatchInsertClearsResources(BLOB);
-    }
-
-    /**
-     * This is a regression test for https://github.com/feedzai/pdb/issues/114. It inserts
-     * 10 rows containing a CLOB column using the batch update interface and ensures that
-     * no temp lOBs are left.
-     *
-     * @throws Exception Should not be thrown.
-     * @since 2.4.2
-     */
-    @Test
-    public void testClobBatchInsertClearsResources() throws Exception {
-        testLobBatchInsertClearsResources(CLOB);
-    }
-
-    /**
-     * This is a regression test for https://github.com/feedzai/pdb/issues/114. It inserts
-     * 10 rows using the batch update interface and ensures that no temp lOBs are left.
-     *
-     * @param testedColType  The type of LOB being tested, either
-     *                      {@link DbColumnType#CLOB} or {@link DbColumnType#BLOB}.
-     *
-     * @throws Exception Should not be thrown.
-     * @since 2.4.2
-     */
-    private void testLobBatchInsertClearsResources(final DbColumnType testedColType) throws Exception {
+    public void testLobBatchInsertClearsLobResources() throws Exception {
+        final String tableName = "TEST";
         final DbEntity entity = dbEntity()
-                .name("TEST")
+                .name(tableName)
                 .addColumn("COL1", STRING)
-                .addColumn("COL2", testedColType)
+                .addColumn("COL2", CLOB)
+                .addColumn("COL3", BLOB)
                 .build();
 
         try (DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
@@ -313,16 +287,21 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             // Bach with huge size and timeout, so we control it explicitly
             final AbstractBatch batch = engine.createBatch(1000000, 2000000L, "Testing");
 
-            // Add 10 rows with a large CLOB
-            for (int rowIdx = 0; rowIdx < 10; rowIdx++) {
-                final StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < (testedColType == BLOB ? 4000 : 40000); i++) {
-                    sb.append("a");
-                }
-                final String bigString = sb.toString();
-                final EntityEntry entry = entry().set("COL1", "CENINHAS").set("COL2", bigString)
+            // Add 10 rows with a large LOBs
+            final StringBuilder clobValue = new StringBuilder();
+            for (int i = 0; i < 40000; i++) {
+                clobValue.append("a");
+            }
+            final byte[] blobValue = new byte[4000];
+            Arrays.fill(blobValue, (byte) 'x');
+            final int numRows = 10;
+            for (int rowIdx = 0; rowIdx < numRows; rowIdx++) {
+                final EntityEntry entry = entry()
+                        .set("COL1", "CENINHAS")
+                        .set("COL2", clobValue.toString())
+                        .set("COL3", blobValue)
                         .build();
-                batch.add("TEST", entry);
+                batch.add(tableName, entry);
             }
 
             // Flush the batch
@@ -340,6 +319,17 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             rs.next();
             final int cachedLobs = rs.getInt(1);
             assertEquals("No cached lobs after batch update", 0, cachedLobs);
+
+            // Check that we read what we stored
+            final Expression query = select(all()).from(table(tableName));
+            final List<Map<String, ResultColumn>> result = engine.query(query);
+            assertEquals(numRows, result.size());
+
+            for (int i = 0; i < numRows; i++) {
+                assertEquals("CENINHAS", result.get(i).get("COL1").toString());
+                assertEquals(clobValue.toString(), result.get(i).get("COL2").toString());
+                assertTrue(Arrays.equals(blobValue, result.get(i).get("COL3").toBlob()));
+            }
         }
     }
 

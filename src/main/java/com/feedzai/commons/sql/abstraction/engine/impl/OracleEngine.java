@@ -233,7 +233,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                             // it when the PreparedStatement is closed. This will be closed
                             // explicitly when the batch is flushed.
                             final Blob blob = ps.getConnection().createBlob();
-                            blob.setBytes(1, objectToArray(val));
+                            blob.setBytes(1, valArray);
                             ps.setBlob(i, blob);
                             postFlushActions.add(blob::free);
                         } else {
@@ -254,7 +254,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                                 // it when the PreparedStatement is closed. This will be closed
                                 // explicitly when the batch is flushed.
                                 final Clob clob = ps.getConnection().createClob();
-                                clob.setString(1, (String) val);
+                                clob.setString(1, valString);
                                 ps.setClob(i, clob);
                                 postFlushActions.add(clob::free);
                             } else {
