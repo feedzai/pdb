@@ -55,7 +55,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.1.4</version>
+                <version>42.2.6</version>
             </dependency>
             <!--
              Needed for compilation even if Oracle DB won't be used;
@@ -66,7 +66,7 @@
             <dependency>
                 <groupId>com.oracle.jdbc</groupId>
                 <artifactId>ojdbc8</artifactId>
-                <version>12.2.0.1</version>
+                <version>18.3.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -81,7 +81,7 @@
             <dependency>
                 <groupId>com.microsoft.sqlserver</groupId>
                 <artifactId>mssql-jdbc</artifactId>
-                <version>6.4.0.jre8</version>
+                <version>7.2.2.jre8</version>
             </dependency>
             <dependency>
                 <groupId>org.jmockit</groupId>
@@ -259,7 +259,7 @@
                 <plugin>
                     <groupId>io.fabric8</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
-                    <version>0.25.2</version>
+                    <version>0.30.0</version>
                     <executions>
                         <execution>
                             <id>start</id>
@@ -549,7 +549,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>microsoft/mssql-server-linux:2017-CU6</name>
+                                    <name>microsoft/mssql-server-linux:2017-CU13</name>
                                     <alias>pdb-sqlserver</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -594,11 +594,55 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>postgres:9.6.8</name>
+                                    <name>postgres:9.6.14</name>
                                     <alias>pdb-postgresql</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
                                         <hostname>pdb-postgresql</hostname>
+                                        <ports>
+                                            <port>5432:5432</port>
+                                        </ports>
+                                        <env>
+                                            <POSTGRES_PASSWORD>AaBb12.#</POSTGRES_PASSWORD>
+                                        </env>
+                                        <wait>
+                                            <time>40000</time>
+                                            <log>PostgreSQL init process complete; ready for start up</log>
+                                        </wait>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>postgresql11</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemProperties>
+                                <instances>postgresql</instances>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <name>postgres:11.4</name>
+                                    <alias>pdb-postgresql11</alias>
+                                    <run>
+                                        <namingStrategy>alias</namingStrategy>
+                                        <hostname>pdb-postgresql11</hostname>
                                         <ports>
                                             <port>5432:5432</port>
                                         </ports>
@@ -684,7 +728,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>ibmcom/db2express-c:10.5.0.5-3.10.0</name>
+                                    <name>ibmcom/db2:11.5.0.0</name>
                                     <alias>pdb-db2</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -692,18 +736,15 @@
                                         <ports>
                                             <port>50000:50000</port>
                                         </ports>
+                                        <privileged>true</privileged>
                                         <env>
                                             <LICENSE>accept</LICENSE>
                                             <DB2INST1_PASSWORD>AaBb12.#</DB2INST1_PASSWORD>
+                                            <DBNAME>testdb</DBNAME>
                                         </env>
-                                        <entrypoint>
-                                            <arg>/bin/bash</arg>
-                                            <arg>-c</arg>
-                                            <arg>echo -e "$DB2INST1_PASSWORD\n$DB2INST1_PASSWORD" | passwd db2inst1; /usr/bin/su - db2inst1 -c 'db2start; db2 create database testdb; tail -f /dev/null'</arg>
-                                        </entrypoint>
                                         <wait>
-                                            <time>120000</time>
-                                            <log>The CREATE DATABASE command completed successfully.</log>
+                                            <time>360000</time>
+                                            <log>All databases are now active.</log>
                                         </wait>
                                     </run>
                                 </image>
