@@ -152,6 +152,14 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
+    protected void connect() throws Exception {
+        super.connect();
+        // need to enable this for the session in order to clean temporary segment usage when cached LOBs are freed
+        // (followup on https://github.com/feedzai/pdb/issues/114)
+        query("alter session set events '60025 trace name context forever'");
+    }
+
+    @Override
     public synchronized void setParameters(final String name, final Object... params) throws DatabaseEngineException, ConnectionResetException {
         for(int i = 0 ; i < params.length ; i++) {
             params[i] = ensureNoUnderflow(params[i]);

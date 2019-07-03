@@ -16,7 +16,6 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
@@ -28,14 +27,11 @@ import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaT
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +52,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -260,7 +257,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             assertEquals(1L, (long) result.get(0).get(idColumn).toLong());
             assertEquals("testClob", result.get(0).get(clobColumn).toString());
             final byte[] blobResult = result.get(0).get(blobColumn).toBlob();
-            assertTrue(Arrays.equals(stringBytes, blobResult));
+            assertArrayEquals(stringBytes, blobResult);
         }
     }
 
@@ -287,13 +284,16 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             // Bach with huge size and timeout, so we control it explicitly
             final AbstractBatch batch = engine.createBatch(1000000, 2000000L, "Testing");
 
-            // Add 10 rows with a large LOBs
-            final StringBuilder clobValue = new StringBuilder();
-            for (int i = 0; i < 40000; i++) {
+            final int clobSize = 40000;
+            final int blobSize = 5000;
+            final StringBuilder clobValue = new StringBuilder(clobSize);
+            for (int i = 0; i < clobSize; i++) {
                 clobValue.append("a");
             }
-            final byte[] blobValue = new byte[4000];
+            final byte[] blobValue = new byte[blobSize];
             Arrays.fill(blobValue, (byte) 'x');
+
+            // Add 10 rows with a large LOBs
             final int numRows = 10;
             for (int rowIdx = 0; rowIdx < numRows; rowIdx++) {
                 final EntityEntry entry = entry()
@@ -307,18 +307,23 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             // Flush the batch
             batch.flush();
 
-            // Get the cache_lobs value for the session that corresponds to the current DB connection
-            final Connection conn = engine.getConnection();
-            final String myCachedLobsQuery =
-                    "select CACHE_LOBS " +
-                    "from V$TEMPORARY_LOBS " +
-                    "where sid = (SELECT s.sid FROM v$session s, v$process p WHERE p.addr = s.paddr and s.sid in (select distinct sid from v$mystat))";
+            // Get the session ID that corresponds to the current DB connection
+            final String sid = engine.query("select distinct sid from v$mystat")
+                    .get(0)
+                    .get("SID")
+                    .toString();
 
-            // Just get the query results need to release resources here
-            final ResultSet rs = conn.createStatement().executeQuery(myCachedLobsQuery);
-            rs.next();
-            final int cachedLobs = rs.getInt(1);
-            assertEquals("No cached lobs after batch update", 0, cachedLobs);
+            // Get the number of cached LOBs for the current DB connection
+            final String myCachedLobsQuery = "select CACHE_LOBS from V$TEMPORARY_LOBS where sid = " + sid;
+            final Long cachedLobs = engine.query(myCachedLobsQuery).get(0).get("CACHE_LOBS").toLong();
+            assertEquals("No cached LOBs after batch update", Long.valueOf(0), cachedLobs);
+
+            // Get the number of temporary segments used by LOB data for the current DB connection
+            final String myTempLobDataQuery = "select count(*) AS LOB_COUNT " +
+                    "from v$tempseg_usage t, v$session s " +
+                    "where s.saddr=t.session_addr and segtype = 'LOB_DATA' and s.sid = " + sid;
+            final Long tempLobData = engine.query(myTempLobDataQuery).get(0).get("LOB_COUNT").toLong();
+            assertEquals("No temp LOB data after batch update", Long.valueOf(0), tempLobData);
 
             // Check that we read what we stored
             final Expression query = select(all()).from(table(tableName));
@@ -328,7 +333,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             for (int i = 0; i < numRows; i++) {
                 assertEquals("CENINHAS", result.get(i).get("COL1").toString());
                 assertEquals(clobValue.toString(), result.get(i).get("COL2").toString());
-                assertTrue(Arrays.equals(blobValue, result.get(i).get("COL3").toBlob()));
+                assertArrayEquals(blobValue, result.get(i).get("COL3").toBlob());
             }
         }
     }
