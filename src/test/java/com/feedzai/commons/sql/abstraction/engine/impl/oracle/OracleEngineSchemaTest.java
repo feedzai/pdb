@@ -50,6 +50,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.COMPRESS_LOBS;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.DISABLE_LOB_CACHING;
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.junit.Assert.assertArrayEquals;
@@ -277,6 +278,8 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
                 .addColumn("COL2", CLOB)
                 .addColumn("COL3", BLOB)
                 .build();
+
+        properties.setProperty(DISABLE_LOB_CACHING, Boolean.toString(true));
 
         try (DatabaseEngine engine = DatabaseFactory.getConnection(properties)) {
             engine.addEntity(entity);

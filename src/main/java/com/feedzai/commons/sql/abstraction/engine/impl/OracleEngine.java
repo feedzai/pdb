@@ -154,9 +154,16 @@ public class OracleEngine extends AbstractDatabaseEngine {
     @Override
     protected void connect() throws Exception {
         super.connect();
-        // need to enable this for the session in order to clean temporary segment usage when cached LOBs are freed
-        // (followup on https://github.com/feedzai/pdb/issues/114)
-        query("alter session set events '60025 trace name context forever'");
+
+        if (this.properties.isLobCachingDisabled()) {
+            // need to enable this for the session in order to clean temporary segment usage when cached LOBs are freed
+            // (followup for https://github.com/feedzai/pdb/issues/114)
+            try {
+                query("alter session set events '60025 trace name context forever'");
+            } catch (final Exception ex) {
+                logger.debug("LOB caching is set to be disabled in properties, but it was not possible to disable for this DB session");
+            }
+        }
     }
 
     @Override
