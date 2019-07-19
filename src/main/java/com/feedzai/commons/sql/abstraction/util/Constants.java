@@ -79,4 +79,9 @@ public final class Constants {
      * this behavior. The default value is {@code false}.
      */
     public static final boolean DEFAULT_COMPRESS_LOBS = false;
+    /**
+     * Indicates if LOB data caching should be disabled, to avoid consuming too much memory and/or disk space in the DB
+     * server. This is only possible on implementations that support this behavior. The default value is {@code false}.
+     */
+    public static final boolean DEFAULT_DISABLE_LOB_CACHING = false;
 }

@@ -27,6 +27,7 @@ import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ALLOW_COLUMN_DROP;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_BLOB_BUFFER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_DISABLE_LOB_CACHING;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_FETCH_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ISOLATION_LEVEL;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN;
@@ -144,6 +145,11 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      * Property that indicates the lobs should be compressed. This depends on the database implementation.
      */
     public static final String COMPRESS_LOBS = "pdb.compress_lobs";
+    /**
+     * Property that indicates if LOB data caching should be disabled, to avoid consuming too much memory and/or disk
+     * space in the DB server. This depends on the database implementation.
+     */
+    public static final String DISABLE_LOB_CACHING = "pdb.disable_lob_caching";
 
     /**
      * Creates a new instance of an empty {@link PdbProperties}.
@@ -175,6 +181,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(FETCH_SIZE, DEFAULT_FETCH_SIZE);
             setProperty(MAXIMUM_TIME_BATCH_SHUTDOWN, DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN);
             setProperty(COMPRESS_LOBS, DEFAULT_COMPRESS_LOBS);
+            setProperty(DISABLE_LOB_CACHING, DEFAULT_DISABLE_LOB_CACHING);
         }
     }
 
@@ -361,6 +368,15 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      */
     public boolean shouldCompressLobs() {
         return Boolean.parseBoolean(getProperty(COMPRESS_LOBS));
+    }
+
+    /**
+     * Checks if LOB data caching should be disabled.
+     *
+     * @return {@code true} if LOB caching should be disabled, {@code false} otherwise.
+     */
+    public boolean isLobCachingDisabled() {
+        return Boolean.parseBoolean(getProperty(DISABLE_LOB_CACHING));
     }
 
     /**
