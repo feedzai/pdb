@@ -119,6 +119,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final boolean sslEnabled = PGProperty.SSL.getBoolean(parsedProps) || "".equals(PGProperty.SSL.get(parsedProps));
         final String sslmode = PGProperty.SSL_MODE.get(parsedProps);
         if (sslEnabled && sslmode == null) {
+            logger.trace("SSL enabled without SSL mode specified: \"require\" will be used by default, appended to JDBC URL");
             return jdbc.concat(LEGACY_DEFAULT_SSL_MODE);
         }
 
