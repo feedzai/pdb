@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.feedzai</groupId>
     <artifactId>pdb</artifactId>
-    <version>2.4.3-SNAPSHOT</version>
+    <version>2.4.3</version>
     <name>pdb</name>
 
     <parent>
@@ -22,7 +22,7 @@
         <connection>scm:git:git@github.com:feedzai/pdb.git</connection>
         <developerConnection>scm:git:git@github.com:feedzai/pdb.git</developerConnection>
         <url>git@github.com:feedzai/pdb.git</url>
-        <tag>HEAD</tag>
+        <tag>pdb-2.4.3</tag>
     </scm>
 
     <licenses>
