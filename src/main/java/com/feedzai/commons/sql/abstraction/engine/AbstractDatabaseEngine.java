@@ -38,6 +38,7 @@ import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import oracle.jdbc.driver.OracleConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -222,6 +223,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
+     * Get the properties to be passed to the database connection that will be created. Since these
+     * properties are specific to the database engine, it is up to the {@link AbstractDatabaseEngine}
+     * implementation to specify them. This is used, for instance, to set the database connection timeout.
+     *
+     * @return the properties of the connection to the database.
+     */
+    protected abstract Properties getDBProperties();
+
+    /**
      * Connects to the database.
      *
      * @throws Exception If connection is not possible, or failed to decrypt username/password if encryption was provided.
@@ -252,10 +262,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         final String jdbc = getFinalJdbcConnection(this.properties.getJdbc());
 
-        this.conn = DriverManager.getConnection(
-                jdbc,
-                username,
-                password);
+        final Properties props = getDBProperties();
+
+        // Need to check if not null, because setProperty method doesn't accept null values
+        if (username != null && password != null) {
+            props.setProperty("user", username);
+            props.setProperty("password", password);
+        }
+
+        this.conn = DriverManager.getConnection(jdbc, props);
 
         if (this.properties.isSchemaSet()) {
             setSchema(this.properties.getSchema());

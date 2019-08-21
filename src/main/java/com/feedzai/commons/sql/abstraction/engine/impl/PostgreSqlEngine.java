@@ -34,6 +34,7 @@ import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import oracle.jdbc.driver.OracleConnection;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
@@ -662,6 +663,18 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             }
 
         }
+    }
+
+    @Override
+    protected Properties getDBProperties() {
+        final Properties props = new Properties();
+        // in seconds
+        final String loginTimeout = this.properties.getLoginTimeout();
+        final String socketTimeout = this.properties.getSocketTimeout();
+        // in seconds
+        props.setProperty("loginTimeout", loginTimeout);
+        props.setProperty("socketTimeout", socketTimeout);
+        return props;
     }
 
     @Override

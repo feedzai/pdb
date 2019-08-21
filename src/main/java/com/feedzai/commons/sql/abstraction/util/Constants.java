@@ -84,4 +84,16 @@ public final class Constants {
      * server. This is only possible on implementations that support this behavior. The default value is {@code false}.
      */
     public static final boolean DEFAULT_DISABLE_LOB_CACHING = false;
+
+    /**
+     * Default duration (in seconds) to wait for the database connection to be established.
+     * By default, there is no timeout at establishing the connection, so pdb will wait indefinitely for the database.
+     */
+    public static final String DEFAULT_LOGIN_TIMEOUT = "0";
+
+    /**
+     * The default socket connection timeout (in seconds).
+     * By default, there is no timeout at the socket level, so pdb will wait indefinitely for the database to respond the queries.
+     */
+    public static final String DEFAULT_SOCKET_TIMEOUT = "0";
 }

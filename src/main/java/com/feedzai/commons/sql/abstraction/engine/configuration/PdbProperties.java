@@ -30,6 +30,7 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_BLOB_BU
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_DISABLE_LOB_CACHING;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_FETCH_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ISOLATION_LEVEL;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_LOGIN_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAX_IDENTIFIER_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RECONNECT_ON_LOST;
@@ -37,6 +38,7 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RETRY_I
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SECRET_LOCATION;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_COMPRESS_LOBS;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SOCKET_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_VARCHAR_SIZE;
 
 /**
@@ -152,6 +154,16 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
     public static final String DISABLE_LOB_CACHING = "pdb.disable_lob_caching";
 
     /**
+     * Property that indicates the waiting time for the database connection to be established (in seconds)
+     */
+    public static final String LOGIN_TIMEOUT = "pdb.login_timeout";
+
+    /**
+     * Property that indicates the time, in seconds, of socket timeout.
+     */
+    public static final String SOCKET_TIMEOUT = "pdb.socket_timeout";
+
+    /**
      * Creates a new instance of an empty {@link PdbProperties}.
      */
     public PdbProperties() {
@@ -182,6 +194,8 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(MAXIMUM_TIME_BATCH_SHUTDOWN, DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN);
             setProperty(COMPRESS_LOBS, DEFAULT_COMPRESS_LOBS);
             setProperty(DISABLE_LOB_CACHING, DEFAULT_DISABLE_LOB_CACHING);
+            setProperty(LOGIN_TIMEOUT, DEFAULT_LOGIN_TIMEOUT);
+            setProperty(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
         }
     }
 
@@ -458,6 +472,24 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      */
     public String getSchema() {
         return getProperty(SCHEMA);
+    }
+
+    /**
+     * Gets the socket login timeout (in seconds).
+     *
+     * @return The socket login timeout.
+     */
+    public String getLoginTimeout() {
+        return getProperty(LOGIN_TIMEOUT);
+    }
+
+    /**
+     * Gets the socket connection timeout (in seconds).
+     *
+     * @return The socket connection timeout.
+     */
+    public String getSocketTimeout() {
+        return getProperty(SOCKET_TIMEOUT);
     }
 
     /**
