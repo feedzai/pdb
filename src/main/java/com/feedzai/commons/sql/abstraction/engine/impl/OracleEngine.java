@@ -37,6 +37,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import oracle.jdbc.OraclePreparedStatement;
 import oracle.jdbc.OracleTypes;
+import oracle.jdbc.driver.OracleConnection;
 
 import java.sql.Blob;
 import java.sql.Clob;
@@ -51,6 +52,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -149,6 +151,18 @@ public class OracleEngine extends AbstractDatabaseEngine {
      */
     public OracleEngine(PdbProperties properties) throws DatabaseEngineException {
         super(ORACLE_DRIVER, properties, Dialect.ORACLE);
+    }
+
+    @Override
+    protected Properties getDBProperties() {
+        final Properties props = new Properties();
+        // in seconds
+        final String loginTimeout = this.properties.getLoginTimeout();
+        final String socketTimeout = this.properties.getSocketTimeout();
+        // in milliseconds
+        props.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_NET_CONNECT_TIMEOUT, loginTimeout + "000");
+        props.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_READ_TIMEOUT, socketTimeout + "000");
+        return props;
     }
 
     @Override

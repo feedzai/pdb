@@ -33,6 +33,7 @@ import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import oracle.jdbc.driver.OracleConnection;
 
 import java.io.StringReader;
 import java.sql.Connection;
@@ -43,6 +44,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -95,6 +97,18 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
      */
     public SqlServerEngine(PdbProperties properties) throws DatabaseEngineException {
         super(SQLSERVER_DRIVER, properties, Dialect.SQLSERVER);
+    }
+
+    @Override
+    protected Properties getDBProperties() {
+        final Properties props = new Properties();
+        // in seconds
+        final String loginTimeout = this.properties.getLoginTimeout();
+        final String socketTimeout = this.properties.getSocketTimeout();
+        // in milliseconds
+        props.setProperty("loginTimeout", loginTimeout + "000");
+        props.setProperty("socketTimeout", socketTimeout + "000");
+        return props;
     }
 
     @Override

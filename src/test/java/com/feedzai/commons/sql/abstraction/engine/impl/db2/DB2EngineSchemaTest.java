@@ -19,15 +19,31 @@ package com.feedzai.commons.sql.abstraction.engine.impl.db2;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.RecoveryException;
+import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.LOGIN_TIMEOUT;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SOCKET_TIMEOUT;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Joao Silva (joao.silva@feedzai.com)
@@ -94,5 +110,38 @@ public class DB2EngineSchemaTest extends AbstractEngineSchemaTest {
                 "   EXECUTE IMMEDIATE 'DROP SCHEMA \"" + schema + "\" RESTRICT';\n" +
                 "END"
         );
+    }
+
+    /**
+     * Tests if the timeout setting is properly set in the connection socket to the database.
+     * Note: the DB2 and H2 databases don't support setting the connection socket timeout
+     *
+     * @throws DatabaseFactoryException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     * @throws RecoveryException
+     * @throws RetryLimitExceededException
+     * @throws SQLException
+     */
+    @Test
+    public void testTimeout() throws DatabaseFactoryException, InterruptedException, RecoveryException, RetryLimitExceededException, SQLException {
+        final int socketTimeout = 60;// in seconds
+        final int loginTimeout = 30;// in seconds
+        final Properties properties = new Properties() {
+            {
+                setProperty(JDBC, config.jdbc);
+                setProperty(USERNAME, config.username);
+                setProperty(PASSWORD, config.password);
+                setProperty(ENGINE, config.engine);
+                setProperty(SCHEMA_POLICY, "create");
+                setProperty(SOCKET_TIMEOUT, Integer.toString(socketTimeout));
+                setProperty(LOGIN_TIMEOUT, Integer.toString(loginTimeout));
+            }
+        };
+
+        final DatabaseEngine de = DatabaseFactory.getConnection(properties);
+        final int connectionTimeoutInMs = de.getConnection().getNetworkTimeout();
+        // Not supported
+        assertEquals("Is the timeout of the DB connection disabled as expected?", 0, connectionTimeoutInMs);
     }
 }
