@@ -33,7 +33,6 @@ import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import oracle.jdbc.driver.OracleConnection;
 
 import java.io.StringReader;
 import java.sql.Connection;
@@ -101,13 +100,18 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
 
     @Override
     protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in milliseconds
-        props.setProperty("loginTimeout", loginTimeout + "000");
-        props.setProperty("socketTimeout", socketTimeout + "000");
+        final Properties props = super.getDBProperties();
+
+        /*
+         Driver supports DriverManager.setLoginTimeout but this login timeout only applies after the socket connection;
+         if there is a problem connecting (e.g. if the DB server is down) the connection process may be blocked for a
+         long time, so an "initial" socket timeout is set here for the connection/login, and after the connection it is
+         set to the value specified by the SOCKET_TIMEOUT Pdb property
+         */
+        final int loginTimeoutSeconds = this.properties.getLoginTimeout();
+        // property requires milliseconds
+        props.setProperty("socketTimeout", Integer.toString(loginTimeoutSeconds * 1000));
+
         return props;
     }
 

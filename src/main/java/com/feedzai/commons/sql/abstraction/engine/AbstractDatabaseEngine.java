@@ -38,7 +38,6 @@ import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import oracle.jdbc.driver.OracleConnection;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,6 +67,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_PASSWORD;
@@ -158,6 +159,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     protected ExceptionHandler eh;
 
     /**
+     * An {@link ExecutorService} to be used by the DB drivers to break a connection if it has been blocked for longer
+     * than the specified socket timeout
+     */
+    private ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
+
+    /**
      * Creates a new instance of {@link AbstractDatabaseEngine}.
      *
      * @param driver     The driver to connect to the database.
@@ -229,7 +236,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      *
      * @return the properties of the connection to the database.
      */
-    protected abstract Properties getDBProperties();
+    protected Properties getDBProperties() {
+        return new Properties();
+    };
 
     /**
      * Connects to the database.
@@ -260,6 +269,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
         }
 
+        DriverManager.setLoginTimeout(this.properties.getLoginTimeout());
+
         final String jdbc = getFinalJdbcConnection(this.properties.getJdbc());
 
         final Properties props = getDBProperties();
@@ -271,6 +282,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         this.conn = DriverManager.getConnection(jdbc, props);
+
+        // the "network timeout" is specified in milliseconds, needs to be converted from seconds
+        this.conn.setNetworkTimeout(socketTimeoutExecutor, this.properties.getSocketTimeout() * 1000);
 
         if (this.properties.isSchemaSet()) {
             setSchema(this.properties.getSchema());
@@ -439,6 +453,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         } catch (final SQLException ex) {
             logger.warn("Unable to close connection", ex);
         }
+
+        socketTimeoutExecutor.shutdownNow();
     }
 
     /**

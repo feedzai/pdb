@@ -50,7 +50,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -157,18 +156,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
         }
 
         return i - 1;
-    }
-
-    @Override
-    protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in seconds
-        props.setProperty("loginTimeout", loginTimeout);
-        props.setProperty("socketTimeout", socketTimeout);
-        return props;
     }
 
     @Override
