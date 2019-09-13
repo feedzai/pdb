@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -163,9 +164,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
          long time, so an "initial" socket timeout is set here for the connection/login, and after the connection it is
          set to the value specified by the SOCKET_TIMEOUT Pdb property
          */
-        final int loginTimeoutSeconds = this.properties.getLoginTimeout();
-        // property requires milliseconds
-        props.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_READ_TIMEOUT, Integer.toString(loginTimeoutSeconds * 1000));
+        props.setProperty(
+                OracleConnection.CONNECTION_PROPERTY_THIN_READ_TIMEOUT,
+                Long.toString(TimeUnit.SECONDS.toMillis(this.properties.getLoginTimeout()))
+        );
 
         return props;
     }

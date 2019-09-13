@@ -36,6 +36,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.DriverManager;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
@@ -53,6 +54,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -138,11 +140,7 @@ public class TimeoutsTest {
         // is loaded: see org.h2.engine.SysProperties
         assumeTrue("H2 engine doesn't support setting timeouts, tests will be skipped", engine != DatabaseEngineDriver.H2);
 
-        final int defaultPort = engine.defaultPort();
-
-        testRouter = new TestRouter(executor, defaultPort);
-
-        dbProps.setProperty(JDBC, config.jdbc.replace("localhost:" + defaultPort, "localhost:" + testRouter.getLocalPort()));
+        testRouter = new TestRouter(executor, engine.defaultPort());
     }
 
     @After
@@ -157,12 +155,30 @@ public class TimeoutsTest {
     }
 
     /**
+     * Tests if the timeout settings are properly set for the connection to the database.
+     *
+     * @throws Exception if something goes wrong (test fails).
+     */
+    @Test
+    public void testTimeoutsConfigured() throws Exception {
+        final DatabaseEngine de = DatabaseFactory.getConnection(this.dbProps);
+
+        int loginTimeoutInSeconds = DriverManager.getLoginTimeout();
+        int connectionTimeoutInMs = de.getConnection().getNetworkTimeout();
+
+        assertEquals("Is the login timeout of the DB connection the expected?", LOGIN_TIMEOUT_SECONDS, loginTimeoutInSeconds);
+        assertEquals("Is the socket timeout of the DB connection the expected?",
+                TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS), connectionTimeoutInMs);
+    }
+
+    /**
      * Tests that when the DB server is down, the login timeout forces a return from {@link DatabaseFactory#getConnection}
      * in a timely fashion (with an Exception).
      */
     @Test
     public void testLoginTimeout() {
-        final Future<DatabaseEngine> dbEngineFuture = executor.submit(() -> DatabaseFactory.getConnection(dbProps));
+        final Properties testProps = getPatchedDbProperties(dbProps, testRouter.getDbPort(), testRouter.getLocalPort());
+        final Future<DatabaseEngine> dbEngineFuture = executor.submit(() -> DatabaseFactory.getConnection(testProps));
 
         assertThatCode(() -> dbEngineFuture.get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS))
                 .as("When the DB server is down, the DB engine creation should fail by timeout in the connection")
@@ -182,8 +198,9 @@ public class TimeoutsTest {
     @Test
     public void testNetworkTimeout() throws Exception {
         testRouter.init();
+        final Properties testProps = getPatchedDbProperties(dbProps, testRouter.getDbPort(), testRouter.getLocalPort());
 
-        final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(dbProps))
+        final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
                 .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
 
         Future<Boolean> connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
@@ -204,6 +221,25 @@ public class TimeoutsTest {
 
         assertFalse("After breaking connection, PDB should detect that it is not connected to the DB server",
                 connCheckFuture.get(SOCKET_TIMEOUT_SECONDS - LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+    }
+
+    /**
+     * Gets new DB properties with the JDBC URL patched to replace the default DB port with a new one.
+     *
+     * @param dbProperties The original DB properties.
+     * @param defaultPort  The default DB port.
+     * @param newPort      The port to use as replacement in the JDBC URL for the default DB port.
+     * @return The patched DB properties.
+     */
+    private Properties getPatchedDbProperties(final Properties dbProperties, final int defaultPort, final int newPort) {
+        final Properties testProps = new Properties();
+        testProps.putAll(dbProperties);
+
+        final String patchedJdbc = dbProperties.getProperty(JDBC)
+                .replace("localhost:" + defaultPort, "localhost:" + newPort);
+        testProps.setProperty(JDBC, patchedJdbc);
+
+        return testProps;
     }
 
     /**
@@ -237,6 +273,15 @@ public class TimeoutsTest {
          */
         public int getLocalPort() {
             return serverSocket.getLocalPort();
+        }
+
+        /**
+         * Gets the database port (the port where the DB server being tested is listening).
+         *
+         * @return the database port.
+         */
+        public int getDbPort() {
+            return dbPort;
         }
 
         /**

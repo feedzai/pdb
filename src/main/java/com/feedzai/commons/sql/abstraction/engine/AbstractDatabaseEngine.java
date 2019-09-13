@@ -162,7 +162,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * An {@link ExecutorService} to be used by the DB drivers to break a connection if it has been blocked for longer
      * than the specified socket timeout
      */
-    private ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * Creates a new instance of {@link AbstractDatabaseEngine}.
@@ -238,7 +238,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected Properties getDBProperties() {
         return new Properties();
-    };
+    }
 
     /**
      * Connects to the database.
@@ -283,8 +283,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         this.conn = DriverManager.getConnection(jdbc, props);
 
-        // the "network timeout" is specified in milliseconds, needs to be converted from seconds
-        this.conn.setNetworkTimeout(socketTimeoutExecutor, this.properties.getSocketTimeout() * 1000);
+        this.conn.setNetworkTimeout(socketTimeoutExecutor, (int) TimeUnit.SECONDS.toMillis(this.properties.getSocketTimeout()));
 
         if (this.properties.isSchemaSet()) {
             setSchema(this.properties.getSchema());
