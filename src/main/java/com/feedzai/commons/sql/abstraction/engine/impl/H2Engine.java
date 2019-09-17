@@ -41,7 +41,6 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -114,19 +113,6 @@ public class H2Engine extends AbstractDatabaseEngine {
         }
 
         return jdbc;
-    }
-
-    @Override
-    protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in seconds
-        // Note: these settings don't work with H2
-        props.setProperty("loginTimeout", loginTimeout);
-        props.setProperty("socketTimeout", socketTimeout);
-        return props;
     }
 
     @Override

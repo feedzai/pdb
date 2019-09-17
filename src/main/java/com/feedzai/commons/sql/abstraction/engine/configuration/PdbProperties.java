@@ -154,7 +154,10 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
     public static final String DISABLE_LOB_CACHING = "pdb.disable_lob_caching";
 
     /**
-     * Property that indicates the waiting time for the database connection to be established (in seconds)
+     * Property that indicates the waiting time for the database connection to be established (in seconds).
+     *
+     * In some drivers this may refer only to the login timeout, in others it may refer to the total time to wait
+     * for getting a connection in addition to logging in.
      */
     public static final String LOGIN_TIMEOUT = "pdb.login_timeout";
 
@@ -479,8 +482,8 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      *
      * @return The socket login timeout.
      */
-    public String getLoginTimeout() {
-        return getProperty(LOGIN_TIMEOUT);
+    public int getLoginTimeout() {
+        return Integer.parseInt(getProperty(LOGIN_TIMEOUT));
     }
 
     /**
@@ -488,8 +491,8 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      *
      * @return The socket connection timeout.
      */
-    public String getSocketTimeout() {
-        return getProperty(SOCKET_TIMEOUT);
+    public int getSocketTimeout() {
+        return Integer.parseInt(getProperty(SOCKET_TIMEOUT));
     }
 
     /**

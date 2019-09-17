@@ -34,7 +34,6 @@ import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import oracle.jdbc.driver.OracleConnection;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
@@ -87,7 +86,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * The default SSL mode for the connection, when that PostgreSQL property is not set in the JDBC URL but SSL is
      * enabled.
      *
-     * This is required to avoid requiring configuration changes, by keeping the old behavior where if SSL was enabled
+     * This is needed to avoid requiring configuration changes, by keeping the old behavior where if SSL was enabled
      * ("ssl" option present in JDBC URL, without arguments or with argument "true") but SSL mode was not set, then SSL
      * mode would work as "require".
      * The new behavior since driver v42.2.5 when SSL is enabled but SSL mode is not set is "verify-full".
@@ -95,7 +94,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * When using SSL it is recommended to perform the certificate verifications, but that should be explicitly set
      * (either setting SSL mode as "verify-full", or using an SSL connection factory that already does that).
      */
-    private static final String LEGACY_DEFAULT_SSL_MODE = "&" + PGProperty.SSL_MODE.getName() + "=require";
+    private static final String LEGACY_DEFAULT_SSL_MODE = "require";
 
     /**
      * Creates a new PostgreSql connection.
@@ -105,26 +104,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      */
     public PostgreSqlEngine(PdbProperties properties) throws DatabaseEngineException {
         super(POSTGRESQL_DRIVER, properties, Dialect.POSTGRESQL);
-    }
-
-    @Override
-    protected String getFinalJdbcConnection(final String jdbc) {
-        final Properties parsedProps = Driver.parseURL(jdbc, null);
-        if (parsedProps == null) {
-            return jdbc;
-        }
-
-        // If SSL is enabled ("ssl" option is present in JDBC URL, with argument "true" or without arguments)
-        // but SSL mode ("sslmode" option) is not set, use legacy behavior - consider "sslmode" = "require"
-        // NOTE: the properties should be explicitly set, this code may be reverted in the future
-        final boolean sslEnabled = PGProperty.SSL.getBoolean(parsedProps) || "".equals(PGProperty.SSL.get(parsedProps));
-        final String sslmode = PGProperty.SSL_MODE.get(parsedProps);
-        if (sslEnabled && sslmode == null) {
-            logger.trace("SSL enabled without SSL mode specified: \"require\" will be used by default, appended to JDBC URL");
-            return jdbc.concat(LEGACY_DEFAULT_SSL_MODE);
-        }
-
-        return jdbc;
     }
 
     @Override
@@ -667,13 +646,30 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in seconds
-        props.setProperty("loginTimeout", loginTimeout);
-        props.setProperty("socketTimeout", socketTimeout);
+        final Properties props = super.getDBProperties();
+
+        /*
+         Define login timeout for Postgres (in seconds);
+         DriverManager.setLoginTimeout is supported by PostgreSQL driver, but is not working due to bug
+            https://github.com/pgjdbc/pgjdbc/issues/879
+         */
+        final int loginTimeout = this.properties.getLoginTimeout();
+        props.setProperty(PGProperty.LOGIN_TIMEOUT.getName(), Integer.toString(loginTimeout));
+
+        final Properties parsedProps = Driver.parseURL(this.properties.getJdbc(), null);
+        if (parsedProps != null) {
+            /*
+             If SSL is enabled ("ssl" option is present in JDBC URL, with argument "true" or without arguments)
+             but SSL mode ("sslmode" option) is not set, use legacy behavior - consider "sslmode" = "require".
+             NOTE: the properties should be explicitly set, this code may be reverted in the future
+             */
+            final boolean sslEnabled = PGProperty.SSL.getBoolean(parsedProps) || "".equals(PGProperty.SSL.get(parsedProps));
+            if (sslEnabled && !PGProperty.SSL_MODE.isPresent(parsedProps)) {
+                logger.trace("SSL enabled without SSL mode specified: \"{}\" will be used by default", LEGACY_DEFAULT_SSL_MODE);
+                PGProperty.SSL_MODE.set(props, LEGACY_DEFAULT_SSL_MODE);
+            }
+        }
+
         return props;
     }
 

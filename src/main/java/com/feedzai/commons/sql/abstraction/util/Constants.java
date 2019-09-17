@@ -89,11 +89,11 @@ public final class Constants {
      * Default duration (in seconds) to wait for the database connection to be established.
      * By default, there is no timeout at establishing the connection, so pdb will wait indefinitely for the database.
      */
-    public static final String DEFAULT_LOGIN_TIMEOUT = "0";
+    public static final int DEFAULT_LOGIN_TIMEOUT = 0;
 
     /**
      * The default socket connection timeout (in seconds).
      * By default, there is no timeout at the socket level, so pdb will wait indefinitely for the database to respond the queries.
      */
-    public static final String DEFAULT_SOCKET_TIMEOUT = "0";
+    public static final int DEFAULT_SOCKET_TIMEOUT = 0;
 }

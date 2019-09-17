@@ -35,9 +35,9 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import oracle.jdbc.OracleConnection;
 import oracle.jdbc.OraclePreparedStatement;
 import oracle.jdbc.OracleTypes;
-import oracle.jdbc.driver.OracleConnection;
 
 import java.sql.Blob;
 import java.sql.Clob;
@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -155,13 +156,19 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     @Override
     protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in milliseconds
-        props.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_NET_CONNECT_TIMEOUT, loginTimeout + "000");
-        props.setProperty(OracleConnection.CONNECTION_PROPERTY_THIN_READ_TIMEOUT, socketTimeout + "000");
+        final Properties props = super.getDBProperties();
+
+        /*
+         Driver supports DriverManager.setLoginTimeout but this login timeout only applies after the socket connection;
+         if there is a problem connecting (e.g. if the DB server is down) the connection process may be blocked for a
+         long time, so an "initial" socket timeout is set here for the connection/login, and after the connection it is
+         set to the value specified by the SOCKET_TIMEOUT Pdb property
+         */
+        props.setProperty(
+                OracleConnection.CONNECTION_PROPERTY_THIN_READ_TIMEOUT,
+                Long.toString(TimeUnit.SECONDS.toMillis(this.properties.getLoginTimeout()))
+        );
+
         return props;
     }
 

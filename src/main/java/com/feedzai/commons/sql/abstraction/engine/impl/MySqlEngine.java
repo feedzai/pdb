@@ -48,7 +48,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -859,18 +858,6 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 logger.trace("Error closing result set.", a);
             }
         }
-    }
-
-    @Override
-    protected Properties getDBProperties() {
-        final Properties props = new Properties();
-        // in seconds
-        final String loginTimeout = this.properties.getLoginTimeout();
-        final String socketTimeout = this.properties.getSocketTimeout();
-        // in milliseconds
-        props.setProperty("loginTimeout", loginTimeout + "000");
-        props.setProperty("socketTimeout", socketTimeout + "000");
-        return props;
     }
 
     @Override
