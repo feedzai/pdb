@@ -10,7 +10,7 @@ PDB provides a DSL that covers most of SQL functionalities and allows to easily 
 
 ## Using PDB
 
-Add the following dependency to your Maven pom.
+Add the following dependency to your Maven pom (example for PDB v2.1.13):
 
 ```
 <dependencies>
@@ -23,6 +23,9 @@ Add the following dependency to your Maven pom.
 	...
 </dependencies>
 ```
+
+## Breaking changes
+The timeout properties have been redefined in PdbProperties as numeric instead of strings since v2.4.6 - avoid using versions 2.4.4 and 2.4.5.
 
 ## Changes from 2.0.0
 * It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
