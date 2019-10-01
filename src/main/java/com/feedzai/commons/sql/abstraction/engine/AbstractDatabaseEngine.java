@@ -1629,7 +1629,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized List<Map<String, ResultColumn>> getPSResultSet(final String name) throws DatabaseEngineException {
-        return processResultIterator(getPSIterator(name));
+        logger.trace("[{}] Fetching result set for PS", name);
+        final ResultIterator psIterator = getPSIterator(name);
+        logger.trace("[{}] Obtained result set iterator", name);
+        final List<Map<String, ResultColumn>> maps = processResultIterator(psIterator);
+        logger.trace("[{}] Fetched data to memory", name);
+        return maps;
     }
 
     @Override
