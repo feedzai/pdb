@@ -19,6 +19,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException
 import com.google.common.base.Enums;
 import com.google.common.base.Optional;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.util.EnumSet;
@@ -27,6 +29,7 @@ import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ALLOW_COLUMN_DROP;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_BLOB_BUFFER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_DISABLE_LOB_CACHING;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_FETCH_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ISOLATION_LEVEL;
@@ -37,7 +40,6 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RECONNE
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RETRY_INTERVAL;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SECRET_LOCATION;
-import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SOCKET_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_VARCHAR_SIZE;
 
@@ -54,6 +56,11 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      * The serial version UID of this class.
      */
     private static final long serialVersionUID = -4948574874005506022L;
+
+    /**
+     * Logger for this class.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(PdbProperties.class);
 
     /**
      * The JDBC property name.
@@ -402,13 +409,23 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      * @return The isolation level.
      */
     public int getIsolationLevel() {
-        final Optional<IsolationLevel> e = Enums.getIfPresent(IsolationLevel.class, getProperty(ISOLATION_LEVEL).toUpperCase());
+        final String isolationLevelConfig = getProperty(ISOLATION_LEVEL).toUpperCase();
+        final Optional<IsolationLevel> isolationLevelOpt = Enums.getIfPresent(IsolationLevel.class, isolationLevelConfig);
 
-        if (!e.isPresent()) {
-            throw new DatabaseEngineRuntimeException(ISOLATION_LEVEL + " must be set and be one of the following: " + EnumSet.allOf(IsolationLevel.class));
+        if (!isolationLevelOpt.isPresent()) {
+            try {
+                int finalIsolationLevel = Integer.parseInt(isolationLevelConfig);
+                logger.debug("Using custom isolation level set from a numeric value ({}); this must be supported by the DB",
+                        finalIsolationLevel);
+                return finalIsolationLevel;
+
+            } catch (final Exception ex) {
+                throw new DatabaseEngineRuntimeException(ISOLATION_LEVEL + " must be set with a supported numeric value" +
+                        " or one of the following: " + EnumSet.allOf(IsolationLevel.class));
+            }
         }
 
-        switch (e.get()) {
+        switch (isolationLevelOpt.get()) {
             case READ_UNCOMMITTED:
                 return Connection.TRANSACTION_READ_UNCOMMITTED;
             case READ_COMMITTED:
@@ -419,7 +436,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
                 return Connection.TRANSACTION_SERIALIZABLE;
             default:
                 // Never happens.
-                throw new DatabaseEngineRuntimeException("New isolation level?!" + e.get());
+                throw new DatabaseEngineRuntimeException("New isolation level?!" + isolationLevelOpt.get());
         }
     }
 
