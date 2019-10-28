@@ -549,7 +549,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>microsoft/mssql-server-linux:2017-CU13</name>
+                                    <name>mcr.microsoft.com/mssql/server:2017-CU17</name>
                                     <alias>pdb-sqlserver</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -564,6 +564,16 @@
                                         <wait>
                                             <time>40000</time>
                                             <log>Service Broker manager has started</log>
+                                            <exec>
+                                                <!--
+                                                Prepare a new "pdb" database for tests with READ_COMMITTED_SNAPSHOT enabled
+                                                 (required for SQL server to have the same behavior as other DBs in READ_COMMITTED
+                                                 isolation level) and ALLOW_SNAPSHOT_ISOLATION enabled to allow using the
+                                                 TRANSACTION_SNAPSHOT level (equivalent to SERIALIZABLE in PostgreSQL and Oracle).
+                                                A new database needs to be used because the flags can't be enabled on "master" database.
+                                                -->
+                                                <postStart>/opt/mssql-tools/bin/sqlcmd -l 45 -U sa -P AaBb12.# -Q CREATE\ DATABASE\ pdb;\ ALTER\ DATABASE\ pdb\ SET\ READ_COMMITTED_SNAPSHOT\ ON;\ ALTER\ DATABASE\ pdb\ SET\ ALLOW_SNAPSHOT_ISOLATION\ ON</postStart>
+                                            </exec>
                                         </wait>
                                     </run>
                                 </image>
