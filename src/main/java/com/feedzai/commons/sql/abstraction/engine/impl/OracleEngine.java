@@ -247,7 +247,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
                                           final boolean useAutoInc,
                                           final boolean fromBatch) throws DatabaseEngineException {
         final OraclePreparedStatement ps = (OraclePreparedStatement) originalPs;
-        int i = 1;
+        int i = 1;// FIXME ? originalPs.unwrap(OraclePreparedStatement.class); also... useLobPrefetch
         for (final DbColumn column : entity.getColumns()) {
             if (column.isAutoInc() && useAutoInc) {
                 continue;

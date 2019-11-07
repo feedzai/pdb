@@ -17,8 +17,10 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import org.junit.Before;
@@ -26,6 +28,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.StampedLock;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
@@ -105,6 +111,33 @@ public class EngineIsolationTest {
         DatabaseFactory.getConnection(properties);
     }
 
+    public void limitsTest() throws Exception {
+        final PdbProperties pdbProps = new PdbProperties(this.properties, true);
+
+        final Connection conn = DriverManager.getConnection(
+                pdbProps.getJdbc(),
+                pdbProps.getUsername(),
+                pdbProps.getPassword()
+        );
+
+        conn.setAutoCommit(true);
+
+        try (final Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("CREATE TABLE test (col1 VARCHAR, col2 VARCHAR)");
+        }
+
+        try (final PreparedStatement preparedStatement = conn.prepareStatement("INSERT INTO test VALUES(?, ?)")) {
+            for (int i = 1; i <= 10; i++) {
+                preparedStatement.setString(1, "c1val" + i);
+                preparedStatement.setString(2, "c2val" + i);
+                preparedStatement.executeQuery();
+            }
+        }
+
+        //conn.setAutoCommit(false);
+
+    }
+
     /**
      * Tests whether the current DB engine in the default isolation level (usually "read committed") will cause
      * deadlocks when there are concurrent transactions acquiring DB locks (writes) and Java locks in different order.
@@ -134,7 +167,7 @@ public class EngineIsolationTest {
      */
     @Test
     public void deadlockTransactionTest() throws Exception {
-        final ReentrantLock lock = new ReentrantLock();
+        final StampedLock lock = new StampedLock();
         final Phaser phaser = new Phaser(1);
         final ExecutorService executorService = Executors.newFixedThreadPool(2);
 
@@ -149,6 +182,8 @@ public class EngineIsolationTest {
         final DatabaseEngine engine2 = DatabaseFactory.getConnection(properties);
         engine2.updateEntity(entity);
 
+        engine.persist("TEST", entry().set("COL2", 1).build());
+
         // start Transaction 1
         final Future<?> tx1 = executorService.submit(() -> {
             engine.beginTransaction();
@@ -161,7 +196,7 @@ public class EngineIsolationTest {
                 // wait for phase 1 to complete - Transaction 2 should have began and acquired the Java lock
                 phaser.awaitAdvance(1);
 
-                lock.lock();
+                lock.writeLockInterruptibly();
 
                 engine.commit();
             } catch (final Exception ex) {
@@ -170,7 +205,7 @@ public class EngineIsolationTest {
                 if (engine.isTransactionActive()) {
                     engine.rollback();
                 }
-                lock.unlock();
+                lock.tryUnlockWrite();
 
                 // arrive phase 2 - begin phase 3 (proceed to end of test)
                 phaser.arrive();
@@ -184,7 +219,12 @@ public class EngineIsolationTest {
         final Future<?> tx2 = executorService.submit(() -> {
             try {
                 engine2.beginTransaction();
-                lock.lock();
+
+                long tstamp = lock.readLockInterruptibly();
+                if (isRealSerializableLevel(engine2)) {
+                    tstamp = lock.tryConvertToOptimisticRead(tstamp);
+                }
+
                 // arrive phase 1 - begin phase 2 (transaction 1 can now try to acquire the lock,
                 // only being able to do so after it is unlocked below)
                 phaser.arrive();
@@ -199,7 +239,9 @@ public class EngineIsolationTest {
                 if (engine2.isTransactionActive()) {
                     engine2.rollback();
                 }
-                lock.unlock();
+                // at this point, if we're using only optimistic read on the lock, we would be validating the timestamp;
+                // if invalid (i.e. a write occurred in the meantime) then we would retry the code inside the lock
+                lock.tryUnlockRead();
             }
         });
 
@@ -229,5 +271,27 @@ public class EngineIsolationTest {
         executorService.shutdownNow();
         engine.close();
         engine2.close();
+    }
+
+    /**
+     * Checks whether
+     *
+     * @param engine
+     * @return
+     * @throws Exception if something goes wrong in the test.
+     * @since 2.4.7
+     */
+    protected boolean isRealSerializableLevel(final DatabaseEngine engine) throws Exception {
+        final PdbProperties pdbProps = new PdbProperties(this.properties, true);
+        final DatabaseEngineDriver engineDriver = DatabaseEngineDriver.fromEngine(pdbProps.getEngine());
+
+        switch (engine.getConnection().getTransactionIsolation()) {
+            case Connection.TRANSACTION_SERIALIZABLE:
+                if (engineDriver == DatabaseEngineDriver.SQLSERVER) {
+                    return true;
+                }
+            default:
+                return false;
+        }
     }
 }

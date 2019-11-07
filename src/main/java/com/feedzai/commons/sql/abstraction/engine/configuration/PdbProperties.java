@@ -278,7 +278,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
     }
 
     /**
-     * Gets the maximum await time for batches to shutdown.
+     * Gets the maximum await time for batches to shutdown (in milliseconds).
      *
      * @return The maximum await time for batches to shutdown.
      */
