@@ -304,12 +304,30 @@ public interface DatabaseEngine extends AutoCloseable {
     List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException;
 
     /**
+     * Executes the given query overriding the configured query timeout (see {@link PdbProperties#getSelectQueryTimeout()}).
+     *
+     * @param query The query to execute.
+     * @param readTimeoutOverride The query timeout to use.
+     * @throws DatabaseEngineException If something goes wrong executing the query.
+     */
+    List<Map<String, ResultColumn>> query(final Expression query, final int readTimeoutOverride) throws DatabaseEngineException;
+
+    /**
      * Executes the given native query.
      *
      * @param query The query to execute.
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException;
+
+    /**
+     * Executes the given native query overriding the configured query timeout (see {@link PdbProperties#getSelectQueryTimeout()})..
+     *
+     * @param query The query to execute.
+     * @param readTimeoutOverride The query timeout to use.
+     * @throws DatabaseEngineException If something goes wrong executing the query.
+     */
+    List<Map<String, ResultColumn>> query(final String query, final int readTimeoutOverride) throws DatabaseEngineException;
 
     /**
      * Gets the database entities for the current schema.
@@ -571,6 +589,18 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If a database access error occurs.
      */
     ResultIterator iterator(final String query, final int fetchSize) throws DatabaseEngineException;
+
+    /**
+     * Creates an iterator for the given SQL sentence overriding the configured query
+     * timeout (see {@link PdbProperties#getSelectQueryTimeout()})..
+     *
+     * @param query     The query.
+     * @param fetchSize The number of rows to fetch each time.
+     * @param readTimeoutOverride The query timeout to use.
+     * @return An iterator for the results of the given SQL query.
+     * @throws DatabaseEngineException If a database access error occurs.
+     */
+    ResultIterator iterator(final String query, final int fetchSize, final int readTimeoutOverride) throws DatabaseEngineException;
 
     /**
      * Creates an iterator for the given SQL expression.

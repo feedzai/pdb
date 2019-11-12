@@ -16,12 +16,14 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -40,6 +42,11 @@ public abstract class ResultIterator implements AutoCloseable {
      * The logger.
      */
     private static final Logger logger = LoggerFactory.getLogger(ResultIterator.class);
+
+    /**
+     * The SQL State that indicates a timeout occurred.
+     */
+    private static final String TIMEOUT_SQL_STATE = "57014";
     /**
      * The statement.
      */
@@ -98,8 +105,21 @@ public abstract class ResultIterator implements AutoCloseable {
 
         } catch (final Exception e) {
             close();
-            throw new DatabaseEngineException("Could not process result set.", e);
+            throw (isTimeoutException(e) ?
+                new DatabaseEngineTimeoutException("Timeout waiting for query execution", e) :
+                new DatabaseEngineException("Could not process result set.", e));
         }
+    }
+
+    /**
+     * Indicates if a given exception is a timeout. The default checks for SQL state 57014 (query
+     * cancelled by user), this method should be overrided for drivers where this is not the case.
+     *
+     * @param exception  The exception to check.
+     * @return {@code true} if the exception is a timeout, {@code false} otherwise.
+     */
+    protected boolean isTimeoutException(final Exception exception) {
+        return (exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState()));
     }
 
     /**
@@ -223,6 +243,31 @@ public abstract class ResultIterator implements AutoCloseable {
      */
     public List<String> getColumnNames() {
         return columnNames;
+    }
+
+    /**
+     * Attempts to cancel the current query. This relies on the JDBC driver supporting
+     * {@link Statement#cancel()}, which is not guaranteed on all drivers.
+     *
+     * A possible use case for this method is to implement a timeout; If that's the case, see also
+     * {@link com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine#iterator(String, int, int)} for
+     * an alternative way to accomplish this.
+     *
+     * This method is expected to be invoked from a thread distinct of the one that is reading
+     * from the result set.
+     *
+     * @return {@code true} if the query was cancelled, {@code false} otherwise.
+     */
+    public boolean cancel() {
+        try {
+            if (!closed) {
+                statement.cancel();
+            }
+            return true;
+        } catch (SQLException ex) {
+            logger.debug("Could not cancel statement", ex);
+            return false;
+        }
     }
 
     /**

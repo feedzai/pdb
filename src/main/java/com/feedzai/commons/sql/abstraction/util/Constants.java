@@ -96,4 +96,15 @@ public final class Constants {
      * By default, there is no timeout at the socket level, so pdb will wait indefinitely for the database to respond the queries.
      */
     public static final int DEFAULT_SOCKET_TIMEOUT = 0;
+
+    /**
+     * The value that represents absence of a timeout in query timeouts.
+     */
+    public static final int NO_SELECT_TIMEOUT = 0;
+
+    /**
+     * The default select query timeout (in seconds).
+     * By default, there is no query timeout, so pdb will wait indefinitely for the database to respond to queries.
+     */
+    public static final int DEFAULT_SELECT_QUERY_TIMEOUT = NO_SELECT_TIMEOUT;
 }

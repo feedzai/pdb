@@ -36,6 +36,7 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ISOLATI
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_LOGIN_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAXIMUM_TIME_BATCH_SHUTDOWN;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_MAX_IDENTIFIER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SELECT_QUERY_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RECONNECT_ON_LOST;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_RETRY_INTERVAL;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_SCHEMA_POLICY;
@@ -174,6 +175,12 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
     public static final String SOCKET_TIMEOUT = "pdb.socket_timeout";
 
     /**
+     * Property that indicates the maximum time a select query is allowed to run, in seconds. No limit if zero.
+     * See {@link java.sql.Statement#setQueryTimeout(int)}.
+     */
+    public static final String SELECT_QUERY_TIMEOUT = "pdb.query_select_timeout";
+
+    /**
      * Creates a new instance of an empty {@link PdbProperties}.
      */
     public PdbProperties() {
@@ -206,6 +213,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(DISABLE_LOB_CACHING, DEFAULT_DISABLE_LOB_CACHING);
             setProperty(LOGIN_TIMEOUT, DEFAULT_LOGIN_TIMEOUT);
             setProperty(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
+            setProperty(SELECT_QUERY_TIMEOUT, DEFAULT_SELECT_QUERY_TIMEOUT);
         }
     }
 
@@ -510,6 +518,15 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      */
     public int getSocketTimeout() {
         return Integer.parseInt(getProperty(SOCKET_TIMEOUT));
+    }
+
+    /**
+     * Gets the query select timeout (in seconds).
+     *
+     * @return The query select timeout.
+     */
+    public int getSelectQueryTimeout() {
+        return Integer.parseInt(getProperty(SELECT_QUERY_TIMEOUT));
     }
 
     /**
