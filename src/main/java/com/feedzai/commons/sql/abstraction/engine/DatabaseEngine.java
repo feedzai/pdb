@@ -321,7 +321,7 @@ public interface DatabaseEngine extends AutoCloseable {
     List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException;
 
     /**
-     * Executes the given native query overriding the configured query timeout (see {@link PdbProperties#getSelectQueryTimeout()})..
+     * Executes the given native query overriding the configured query timeout (see {@link PdbProperties#getSelectQueryTimeout()}).
      *
      * @param query The query to execute.
      * @param readTimeoutOverride The query timeout to use.
@@ -592,7 +592,7 @@ public interface DatabaseEngine extends AutoCloseable {
 
     /**
      * Creates an iterator for the given SQL sentence overriding the configured query
-     * timeout (see {@link PdbProperties#getSelectQueryTimeout()})..
+     * timeout (see {@link PdbProperties#getSelectQueryTimeout()}).
      *
      * @param query     The query.
      * @param fetchSize The number of rows to fetch each time.
@@ -611,6 +611,18 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If a database access error occurs.
      */
     ResultIterator iterator(final Expression query, final int fetchSize) throws DatabaseEngineException;
+
+    /**
+     * Creates an iterator for the given SQL expression overriding the configured query
+     * timeout (see {@link PdbProperties#getSelectQueryTimeout()}).
+     *
+     * @param query     The expression that represents the query.
+     * @param fetchSize The number of rows to fetch each time.
+     * @param readTimeoutOverride The query timeout to use.
+     * @return An iterator for the results of the given SQL expression.
+     * @throws DatabaseEngineException If a database access error occurs.
+     */
+    ResultIterator iterator(final Expression query, final int fetchSize, final int readTimeoutOverride) throws DatabaseEngineException;
 
     /**
      * Creates an iterator for the {@link java.sql.PreparedStatement} bound to the given name.

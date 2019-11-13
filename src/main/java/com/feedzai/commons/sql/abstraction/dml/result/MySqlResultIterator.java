@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
+import com.mysql.jdbc.exceptions.MySQLTimeoutException;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -52,5 +53,10 @@ public class MySqlResultIterator extends ResultIterator {
     @Override
     public ResultColumn createResultColumn(String name, Object value) {
         return new MySqlResultColumn(name, value);
+    }
+
+    @Override
+    protected boolean isTimeoutException(final Exception exception) {
+        return exception instanceof MySQLTimeoutException;
     }
 }

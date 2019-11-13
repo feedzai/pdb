@@ -1188,6 +1188,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
+    public ResultIterator iterator(Expression query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
+        return iterator(translate(query), fetchSize, readTimeoutOverride);
+    }
+
+    @Override
     public ResultIterator iterator(String query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
         try {
             getConnection();
@@ -1195,6 +1200,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             stmt.setFetchSize(fetchSize);
             logger.trace(query);
             return createResultIterator(stmt, query);
+
+        } catch (final DatabaseEngineTimeoutException e) {
+            throw e;
 
         } catch (final Exception e) {
             throw new DatabaseEngineException("Error querying", e);

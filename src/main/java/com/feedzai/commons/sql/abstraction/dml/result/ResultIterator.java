@@ -44,10 +44,6 @@ public abstract class ResultIterator implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(ResultIterator.class);
 
     /**
-     * The SQL State that indicates a timeout occurred.
-     */
-    private static final String TIMEOUT_SQL_STATE = "57014";
-    /**
      * The statement.
      */
     private final Statement statement;
@@ -112,14 +108,14 @@ public abstract class ResultIterator implements AutoCloseable {
     }
 
     /**
-     * Indicates if a given exception is a timeout. The default checks for SQL state 57014 (query
-     * cancelled by user), this method should be overrided for drivers where this is not the case.
+     * Indicates if a given exception is a timeout. Logic for this is driver-specific, so
+     * drivers that support query timeouts must override this method..
      *
      * @param exception  The exception to check.
      * @return {@code true} if the exception is a timeout, {@code false} otherwise.
      */
     protected boolean isTimeoutException(final Exception exception) {
-        return (exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState()));
+        return false;
     }
 
     /**
