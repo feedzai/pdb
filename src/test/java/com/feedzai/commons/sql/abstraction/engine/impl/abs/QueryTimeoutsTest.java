@@ -78,15 +78,15 @@ public class QueryTimeoutsTest {
      */
     private static Query HEAVY_QUERY = SqlBuilder
         .select(
-                column("QUERY_TIMEOUT_TEST_1", "COL1")
+                column("T3", "COL1")
         )
         .from(
-                table("QUERY_TIMEOUT_TEST_1"),
-                table("QUERY_TIMEOUT_TEST_2"),
-                table("QUERY_TIMEOUT_TEST_3")
+                table("QUERY_TIMEOUT_TEST").alias("T1"),
+                table("QUERY_TIMEOUT_TEST").alias("T2"),
+                table("QUERY_TIMEOUT_TEST").alias("T3")
         )
         .orderby(
-                column("QUERY_TIMEOUT_TEST_3", "COL1")
+                column("T3", "COL1")
         )
         .limit(
                 1
@@ -135,19 +135,17 @@ public class QueryTimeoutsTest {
         // Create connection
         engine = DatabaseFactory.getConnection(dbProps);
 
-        // Create test tables and load each with 1000 rows.
-        for (int tblIdx = 1; tblIdx <= 3; tblIdx++) {
-            final String tblName = "QUERY_TIMEOUT_TEST_" + tblIdx;
-            final DbEntity.Builder entity = dbEntity()
-                    .name(tblName)
-                    .addColumn("COL1", INT);
-            engine.addEntity(entity.build());
-            for (int i = 0; i < 1000; i++) {
-                engine.persist(tblName, new EntityEntry.Builder()
-                        .set("COL1", i)
-                        .build()
-                );
-            }
+        // Create test table and load it with 1000 rows.
+        final String tblName = "QUERY_TIMEOUT_TEST";
+        final DbEntity.Builder entity = dbEntity()
+                .name(tblName)
+                .addColumn("COL1", INT);
+        engine.addEntity(entity.build());
+        for (int i = 0; i < 1000; i++) {
+            engine.persist(tblName, new EntityEntry.Builder()
+                    .set("COL1", i)
+                    .build()
+            );
         }
     }
 
