@@ -38,6 +38,10 @@ import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryConfig;
+import io.vavr.CheckedRunnable;
+import jdk.nashorn.internal.codegen.CompilerConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +62,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,6 +72,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -158,6 +164,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected ExceptionHandler eh;
 
+    private Callable connectorWithRetry;
+
     /**
      * An {@link ExecutorService} to be used by the DB drivers to break a connection if it has been blocked for longer
      * than the specified socket timeout
@@ -180,7 +188,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             driver = properties.getDriver();
         }
 
-
         logger = LoggerFactory.getLogger(this.getClass());
         notificationLogger = LoggerFactory.getLogger("admin-notifications");
 
@@ -195,9 +202,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         maximumNumberOfTries = this.properties.getMaxRetries();
         retryInterval = this.properties.getRetryInterval();
 
+        setConnectorWithRetry(maximumNumberOfTries, retryInterval);
+
         try {
             Class.forName(driver);
-            connect();
+            connectorWithRetry.call();
         } catch (final ClassNotFoundException ex) {
             throw new DatabaseEngineException("Driver not found", ex);
         } catch (final SQLException ex) {
@@ -340,64 +349,60 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             return conn;
         }
 
-        int retries = 1;
-
         if (checkConnection(conn)) {
             return conn;
         }
 
         logger.debug("Connection is down.");
 
-        // reconnect.
-        while (true) {
-            if (Thread.interrupted()) {
-                throw new InterruptedException();
-            }
-
-            try {
-
-                if (maximumNumberOfTries > 0) {
-                    if (retries == (maximumNumberOfTries / 2) || retries == (maximumNumberOfTries - 1)) {
-                        logger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
-                        notificationLogger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
-                    } else {
-                        logger.debug("Retrying ({}/{}) in {} seconds...", retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
-                    }
-                } else {
-                    logger.debug("Retry number {} in {} seconds...", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
-                    if (retries % 10 == 0) {
-                        notificationLogger.error("The connection to the database was lost. Retry number {} in {}", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
-                    }
-                }
-                Thread.sleep(retryInterval);
-                connect(); // this sets the new object.
-
-
-                // recover state.
-
-                try {
-                    recover();
-                } catch (final Exception e) {
-                    throw new RecoveryException("Error recovering from lost connection.", e);
-                }
-
-                // return it.
-                return conn;
-            } catch (final InterruptedException ex) {
-                logger.debug("Thread interrupted.");
-                throw new InterruptedException();
-            } catch (final SQLException ex) {
-                logger.debug("Connection failed.");
-
-                if (maximumNumberOfTries > 0 && retries > maximumNumberOfTries) {
-                    throw new RetryLimitExceededException("Maximum number of retries for a connection exceeded.", ex);
-                }
-
-                retries++;
-            } catch (final Exception e) {
-                logger.error("An unexpected error occurred.", e);
-            }
+        try {
+            connectorWithRetry.call();
+        } catch (SQLException e) {
+            logger.debug("Connection failed.");
+        } catch (RecoveryException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("An unexpected error occurred.", e);
         }
+
+        return conn;
+    }
+
+    private void setConnectorWithRetry(int maximumNumberOfTries, long retryInterval) {
+        RetryConfig retryConfig = RetryConfig.custom()
+                .waitDuration(Duration.ofMillis(retryInterval))
+                .maxAttempts(maximumNumberOfTries)
+                .build();
+
+        Retry retry = Retry.of("db-connector", retryConfig);
+
+        connectorWithRetry = Retry.decorateCallable(retry, () -> {
+            connect();
+            recover();
+            return null;
+        });
+
+        retry.getEventPublisher()
+                .onError((errorEvent) -> {
+                    logger.debug("An error occurred.", errorEvent.getLastThrowable());
+                    throw new RuntimeException(errorEvent.getLastThrowable());
+                })
+                .onRetry((retryEvent) -> {
+                    int retries = retryEvent.getNumberOfRetryAttempts();
+                    if (maximumNumberOfTries > 1) {
+                        if (retries == (maximumNumberOfTries / 2) || retries == (maximumNumberOfTries - 1)) {
+                            logger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
+                            notificationLogger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
+                        } else {
+                           logger.debug("Retrying ({}/{}) in {} seconds...", retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
+                        }
+                    } else {
+                        logger.debug("Retry number {} in {} seconds...", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
+                        if (retries % 10 == 0) {
+                            notificationLogger.error("The connection to the database was lost. Retry number {} in {}", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
+                        }
+                    }
+                });
     }
 
     private synchronized void recover() throws DatabaseEngineException, NameAlreadyExistsException {

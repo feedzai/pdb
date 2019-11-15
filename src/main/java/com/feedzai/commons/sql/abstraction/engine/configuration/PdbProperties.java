@@ -187,7 +187,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(MAX_IDENTIFIER_SIZE, DEFAULT_MAX_IDENTIFIER_SIZE);
             setProperty(MAX_BLOB_SIZE, -1);
             setProperty(BLOB_BUFFER_SIZE, DEFAULT_BLOB_BUFFER_SIZE); // 1 mB.
-            setProperty(MAX_NUMBER_OF_RETRIES, -1);
+            setProperty(MAX_NUMBER_OF_RETRIES, 1);
             setProperty(RETRY_INTERVAL, DEFAULT_RETRY_INTERVAL);
             setProperty(ISOLATION_LEVEL, DEFAULT_ISOLATION_LEVEL);
             setProperty(RECONNECT_ON_LOST, DEFAULT_RECONNECT_ON_LOST);
