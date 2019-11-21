@@ -97,10 +97,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Inject
     protected AbstractTranslator translator;
-    /**
-     * The default fetch size for iterators.
-     */
-    private static final int DEFAULT_FETCH_SIZE = 1000;
+
     /**
      * The database connection.
      */
@@ -1144,12 +1141,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public synchronized ResultIterator iterator(String query) throws DatabaseEngineException {
-        return iterator(query, DEFAULT_FETCH_SIZE);
+        return iterator(query, properties.getFetchSize());
     }
 
     @Override
     public synchronized ResultIterator iterator(Expression query) throws DatabaseEngineException {
-        return iterator(query, DEFAULT_FETCH_SIZE);
+        return iterator(query, properties.getFetchSize());
     }
 
     @Override
@@ -1683,7 +1680,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public synchronized ResultIterator getPSIterator(String name) throws DatabaseEngineException {
-        return getPSIterator(name, DEFAULT_FETCH_SIZE);
+        return getPSIterator(name, properties.getFetchSize());
     }
 
     @Override
