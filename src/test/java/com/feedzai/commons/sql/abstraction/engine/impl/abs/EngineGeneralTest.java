@@ -27,10 +27,8 @@ import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
-import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.Values;
-import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
@@ -44,7 +42,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
-import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -54,7 +51,6 @@ import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
 import mockit.Verifications;
-import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -74,7 +70,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -130,8 +125,8 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.values;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -564,7 +559,7 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry);
 
         final ResultIterator resultIterator;
-        try (final ResultIterator it = engine.iterator(select(all()).from(table("TEST")))){
+        try (final ResultIterator it = engine.iterator(select(all()).from(table("TEST")))) {
 
             resultIterator = it;
 
@@ -1597,9 +1592,9 @@ public class EngineGeneralTest {
 
         } finally {
             assertTrue("tx active?", engine.isTransactionActive());
-            if (engine.isTransactionActive()) {
-                engine.rollback();
-            }
+
+            engine.rollback();
+
             assertFalse("tx active?", engine.isTransactionActive());
 
             assertEquals("ret 0?", 0, engine.query(select(all()).from(table("TEST"))).size());
@@ -2103,7 +2098,7 @@ public class EngineGeneralTest {
 
         // MySQL does not support With
         if (config.engine.contains("MySqlEngine")) {
-            exception.expect(OperationNotSupportedRuntimeException.class);;
+            exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
         final List<Map<String, ResultColumn>> result = engine.query(with);
@@ -2135,7 +2130,7 @@ public class EngineGeneralTest {
 
         // MySQL does not support With
         if (config.engine.contains("MySqlEngine")) {
-            exception.expect(OperationNotSupportedRuntimeException.class);;
+            exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
         final List<Map<String, ResultColumn>> result = engine.query(with);
@@ -2175,7 +2170,7 @@ public class EngineGeneralTest {
 
         // MySQL does not support With
         if (config.engine.contains("MySqlEngine")) {
-            exception.expect(OperationNotSupportedRuntimeException.class);;
+            exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
         final List<Map<String, ResultColumn>> result = engine.query(with);
