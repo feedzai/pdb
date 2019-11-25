@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.feedzai.commons.sql.abstraction.util.Constants.NO_SELECT_TIMEOUT;
+import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
@@ -873,7 +873,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             getConnection();
             final Statement stmt = conn.createStatement(TYPE_FORWARD_ONLY, CONCUR_READ_ONLY);
             stmt.setFetchSize(fetchSize);
-            if (readTimeout != NO_SELECT_TIMEOUT) {
+            if (readTimeout != NO_TIMEOUT) {
                 stmt.setQueryTimeout(readTimeout);
             }
 

@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -108,14 +109,14 @@ public abstract class ResultIterator implements AutoCloseable {
     }
 
     /**
-     * Indicates if a given exception is a timeout. Logic for this is driver-specific, so
-     * drivers that support query timeouts must override this method..
+     * Indicates if a given exception is a timeout. Logic for this may be driver-specific, so
+     * drivers that support query timeouts may have to override this method.
      *
      * @param exception  The exception to check.
      * @return {@code true} if the exception is a timeout, {@code false} otherwise.
      */
     protected boolean isTimeoutException(final Exception exception) {
-        return false;
+        return (exception instanceof SQLTimeoutException);
     }
 
     /**

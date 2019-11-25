@@ -76,7 +76,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SECRET_LOCATION;
-import static com.feedzai.commons.sql.abstraction.util.Constants.NO_SELECT_TIMEOUT;
+import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 
@@ -872,7 +872,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected Statement createSelectStatement(int readTimeout) throws SQLException {
         final Statement s = conn.createStatement();
-        if (readTimeout != NO_SELECT_TIMEOUT) {
+        if (readTimeout != NO_TIMEOUT) {
             s.setQueryTimeout(readTimeout);
         }
         return s;
@@ -1525,7 +1525,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             getConnection();
-            stmt = createSelectStatement(Constants.NO_SELECT_TIMEOUT);  // No timeout on metadata queries
+            stmt = createSelectStatement(Constants.NO_TIMEOUT);  // No timeout on metadata queries
             long start = System.currentTimeMillis();
             rs = stmt.executeQuery(query);
             logger.trace("[{} ms] {}", (System.currentTimeMillis() - start), query);

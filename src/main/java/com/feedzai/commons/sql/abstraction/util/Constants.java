@@ -31,6 +31,10 @@ public final class Constants {
      */
     public static final char UNIT_SEPARATOR_CHARACTER = '\u001F';
     /**
+     * The value that represents absence of a timeout.
+     */
+    public static final int NO_TIMEOUT = 0;
+    /**
      * The default var char size.
      */
     public static final int DEFAULT_VARCHAR_SIZE = 256;
@@ -89,22 +93,17 @@ public final class Constants {
      * Default duration (in seconds) to wait for the database connection to be established.
      * By default, there is no timeout at establishing the connection, so pdb will wait indefinitely for the database.
      */
-    public static final int DEFAULT_LOGIN_TIMEOUT = 0;
+    public static final int DEFAULT_LOGIN_TIMEOUT = NO_TIMEOUT;
 
     /**
      * The default socket connection timeout (in seconds).
      * By default, there is no timeout at the socket level, so pdb will wait indefinitely for the database to respond the queries.
      */
-    public static final int DEFAULT_SOCKET_TIMEOUT = 0;
-
-    /**
-     * The value that represents absence of a timeout in query timeouts.
-     */
-    public static final int NO_SELECT_TIMEOUT = 0;
+    public static final int DEFAULT_SOCKET_TIMEOUT = NO_TIMEOUT;
 
     /**
      * The default select query timeout (in seconds).
      * By default, there is no query timeout, so pdb will wait indefinitely for the database to respond to queries.
      */
-    public static final int DEFAULT_SELECT_QUERY_TIMEOUT = NO_SELECT_TIMEOUT;
+    public static final int DEFAULT_SELECT_QUERY_TIMEOUT = NO_TIMEOUT;
 }

@@ -16,9 +16,6 @@
 
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.dml.Query;
-import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
@@ -27,9 +24,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.ImmutableList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,14 +32,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbEntity;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SELECT_QUERY_TIMEOUT;
@@ -63,36 +53,6 @@ import static org.junit.Assume.assumeTrue;
 public class QueryTimeoutsTest {
 
     /**
-     * Query timeouts supported only on the Postgres, SQL Server and MySQL. SQL Server is not
-     * included in the list below because it it able to handle the test query in ms, and so
-     * is not testeable in this test.
-     */
-    private static List<DatabaseEngineDriver> SUPPORTED_DRIVERS = ImmutableList.of(
-            DatabaseEngineDriver.POSTGRES,
-            DatabaseEngineDriver.MYSQL
-    );
-
-    /**
-     * A query that makes a sort in 1.000.000.000 rows, taking WAY more than
-     * the test timeout until the first row is returned.
-     */
-    private static Query HEAVY_QUERY = SqlBuilder
-        .select(
-                column("T3", "COL1")
-        )
-        .from(
-                table("QUERY_TIMEOUT_TEST").alias("T1"),
-                table("QUERY_TIMEOUT_TEST").alias("T2"),
-                table("QUERY_TIMEOUT_TEST").alias("T3")
-        )
-        .orderby(
-                column("T3", "COL1")
-        )
-        .limit(
-                1
-        );
-
-    /**
      * Default timeout in all tests.
      */
     private static final int TEST_TIMEOUT_SECS = 2;
@@ -101,6 +61,17 @@ public class QueryTimeoutsTest {
      * Timeout override in all tests with timeout overrides.
      */
     private static final int TEST_TIMEOUT_OVERRIDE_SECS = 6;
+
+    /**
+     * The minimum time the test query takes to run, in seconds.
+     */
+    private static final int QUERY_MINIMUM_TIME_SECS = 59;
+
+    /**
+     * A query that takes at least {@link #QUERY_MINIMUM_TIME_SECS} seconds to run and that
+     * is used in all tests.
+     */
+    private String heavyQuery;
 
     /**
      * The {@link DatabaseEngine} used in each tests.
@@ -116,7 +87,7 @@ public class QueryTimeoutsTest {
     public DatabaseConfiguration config;
 
     @Before
-    public void setupTest() throws DatabaseFactoryException, DatabaseEngineException {
+    public void setupTest() throws DatabaseFactoryException {
         final Properties dbProps = new Properties() {
             {
                 setProperty(JDBC, config.jdbc);
@@ -128,25 +99,24 @@ public class QueryTimeoutsTest {
             }
         };
 
+        // Set heavyQuery with a query that takes a long time to run
         final DatabaseEngineDriver driver = DatabaseEngineDriver.fromEngine(dbProps.getProperty(ENGINE));
-        assumeTrue(driver + " engine doesn't support setting timeouts, tests will be skipped",
-                SUPPORTED_DRIVERS.contains(driver));
+        switch (driver) {
+            case POSTGRES:
+                heavyQuery = "SELECT pg_sleep(" + QUERY_MINIMUM_TIME_SECS + ")";
+                break;
+            case SQLSERVER:
+                heavyQuery = "WAITFOR DELAY '00:00:" + QUERY_MINIMUM_TIME_SECS + "'; SELECT 1";
+                break;
+            case MYSQL:
+                heavyQuery = "SELECT SLEEP(" + QUERY_MINIMUM_TIME_SECS + ")";
+                break;
+            default:
+                assumeTrue(driver + " engine doesn't support setting timeouts, tests will be skipped", false);
+        }
 
         // Create connection
         engine = DatabaseFactory.getConnection(dbProps);
-
-        // Create test table and load it with 1000 rows.
-        final String tblName = "QUERY_TIMEOUT_TEST";
-        final DbEntity.Builder entity = dbEntity()
-                .name(tblName)
-                .addColumn("COL1", INT);
-        engine.addEntity(entity.build());
-        for (int i = 0; i < 1000; i++) {
-            engine.persist(tblName, new EntityEntry.Builder()
-                    .set("COL1", i)
-                    .build()
-            );
-        }
     }
 
     @After
@@ -158,14 +128,14 @@ public class QueryTimeoutsTest {
 
     @Test(expected = DatabaseEngineTimeoutException.class)
     public void iteratorWithDefaultsTest() throws DatabaseEngineException {
-        engine.iterator(HEAVY_QUERY).nextResult();
+        engine.iterator(heavyQuery).nextResult();
     }
 
     @Test(expected = DatabaseEngineTimeoutException.class)
     public void iteratorWithOverrideTest() throws DatabaseEngineException {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         try {
-            engine.iterator(HEAVY_QUERY, 1000, TEST_TIMEOUT_OVERRIDE_SECS).nextResult();
+            engine.iterator(heavyQuery, 1000, TEST_TIMEOUT_OVERRIDE_SECS).nextResult();
         } finally {
             assertTrue(stopwatch.elapsed(TimeUnit.SECONDS) >= TEST_TIMEOUT_OVERRIDE_SECS - 1);
         }
@@ -173,14 +143,14 @@ public class QueryTimeoutsTest {
 
     @Test(expected = DatabaseEngineTimeoutException.class)
     public void queryWithDefaultsTest() throws DatabaseEngineException {
-        engine.query(HEAVY_QUERY);
+        engine.query(heavyQuery);
     }
 
     @Test(expected = DatabaseEngineTimeoutException.class)
     public void queryWithOverrideTest() throws DatabaseEngineException {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         try {
-            engine.query(HEAVY_QUERY, 10);
+            engine.query(heavyQuery, 10);
         } finally {
             assertTrue(stopwatch.elapsed(TimeUnit.SECONDS) >= TEST_TIMEOUT_OVERRIDE_SECS - 1);
         }
