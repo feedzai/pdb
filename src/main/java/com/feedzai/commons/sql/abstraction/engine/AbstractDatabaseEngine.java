@@ -33,6 +33,7 @@ import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.AESHelper;
+import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
@@ -75,6 +76,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SECRET_LOCATION;
+import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 
@@ -861,6 +863,22 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
+     * Creates a {@link Statement} that will be used for selects, i.e., may have an associated
+     * read timeout.
+     *
+     * @param readTimeout   The timeout.
+     * @return The {@link Statement}
+     * @throws SQLException If there is an error creating the statement.
+     */
+    protected Statement createSelectStatement(int readTimeout) throws SQLException {
+        final Statement s = conn.createStatement();
+        if (readTimeout != NO_TIMEOUT) {
+            s.setQueryTimeout(readTimeout);
+        }
+        return s;
+    }
+
+    /**
      * Executes the given update.
      *
      * @param query The update to execute.
@@ -1106,8 +1124,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     @Override
-    public synchronized List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException {
+    public List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException {
         return query(translate(query));
+    }
+
+    @Override
+    public List<Map<String, ResultColumn>> query(Expression query, int readTimeoutOverride) throws DatabaseEngineException {
+        return query(translate(query), readTimeoutOverride);
     }
 
     /**
@@ -1117,8 +1140,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     @Override
-    public synchronized List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException {
+    public List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException {
         return processResultIterator(iterator(query));
+    }
+
+    @Override
+    public List<Map<String, ResultColumn>> query(String query, int readTimeoutOverride) throws DatabaseEngineException {
+        return processResultIterator(iterator(query, properties.getFetchSize(), readTimeoutOverride));
     }
 
     /**
@@ -1128,7 +1156,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @return A list of rows in the form of {@link Map}.
      * @throws DatabaseEngineException If a database access error occurs.
      */
-    protected List<Map<String, ResultColumn>> processResultIterator(ResultIterator it) throws DatabaseEngineException {
+    protected synchronized List<Map<String, ResultColumn>> processResultIterator(ResultIterator it) throws DatabaseEngineException {
         List<Map<String, ResultColumn>> res = new ArrayList<>();
 
         Map<String, ResultColumn> temp;
@@ -1140,32 +1168,45 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public synchronized ResultIterator iterator(String query) throws DatabaseEngineException {
+    public ResultIterator iterator(String query) throws DatabaseEngineException {
         return iterator(query, properties.getFetchSize());
     }
 
     @Override
-    public synchronized ResultIterator iterator(Expression query) throws DatabaseEngineException {
+    public ResultIterator iterator(Expression query) throws DatabaseEngineException {
         return iterator(query, properties.getFetchSize());
     }
 
     @Override
     public ResultIterator iterator(String query, int fetchSize) throws DatabaseEngineException {
-        try {
-            getConnection();
-            Statement stmt = conn.createStatement();
-            stmt.setFetchSize(fetchSize);
-            logger.trace(query);
-            return createResultIterator(stmt, query);
-
-        } catch (final Exception e) {
-            throw new DatabaseEngineException("Error querying", e);
-        }
+        return iterator(query, fetchSize, properties.getSelectQueryTimeout());
     }
 
     @Override
     public ResultIterator iterator(Expression query, int fetchSize) throws DatabaseEngineException {
         return iterator(translate(query), fetchSize);
+    }
+
+    @Override
+    public ResultIterator iterator(Expression query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
+        return iterator(translate(query), fetchSize, readTimeoutOverride);
+    }
+
+    @Override
+    public synchronized ResultIterator iterator(String query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
+        try {
+            getConnection();
+            Statement stmt = createSelectStatement(readTimeoutOverride);
+            stmt.setFetchSize(fetchSize);
+            logger.trace(query);
+            return createResultIterator(stmt, query);
+
+        } catch (final DatabaseEngineTimeoutException e) {
+            throw e;
+
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Error querying", e);
+        }
     }
 
     /**
@@ -1484,7 +1525,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             getConnection();
-            stmt = conn.createStatement();
+            stmt = createSelectStatement(Constants.NO_TIMEOUT);  // No timeout on metadata queries
             long start = System.currentTimeMillis();
             rs = stmt.executeQuery(query);
             logger.trace("[{} ms] {}", (System.currentTimeMillis() - start), query);

@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
@@ -28,6 +29,12 @@ import java.sql.Statement;
  * @since 2.0.0
  */
 public class PostgreSqlResultIterator extends ResultIterator {
+
+    /**
+     * The SQL State that indicates a timeout occurred.
+     */
+    private static final String TIMEOUT_SQL_STATE = "57014";
+
     /**
      * Creates a new instance of {@link PostgreSqlResultIterator}.
      *
@@ -52,5 +59,11 @@ public class PostgreSqlResultIterator extends ResultIterator {
     @Override
     public ResultColumn createResultColumn(String name, Object value) {
         return new PostgreSqlResultColumn(name, value);
+    }
+
+    @Override
+    protected boolean isTimeoutException(Exception exception) {
+        return super.isTimeoutException (exception) ||
+                exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState());
     }
 }
