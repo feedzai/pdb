@@ -863,31 +863,6 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public ResultIterator iterator(String query) throws DatabaseEngineException {
-        return iterator(query, properties.getFetchSize(), properties.getSelectQueryTimeout());
-    }
-
-    @Override
-    public ResultIterator iterator(String query, int fetchSize, int readTimeout) throws DatabaseEngineException {
-        try {
-            getConnection();
-            final Statement stmt = conn.createStatement(TYPE_FORWARD_ONLY, CONCUR_READ_ONLY);
-            stmt.setFetchSize(fetchSize);
-            if (readTimeout != NO_TIMEOUT) {
-                stmt.setQueryTimeout(readTimeout);
-            }
-
-            return createResultIterator(stmt, query);
-
-        } catch (final DatabaseEngineTimeoutException e) {
-            throw e;
-
-        } catch (final Exception e) {
-            throw new DatabaseEngineException("Error querying", e);
-        }
-    }
-
-    @Override
     public boolean isStringAggDistinctCapable() {
         return true;
     }

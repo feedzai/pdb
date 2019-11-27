@@ -1124,7 +1124,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     @Override
-    public synchronized List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException {
+    public List<Map<String, ResultColumn>> query(final Expression query) throws DatabaseEngineException {
         return query(translate(query));
     }
 
@@ -1140,13 +1140,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     @Override
-    public synchronized List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException {
+    public List<Map<String, ResultColumn>> query(final String query) throws DatabaseEngineException {
         return processResultIterator(iterator(query));
     }
 
     @Override
     public List<Map<String, ResultColumn>> query(String query, int readTimeoutOverride) throws DatabaseEngineException {
-        return processResultIterator(iterator(query, DEFAULT_FETCH_SIZE, readTimeoutOverride));
+        return processResultIterator(iterator(query, properties.getFetchSize(), readTimeoutOverride));
     }
 
     /**
@@ -1156,7 +1156,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @return A list of rows in the form of {@link Map}.
      * @throws DatabaseEngineException If a database access error occurs.
      */
-    protected List<Map<String, ResultColumn>> processResultIterator(ResultIterator it) throws DatabaseEngineException {
+    protected synchronized List<Map<String, ResultColumn>> processResultIterator(ResultIterator it) throws DatabaseEngineException {
         List<Map<String, ResultColumn>> res = new ArrayList<>();
 
         Map<String, ResultColumn> temp;
@@ -1168,12 +1168,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public synchronized ResultIterator iterator(String query) throws DatabaseEngineException {
+    public ResultIterator iterator(String query) throws DatabaseEngineException {
         return iterator(query, properties.getFetchSize());
     }
 
     @Override
-    public synchronized ResultIterator iterator(Expression query) throws DatabaseEngineException {
+    public ResultIterator iterator(Expression query) throws DatabaseEngineException {
         return iterator(query, properties.getFetchSize());
     }
 
@@ -1193,7 +1193,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public ResultIterator iterator(String query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
+    public synchronized ResultIterator iterator(String query, int fetchSize, int readTimeoutOverride) throws DatabaseEngineException {
         try {
             getConnection();
             Statement stmt = createSelectStatement(readTimeoutOverride);
