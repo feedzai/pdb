@@ -63,6 +63,7 @@ public class PostgreSqlResultIterator extends ResultIterator {
 
     @Override
     protected boolean isTimeoutException(Exception exception) {
-        return (exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState()));
+        return super.isTimeoutException (exception) ||
+                exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState());
     }
 }
