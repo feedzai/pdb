@@ -22,6 +22,15 @@ package com.feedzai.commons.sql.abstraction.engine;
  * @since 2.0.0
  */
 public class DatabaseEngineRuntimeException extends RuntimeException {
+
+    /**
+     * Property that indicates if Exception is retryable or not.
+     * This property must be defined 'true' if the Transaction Retry must be done on client side.
+     *
+     * @see <a href=https://www.cockroachlabs.com/docs/stable/transactions.html#client-side-intervention>CockroachDB - transactions</a>
+     */
+    private boolean isRetryable = false;
+
     /**
      * Constructs a new runtime exception with {@code null} as its
      * detail message.  The cause is not initialized, and may subsequently be
@@ -39,7 +48,7 @@ public class DatabaseEngineRuntimeException extends RuntimeException {
      * @param message the detail message. The detail message is saved for
      *                later retrieval by the {@link #getMessage()} method.
      */
-    public DatabaseEngineRuntimeException(String message) {
+    public DatabaseEngineRuntimeException(final String message) {
         super(message);
     }
 
@@ -56,7 +65,7 @@ public class DatabaseEngineRuntimeException extends RuntimeException {
      *                permitted, and indicates that the cause is nonexistent or
      *                unknown.)
      */
-    public DatabaseEngineRuntimeException(String message, Throwable cause) {
+    public DatabaseEngineRuntimeException(final String message, final Throwable cause) {
         super(message, cause);
     }
 
@@ -72,7 +81,7 @@ public class DatabaseEngineRuntimeException extends RuntimeException {
      *              permitted, and indicates that the cause is nonexistent or
      *              unknown.)
      */
-    public DatabaseEngineRuntimeException(Throwable cause) {
+    public DatabaseEngineRuntimeException(final Throwable cause) {
         super(cause);
     }
 
@@ -89,9 +98,40 @@ public class DatabaseEngineRuntimeException extends RuntimeException {
      * @param writableStackTrace whether or not the stack trace should
      *                           be writable
      */
-    protected DatabaseEngineRuntimeException(String message, Throwable cause,
-                                             boolean enableSuppression,
-                                             boolean writableStackTrace) {
+    protected DatabaseEngineRuntimeException(final String message,
+                                             final Throwable cause,
+                                             final boolean enableSuppression,
+                                             final boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
+    }
+
+    /**
+     * Constructs a new runtime exception with the specified detail message,
+     * cause and a specified isRetryable state.  <p>Note that the detail message associated with
+     * {@code cause} is <i>not</i> automatically incorporated in
+     * this runtime exception's detail message.
+     *
+     * @param message     The detail message (which is saved for later retrieval
+     *                    by the {@link #getMessage()} method).
+     * @param cause       The cause (which is saved for later retrieval by the
+     *                    {@link #getCause()} method).  (A <tt>null</tt> value is
+     *                    permitted, and indicates that the cause is nonexistent or
+     *                    unknown.)
+     * @param isRetryable The property must be true if generated Exception must be retried.
+     */
+    public DatabaseEngineRuntimeException(final String message, final Throwable cause, final boolean isRetryable) {
+        super(message, cause);
+        this.isRetryable = isRetryable;
+    }
+
+    /**
+     * Gets whether the error that caused this exception is retryable or not.
+     *
+     * In particular, if a transaction commit resulted in this exception, the client can attempt to retry it.
+     *
+     * @return whether this exception is retryable or not.
+     */
+    public boolean isRetryable() {
+        return isRetryable;
     }
 }

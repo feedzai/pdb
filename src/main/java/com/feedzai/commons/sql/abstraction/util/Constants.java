@@ -106,4 +106,11 @@ public final class Constants {
      * By default, there is no query timeout, so pdb will wait indefinitely for the database to respond to queries.
      */
     public static final int DEFAULT_SELECT_QUERY_TIMEOUT = NO_TIMEOUT;
+
+    /**
+     * The SQL standard State code for "transaction failure".
+     * This may be caused by serialization failures in concurrent transactions in the DB server and possibly deadlocks;
+     * this code indicates that the client app may retry the transaction.
+     */
+    public static final String SQL_STATE_TRANSACTION_FAILURE = "40001";
 }

@@ -788,7 +788,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             conn.commit();
             conn.setAutoCommit(true);
         } catch (final SQLException ex) {
-            throw new DatabaseEngineRuntimeException("Something went wrong while committing transaction", ex);
+            final boolean retryableException = isRetryableException(ex);
+            throw new DatabaseEngineRuntimeException(
+                    String.format("Something went wrong while committing transaction%s", retryableException ? " - need retry" : ""),
+                    ex, retryableException
+            );
         }
     }
 
@@ -2041,5 +2045,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         } else {
             ps.setObject(index, param);
         }
+    }
+
+    /**
+     * Checks if an Exception is to be retried on client-side.
+     *
+     * @param ex SQLException.
+     * @return True if it is an Exception that needs to be retried, False otherwise.
+     */
+    protected boolean isRetryableException(final SQLException ex) {
+        return ex.getSQLState().equals(Constants.SQL_STATE_TRANSACTION_FAILURE);
     }
 }

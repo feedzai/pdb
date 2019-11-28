@@ -79,9 +79,16 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      */
     public static final String TABLE_OR_VIEW_DOES_NOT_EXIST = "42P01";
     /**
-     * Table or view does not exist.
+     * Constraint name already exists.
      */
     public static final String CONSTRAINT_NAME_ALREADY_EXISTS = "42710";
+    /**
+     * The SQL State code PostgreSQL uses for "transaction failure due to deadlocks".
+     * This may be caused by serialization failure due to a deadlock detected in the DB server in concurrent; this code
+     * indicates that the client app may retry the transaction.
+     */
+    public static final String SQL_STATE_DEADLOCK_TRANSACTION_FAILURE = "40P01";
+
     /**
      * The default SSL mode for the connection, when that PostgreSQL property is not set in the JDBC URL but SSL is
      * enabled.
@@ -172,6 +179,11 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     @Override
     public boolean isStringAggDistinctCapable() {
         return true;
+    }
+
+    @Override
+    protected boolean isRetryableException(final SQLException ex) {
+        return super.isRetryableException(ex) || ex.getSQLState().equals(SQL_STATE_DEADLOCK_TRANSACTION_FAILURE);
     }
 
     /**
