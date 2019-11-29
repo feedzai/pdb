@@ -701,8 +701,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized void dropEntity(final DbEntity entity) throws DatabaseEngineException {
-        dropSequences(entity);
         dropTable(entity);
+        dropSequences(entity);
         entities.remove(entity.getName());
         logger.trace("Entity {} dropped", entity.getName());
     }

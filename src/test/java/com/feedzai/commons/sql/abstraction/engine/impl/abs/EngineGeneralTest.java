@@ -42,6 +42,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.impl.cockroach.SkipTestCockroachDB;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -56,6 +57,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -1806,6 +1808,9 @@ public class EngineGeneralTest {
     }
 
     @Test
+    @Category(SkipTestCockroachDB.class)
+    // unimplemented in CockroachDB: views do not currently support * expressions
+    // https://github.com/cockroachdb/cockroach/issues/10028
     public void createViewTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -1820,6 +1825,9 @@ public class EngineGeneralTest {
     }
 
     @Test
+    @Category(SkipTestCockroachDB.class)
+    // unimplemented in CockroachDB: views do not currently support * expressions
+    // https://github.com/cockroachdb/cockroach/issues/10028
     public void createOrReplaceViewTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -3861,6 +3869,7 @@ public class EngineGeneralTest {
     }
 
     @Test
+    @Category(SkipTestCockroachDB.class)
     public void dropPrimaryKeyWithOneColumnTest() throws Exception {
         DbEntity entity =
                 dbEntity()
@@ -3877,6 +3886,7 @@ public class EngineGeneralTest {
     }
 
     @Test
+    @Category(SkipTestCockroachDB.class)
     public void dropPrimaryKeyWithTwoColumnsTest() throws Exception {
         DbEntity entity =
                 dbEntity()
@@ -3912,6 +3922,7 @@ public class EngineGeneralTest {
     }
 
     @Test
+    @Category(SkipTestCockroachDB.class)
     public void alterColumnToDifferentTypeTest() throws DatabaseEngineException {
         DbEntity entity =
                 dbEntity()
