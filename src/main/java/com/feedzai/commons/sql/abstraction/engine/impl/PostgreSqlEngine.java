@@ -124,7 +124,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * @throws DatabaseEngineException When the connection fails.
      * @since 2.5.0
      */
-    public PostgreSqlEngine(final PdbProperties properties, final String driver) throws DatabaseEngineException {
+    protected PostgreSqlEngine(final PdbProperties properties, final String driver) throws DatabaseEngineException {
         super(driver, properties, Dialect.POSTGRESQL);
     }
 

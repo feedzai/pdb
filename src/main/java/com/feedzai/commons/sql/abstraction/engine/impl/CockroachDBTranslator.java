@@ -47,18 +47,10 @@ public class CockroachDBTranslator extends PostgreSqlTranslator {
                 return "DOUBLE PRECISION";
 
             case INT:
-                if (c.isAutoInc()) {
-                    return "INT4";
-                } else {
-                    return "INT4";
-                }
+                return "INT4";
 
             case LONG:
-                if (c.isAutoInc()) {
-                    return "INT8";
-                } else {
-                    return "INT8";
-                }
+                return "INT8";
 
             case STRING:
                 return format("VARCHAR(%s)", c.isSizeSet() ? c.getSize().toString() : properties.getProperty(VARCHAR_SIZE));

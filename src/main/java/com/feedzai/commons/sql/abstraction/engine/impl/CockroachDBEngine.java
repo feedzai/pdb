@@ -199,7 +199,7 @@ public class CockroachDBEngine extends PostgreSqlEngine {
                 }
             } else if (hasIdentityColumn(me.getEntity())) {
                 final List<Map<String, ResultColumn>> q = query(
-                        "SELECT max(" + quotize(me.getAutoIncColumn()) + ") FROM" + quotize(name)
+                        format("SELECT max(%s) FROM %s", quotize(me.getAutoIncColumn()), quotize(name))
                 );
                 if (!q.isEmpty()) {
                     ret = q.get(0).values().iterator().next().toLong();

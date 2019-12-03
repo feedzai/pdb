@@ -701,6 +701,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     @Override
     public synchronized void dropEntity(final DbEntity entity) throws DatabaseEngineException {
+        // DROP table before sequences, since the table may be using them and prevent them from being dropped
         dropTable(entity);
         dropSequences(entity);
         entities.remove(entity.getName());
