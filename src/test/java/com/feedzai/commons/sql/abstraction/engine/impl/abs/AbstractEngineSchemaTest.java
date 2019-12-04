@@ -39,6 +39,7 @@ import org.junit.runners.Parameterized;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
@@ -525,28 +526,66 @@ public abstract class AbstractEngineSchemaTest {
     }
 
     /**
-     * Tests that the default option for the ALLOW_COLUMN_DROP option is true.
+     * Tests that the default option for the ALLOW_COLUMN_DROP option is false.
      *
+     * @throws Exception in case something goes wrong in the test.
      * @since 2.1.8
      */
     @Test
-    public void testDefaultAllowColumnDrop() throws DatabaseFactoryException, DatabaseEngineException {
+    public void testDefaultAllowColumnDrop() throws Exception {
         // copy to make sure we don't have an allow column drop defined
-        Properties defaultAllowColumnDropProperties = new Properties();
+        final Properties defaultAllowColumnDropProperties = new Properties();
         defaultAllowColumnDropProperties.putAll(properties);
         defaultAllowColumnDropProperties.remove(PdbProperties.ALLOW_COLUMN_DROP);
         // use only a create to avoid dropping the table when adding.
         defaultAllowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
 
-        // 1. create the table, insert, do a updateEntity that doesn't have the second column and confirm that the column is dropped.
-        DatabaseEngine engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
+        final Set<String> result = runAllowColumnDropCheck(defaultAllowColumnDropProperties, false);
+        // confirm that column is not dropped because default ALLOW_COLUMN_DROP is false.
+        assertEquals("Check that a select star query returns both columns", Sets.newHashSet(ID_COL, DBL_COL), result);
+    }
+
+    /**
+     * Tests that ALLOW_COLUMN_DROP option {@code true} works as intended.
+     *
+     * @throws Exception in case something goes wrong in the test.
+     * @since 2.5.0
+     */
+    @Test
+    public void testAllowColumnDropTrue() throws Exception {
+        // copy to make sure we don't have an allow column drop defined
+        final Properties allowColumnDropProperties = new Properties();
+        allowColumnDropProperties.putAll(properties);
+        allowColumnDropProperties.setProperty(PdbProperties.ALLOW_COLUMN_DROP, Boolean.TRUE.toString());
+        // use only a create to avoid dropping the table when adding.
+        allowColumnDropProperties.put(PdbProperties.SCHEMA_POLICY, "create");
+
+        final Set<String> result = runAllowColumnDropCheck(allowColumnDropProperties, true);
+        // confirm that the column is dropped.
+        assertEquals("Check that a select star query returns only ID_COL columns", Sets.newHashSet(ID_COL), result);
+    }
+
+    /**
+     * Creates a table, inserts data, and does an update on the table/Entity that doesn't have the second column.
+     *
+     * @param properties              The properties for the engine to use.
+     * @param expectedAllowColumnDrop The expected value for "allowColumnDrop".
+     * @return a set of columns present in the result of a "SELECT all" query (columns currently present in the table).
+     * @throws Exception in case something goes wrong.
+     */
+    private Set<String> runAllowColumnDropCheck(final Properties properties,
+                                                final boolean expectedAllowColumnDrop) throws Exception {
+        final DatabaseEngine engine = DatabaseFactory.getConnection(properties);
+
+        assertEquals("allowColumnDrop doesn't have the expected value",
+                expectedAllowColumnDrop, engine.getProperties().allowColumnDrop());
+
+        // guarantee that is deleted and doesn't come from previous tests.
+        engine.dropEntity(TABLE_NAME);
 
         try {
             final DbEntity entity = createSpecialValuesEntity();
             engine.beginTransaction();
-            engine.updateEntity(entity);
-            // guarantee that is deleted and doesn't come from previous tests.
-            engine.dropEntity(TABLE_NAME);
             engine.updateEntity(entity);
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
             engine.flush();
@@ -555,39 +594,17 @@ public abstract class AbstractEngineSchemaTest {
 
             engine.removeEntity(TABLE_NAME);
             engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
-            assertEquals("Check that a select star query returns only ID_COL columns", Sets.newHashSet(ID_COL),
-                    engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
-            // drop the entity to prepare for the rest of the test.
+
+            return engine.query(
+                    select(all())
+                            .from(table(TABLE_NAME))
+                            .limit(1)
+            ).get(0).keySet();
+
+        } finally {
+            // drop the entity, not needed anymore
             engine.dropEntity(TABLE_NAME);
 
-        } finally {
-            if (engine.isTransactionActive()) {
-                engine.rollback();
-            }
-            engine.close();
-        }
-
-        // 2. create the table, insert, do a updateEntity that doesn't have the second column
-        // and confirm that column is not dropped because ALLOW_COLUMN_DROP is false.
-        defaultAllowColumnDropProperties.put(PdbProperties.ALLOW_COLUMN_DROP, false);
-        engine = DatabaseFactory.getConnection(defaultAllowColumnDropProperties);
-
-        try {
-            final DbEntity entity = createSpecialValuesEntity();
-            engine.beginTransaction();
-            engine.updateEntity(entity);
-            engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
-            engine.flush();
-            engine.commit();
-            checkResult(engine, TABLE_NAME, 10d);
-
-            engine.removeEntity(TABLE_NAME);
-            engine.updateEntity(dbEntity().name(TABLE_NAME).addColumn(ID_COL, INT).pkFields(ID_COL).build());
-            assertEquals("Check that a select star query returns both columns", Sets.newHashSet(ID_COL, DBL_COL),
-                    engine.query(select(all()).from(table(TABLE_NAME)).limit(1)).get(0).keySet());
-            checkResult(engine, TABLE_NAME, 10d);
-
-        } finally {
             if (engine.isTransactionActive()) {
                 engine.rollback();
             }
