@@ -273,17 +273,13 @@ public class EngineIsolationTest {
      * @throws Exception if something goes wrong in the verification.
      * @since 2.4.7
      */
-    protected boolean isRealSerializableLevel(final DatabaseEngine engine) throws Exception {
+    private boolean isRealSerializableLevel(final DatabaseEngine engine) throws Exception {
         final PdbProperties pdbProps = new PdbProperties(this.properties, true);
         final DatabaseEngineDriver engineDriver = DatabaseEngineDriver.fromEngine(pdbProps.getEngine());
 
-        switch (engine.getConnection().getTransactionIsolation()) {
-            case Connection.TRANSACTION_SERIALIZABLE:
-                if (engineDriver == DatabaseEngineDriver.SQLSERVER) {
-                    return true;
-                }
-            default:
-                return false;
+        if (engine.getConnection().getTransactionIsolation() == Connection.TRANSACTION_SERIALIZABLE) {
+            return engineDriver == DatabaseEngineDriver.SQLSERVER || engineDriver == DatabaseEngineDriver.COCKROACHDB;
         }
+        return false;
     }
 }

@@ -113,6 +113,21 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         super(POSTGRESQL_DRIVER, properties, Dialect.POSTGRESQL);
     }
 
+    /**
+     * Creates a new PostgreSql connection.
+     *
+     * Note: this constructor exists so that most of the code in this implementation can be reused
+     * by (almost) compatible engines, like CockroachDB.
+     *
+     * @param properties The properties for the database connection.
+     * @param driver     The driver to connect to the database.
+     * @throws DatabaseEngineException When the connection fails.
+     * @since 2.5.0
+     */
+    protected PostgreSqlEngine(final PdbProperties properties, final String driver) throws DatabaseEngineException {
+        super(driver, properties, Dialect.POSTGRESQL);
+    }
+
     @Override
     protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
 

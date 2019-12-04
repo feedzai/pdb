@@ -486,6 +486,9 @@
 
         <profile>
             <id>mysql</id>
+            <properties>
+                <image.mysql>mysql:5.7.22</image.mysql>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -504,7 +507,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>mysql:5.7.22</name>
+                                    <name>${image.mysql}</name>
                                     <alias>pdb-mysql</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -531,6 +534,9 @@
 
         <profile>
             <id>sqlserver</id>
+            <properties>
+                <image.sqlserver>mcr.microsoft.com/mssql/server:2017-CU17</image.sqlserver>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -549,7 +555,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>mcr.microsoft.com/mssql/server:2017-CU17</name>
+                                    <name>${image.sqlserver}</name>
                                     <alias>pdb-sqlserver</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -586,6 +592,9 @@
 
         <profile>
             <id>postgresql</id>
+            <properties>
+                <image.postgresql>postgres:9.6.14</image.postgresql>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -604,7 +613,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>postgres:9.6.14</name>
+                                    <name>${image.postgresql}</name>
                                     <alias>pdb-postgresql</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -629,7 +638,10 @@
         </profile>
 
         <profile>
-            <id>postgresql11</id>
+            <id>cockroach</id>
+            <properties>
+                <image.cockroach>cockroachdb/cockroach:v19.2.0</image.cockroach>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -637,8 +649,9 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <systemProperties>
-                                <instances>postgresql</instances>
+                                <instances>cockroach</instances>
                             </systemProperties>
+                            <excludedGroups>com.feedzai.commons.sql.abstraction.engine.impl.cockroach.SkipTestCockroachDB</excludedGroups>
                         </configuration>
                     </plugin>
 
@@ -648,20 +661,19 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>postgres:11.4</name>
-                                    <alias>pdb-postgresql11</alias>
+                                    <name>${image.cockroach}</name>
+                                    <alias>pdb-cockroach</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
-                                        <hostname>pdb-postgresql11</hostname>
+                                        <hostname>pdb-cockroach</hostname>
                                         <ports>
-                                            <port>5432:5432</port>
+                                            <port>8080:8080</port>
+                                            <port>26257:26257</port>
                                         </ports>
-                                        <env>
-                                            <POSTGRES_PASSWORD>AaBb12.#</POSTGRES_PASSWORD>
-                                        </env>
+                                        <cmd>start --insecure</cmd>
                                         <wait>
                                             <time>40000</time>
-                                            <log>PostgreSQL init process complete; ready for start up</log>
+                                            <log>CockroachDB node starting</log>
                                         </wait>
                                     </run>
                                 </image>
@@ -674,6 +686,9 @@
 
         <profile>
             <id>oracle</id>
+            <properties>
+                <image.oracle>iatebes/oracle_11g:latest</image.oracle>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -697,7 +712,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>iatebes/oracle_11g:latest</name>
+                                    <name>${image.oracle}</name>
                                     <alias>pdb-oracle</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>
@@ -720,6 +735,9 @@
 
         <profile>
             <id>db2</id>
+            <properties>
+                <image.db2>ibmcom/db2:11.5.0.0</image.db2>
+            </properties>
             <build>
                 <plugins>
                     <plugin>
@@ -738,7 +756,7 @@
                         <configuration>
                             <images>
                                 <image>
-                                    <name>ibmcom/db2:11.5.0.0</name>
+                                    <name>${image.db2}</name>
                                     <alias>pdb-db2</alias>
                                     <run>
                                         <namingStrategy>alias</namingStrategy>

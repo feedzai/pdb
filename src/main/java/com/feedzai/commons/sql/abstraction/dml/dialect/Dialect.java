@@ -31,6 +31,11 @@ public enum Dialect {
      */
     POSTGRESQL,
     /**
+     * CockroachDB dialect.
+     * @since 2.5.0
+     */
+    COCKROACHDB,
+    /**
      * MySQL SQL dialect.
      */
     MYSQL,

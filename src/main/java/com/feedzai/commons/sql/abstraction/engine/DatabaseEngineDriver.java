@@ -43,10 +43,15 @@ public enum DatabaseEngineDriver {
      */
     POSTGRES("Postgres", "com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine", "org.postgresql.Driver", 5432) {
         @Override
-        public String connectionStringFor(String hostname, String database) {
-            return connectionStringFor(hostname, database, 5432);
+        public String connectionStringFor(String hostname, String database, int port) {
+            return String.format("jdbc:postgresql://%s:%d/%s", hostname, port, database);
         }
-
+    },
+    /**
+     * The CockroachDB vendor.
+     * @since 2.5.0
+     */
+    COCKROACHDB("CockroachDB", "com.feedzai.commons.sql.abstraction.engine.impl.CockroachDBEngine", "org.postgresql.Driver", 26257) {
         @Override
         public String connectionStringFor(String hostname, String database, int port) {
             return String.format("jdbc:postgresql://%s:%d/%s", hostname, port, database);
@@ -57,11 +62,6 @@ public enum DatabaseEngineDriver {
      */
     SQLSERVER("SQLServer", "com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine", "com.microsoft.sqlserver.jdbc.SQLServerDriver", 1433) {
         @Override
-        public String connectionStringFor(String hostname, String database) {
-            return connectionStringFor(hostname, database, 1433);
-        }
-
-        @Override
         public String connectionStringFor(String hostname, String database, int port) {
             return String.format("jdbc:sqlserver://%s:%d;database=%s", hostname, port, database);
         }
@@ -70,11 +70,6 @@ public enum DatabaseEngineDriver {
      * The Oracle vendor.
      */
     ORACLE("Oracle", "com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine", "oracle.jdbc.OracleDriver", 1521) {
-        @Override
-        public String connectionStringFor(String hostname, String database) {
-            return connectionStringFor(hostname, database, 1521);
-        }
-
         @Override
         public String connectionStringFor(String hostname, String database, int port) {
             return String.format("jdbc:oracle:thin:@%s:%d:%s", hostname, port, database);
@@ -85,11 +80,6 @@ public enum DatabaseEngineDriver {
      */
     MYSQL("MySQL", "com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine", "com.mysql.jdbc.Driver", 3306) {
         @Override
-        public String connectionStringFor(String hostname, String database) {
-            return connectionStringFor(hostname, database, 3306);
-        }
-
-        @Override
         public String connectionStringFor(String hostname, String database, int port) {
             return String.format("jdbc:mysql://%s:%d/%s", hostname, port, database);
         }
@@ -98,11 +88,6 @@ public enum DatabaseEngineDriver {
      * The DB2 vendor.
      */
     DB2("DB2", "com.feedzai.commons.sql.abstraction.engine.impl.DB2Engine", "com.ibm.db2.jcc.DB2Driver", 50000) {
-        @Override
-        public String connectionStringFor(String hostname, String database) {
-            return connectionStringFor(hostname, database, 50000);
-        }
-
         @Override
         public String connectionStringFor(String hostname, String database, int port) {
             return String.format("jdbc:db2://%s:%d/%s", hostname, port, database);
@@ -215,7 +200,9 @@ public enum DatabaseEngineDriver {
      * @param database The database.
      * @return The formatted string to create a JDBC connection.
      */
-    public abstract String connectionStringFor(String hostname, String database);
+    public String connectionStringFor(final String hostname, final String database) {
+        return connectionStringFor(hostname, database, defaultPort());
+    }
 
     /**
      * Gets the JDBC connection string given the hostname and the database.
