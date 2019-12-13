@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.OracleResultIterator;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
@@ -30,8 +31,11 @@ import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.impl.oracle.OracleQueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -143,6 +147,12 @@ public class OracleEngine extends AbstractDatabaseEngine {
      * @since 2.4.2
      */
     private Deque<Action0> postFlushActions = new ConcurrentLinkedDeque<>();
+
+    /**
+     * An instance of {@link QueryExceptionHandler} specific for Oracle engine, to be used in disambiguating SQL exceptions.
+     * @since 2.5.1
+     */
+    public static final QueryExceptionHandler ORACLE_QUERY_EXCEPTION_HANDLER = new OracleQueryExceptionHandler();
 
     /**
      * Creates a new Oracle connection.
@@ -859,71 +869,56 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
-        try {
-            getConnection();
+    public synchronized void createPreparedStatement(String name, Expression query) throws NameAlreadyExistsException, DatabaseEngineException {
+        super.createPreparedStatement(name, query);
+    }
 
-            final MappedEntity me = entities.get(name);
-
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = me.getInsertReturning();
-                synchronizeSequence(name, me);
-            } else {
-                ps = me.getInsertWithAutoInc();
-            }
-
-            int i = entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-
-            if (useAutoInc) {
-                ((OraclePreparedStatement) ps).registerReturnParameter(i + 1, OracleTypes.NUMBER);
-            }
-
-            ps.execute();
-
-            long ret = 0;
-
-            if (useAutoInc) {
-                generatedKeys = ((OraclePreparedStatement) ps).getReturnResultSet();
-                if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
-                }
-
-                generatedKeys.close();
-            } else {
-                me.setSequenceDirty(true);
-            }
-
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
-            }
+    @Override
+    protected PreparedStatement getPreparedStatementForPersist(final boolean useAutoInc, final MappedEntity mappedEntity) {
+        if (useAutoInc) {
+            synchronizeSequence(mappedEntity);
+            return mappedEntity.getInsertReturning();
+        } else {
+            return mappedEntity.getInsertWithAutoInc();
         }
+    }
+
+    @Override
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
+        final OraclePreparedStatement oraclePs = ps.unwrap(OraclePreparedStatement.class);
+        if (useAutoInc) {
+            oraclePs.registerReturnParameter(lastBindPosition + 1, OracleTypes.NUMBER);
+        }
+
+        oraclePs.execute();
+
+        if (useAutoInc) {
+            try (final ResultSet generatedKeys = oraclePs.getReturnResultSet()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getLong(1);
+                }
+            }
+        } else {
+            me.setSequenceDirty(true);
+        }
+
+        return 0;
     }
 
     /**
      * Synchronizes the given sequence to the current value.
      *
-     * @param name The table name that the sequence belongs.
      * @param me   The mapped entity.
      */
-    private void synchronizeSequence(String name, MappedEntity me) {
+    private void synchronizeSequence(final MappedEntity me) {
         if (!me.isSequenceDirty()) {
             return;
         }
 
+        final String name = me.getEntity().getName();
         final String sequenceName = md5(format("%s_%s_SEQ", name, me.getAutoIncColumn()), properties.getMaxIdentifierSize());
 
         // Touch the sequence.
@@ -1171,4 +1166,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
         void apply() throws Exception;
     }
 
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return ORACLE_QUERY_EXCEPTION_HANDLER;
+    }
 }

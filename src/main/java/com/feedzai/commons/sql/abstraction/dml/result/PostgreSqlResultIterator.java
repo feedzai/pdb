@@ -16,11 +16,13 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine;
 
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.Statement;
+
+import static com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine.PG_QUERY_EXCEPTION_HANDLER;
 
 /**
  * Result iterator for the {@link PostgreSqlEngine} engine.
@@ -29,11 +31,6 @@ import java.sql.Statement;
  * @since 2.0.0
  */
 public class PostgreSqlResultIterator extends ResultIterator {
-
-    /**
-     * The SQL State that indicates a timeout occurred.
-     */
-    private static final String TIMEOUT_SQL_STATE = "57014";
 
     /**
      * Creates a new instance of {@link PostgreSqlResultIterator}.
@@ -62,8 +59,7 @@ public class PostgreSqlResultIterator extends ResultIterator {
     }
 
     @Override
-    protected boolean isTimeoutException(Exception exception) {
-        return super.isTimeoutException (exception) ||
-                exception instanceof SQLException && TIMEOUT_SQL_STATE.equals(((SQLException) exception).getSQLState());
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return PG_QUERY_EXCEPTION_HANDLER;
     }
 }

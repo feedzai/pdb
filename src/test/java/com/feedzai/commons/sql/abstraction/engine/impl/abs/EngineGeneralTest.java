@@ -3005,7 +3005,7 @@ public class EngineGeneralTest {
             fail("Should throw an exception if trying to persist an entity before calling addEntity/updateEntity a first time");
         } catch (final DatabaseEngineException e) {
             assertTrue("Should fail because the entity is still unknown to this DatabaseEngine instance",
-                e.getCause().getMessage().contains("Unknown entity"));
+                e.getMessage().contains("Unknown entity"));
         }
 
         schemaNoneEngine.updateEntity(entity);

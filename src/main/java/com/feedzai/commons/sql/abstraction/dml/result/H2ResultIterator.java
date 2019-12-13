@@ -16,10 +16,13 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.H2Engine;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+
+import static com.feedzai.commons.sql.abstraction.engine.impl.H2Engine.H2_QUERY_EXCEPTION_HANDLER;
 
 /**
  * Result iterator for the {@link H2Engine} engine.
@@ -52,5 +55,10 @@ public class H2ResultIterator extends ResultIterator {
     @Override
     public ResultColumn createResultColumn(String name, Object value) {
         return new H2ResultColumn(name, value);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return H2_QUERY_EXCEPTION_HANDLER;
     }
 }

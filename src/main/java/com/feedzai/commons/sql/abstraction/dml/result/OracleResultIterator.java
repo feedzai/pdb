@@ -16,10 +16,13 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+
+import static com.feedzai.commons.sql.abstraction.engine.impl.OracleEngine.ORACLE_QUERY_EXCEPTION_HANDLER;
 
 /**
  * Result iterator for the {@link OracleEngine} engine.
@@ -52,5 +55,10 @@ public class OracleResultIterator extends ResultIterator {
     @Override
     public ResultColumn createResultColumn(String name, Object value) {
         return new OracleResultColumn(name, value);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return ORACLE_QUERY_EXCEPTION_HANDLER;
     }
 }

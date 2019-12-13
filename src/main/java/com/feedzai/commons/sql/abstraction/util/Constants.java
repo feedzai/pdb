@@ -15,8 +15,13 @@
  */
 package com.feedzai.commons.sql.abstraction.util;
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.IsolationLevel;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableRuntimeException;
+import com.google.common.collect.ImmutableSet;
 
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -113,4 +118,15 @@ public final class Constants {
      * this code indicates that the client app may retry the transaction.
      */
     public static final String SQL_STATE_TRANSACTION_FAILURE = "40001";
+
+    /**
+     * A set of PDB Exceptions that can be considered retryable (when these are thrown, it is possible that a client
+     * application will be successfull if it performs again the same actions that resulted in the exception).
+     * @since 2.5.1
+     */
+    public static final Set<Class<?extends Throwable>> RETRYABLE_EXCEPTIONS = ImmutableSet.of(
+            DatabaseEngineRetryableException.class,
+            DatabaseEngineRetryableRuntimeException.class,
+            DatabaseEngineTimeoutException.class
+    );
 }
