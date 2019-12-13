@@ -20,17 +20,14 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.sql.DatabaseMetaData;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -167,62 +164,12 @@ public class CockroachDBEngine extends PostgreSqlEngine {
     }
 
     @Override
-    public synchronized Long persist(final String name,
-                                     final EntityEntry entry,
-                                     final boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
-        try {
-            getConnection();
-
-            final MappedEntity me = entities.get(name);
-
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = me.getInsertReturning();
-            } else {
-                ps = me.getInsertWithAutoInc();
-            }
-
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-            generatedKeys = ps.executeQuery();
-
-
-            long ret = 0;
-
-            if (useAutoInc) {
-                if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
-                }
-            } else if (hasIdentityColumn(me.getEntity())) {
-                final List<Map<String, ResultColumn>> q = query(
-                        format("SELECT max(%s) FROM %s", quotize(me.getAutoIncColumn()), quotize(name))
-                );
-                if (!q.isEmpty()) {
-                    ret = q.get(0).values().iterator().next().toLong();
-                }
-
-                executeUpdateSilently(format("SELECT setval('%s', %d, false)",
-                        getQuotizedSequenceName(me.getEntity(), me.getAutoIncColumn()), ret + 1
-                ));
-                ret = 0;
-            }
-
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
-            }
-        }
+    protected void updatePersistAutoIncSequence(final MappedEntity mappedEntity, long currentAutoIncVal) {
+        executeUpdateSilently(format(
+                "SELECT setval('%s', %d, false)",
+                getQuotizedSequenceName(mappedEntity.getEntity(), mappedEntity.getAutoIncColumn()),
+                currentAutoIncVal + 1
+        ));
     }
 
     protected void addFks(final DbEntity entity) throws DatabaseEngineException {

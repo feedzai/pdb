@@ -31,7 +31,10 @@ import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.AESHelper;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
@@ -162,6 +165,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * than the specified socket timeout
      */
     private final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
+
+    /**
+     * The default instance of {@link QueryExceptionHandler} to be used in disambiguating SQL exceptions.
+     * @since 2.5.1
+     */
+    public static final QueryExceptionHandler DEFAULT_QUERY_EXCEPTION_HANDLER = new QueryExceptionHandler();
 
     /**
      * Creates a new instance of {@link AbstractDatabaseEngine}.
@@ -756,7 +765,63 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     @Override
-    public abstract Long persist(final String name, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException;
+    public final synchronized Long persist(final String name,
+                                           final EntityEntry entry,
+                                           final boolean useAutoInc) throws DatabaseEngineException {
+        try {
+            getConnection();
+        } catch (final Exception ex) {
+            throw new DatabaseEngineException(String.format("Connection error while persisting entity '%s'", name), ex);
+        }
+
+        final MappedEntity me = entities.get(name);
+        if (me == null) {
+            throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
+        }
+
+        final PreparedStatement ps = getPreparedStatementForPersist(useAutoInc, me);
+
+        final int lastBindPosition = entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
+
+        try {
+            final long ret = doPersist(ps, me, useAutoInc, lastBindPosition);
+            return ret == 0 ? null : ret;
+
+        } catch (final DatabaseEngineException | DatabaseEngineRuntimeException dbex) {
+            throw dbex;
+        } catch (final Exception ex) {
+            throw handleException(ex, "Something went wrong persisting the entity");
+        }
+    }
+
+    /**
+     * Gets the {@link PreparedStatement} to use in a persist operation, depending on whether autoInc is to be used or not.
+     *
+     * @param useAutoInc   Whether to use autoInc.
+     * @param mappedEntity The mapped entity for which to get the prepared statement.
+     * @return the {@link PreparedStatement}.
+     * @since 2.5.1
+     */
+    protected PreparedStatement getPreparedStatementForPersist(final boolean useAutoInc, final MappedEntity mappedEntity) {
+        return useAutoInc ? mappedEntity.getInsertReturning() : mappedEntity.getInsertWithAutoInc();
+    }
+
+    /**
+     * DB engine specific auxiliary method for {@link #persist(String, EntityEntry, boolean)} to effectively perform
+     * the persist action.
+     *
+     * @param ps               The {@link PreparedStatement} to use in the persist operation
+     * @param me               The mapped entity on which to persist.
+     * @param useAutoInc       Whether to use autoInc.
+     * @param lastBindPosition The position (1-based) of the last bind parameter that was filled in the prepared statement.
+     * @return The ID of the auto generated value ({@code 0} if there's no auto generated value).
+     * @throws Exception if any problem occurs while persisting.
+     * @since 2.5.1
+     */
+    protected abstract long doPersist(final PreparedStatement ps,
+                                      final MappedEntity me,
+                                      final boolean useAutoInc,
+                                      int lastBindPosition) throws Exception;
 
     /**
      * Flushes the batches for all the registered entities.
@@ -792,11 +857,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             conn.commit();
             conn.setAutoCommit(true);
         } catch (final SQLException ex) {
-            final boolean retryableException = isRetryableException(ex);
-            throw new DatabaseEngineRuntimeException(
-                    String.format("Something went wrong while committing transaction%s", retryableException ? " - need retry" : ""),
-                    ex, retryableException
-            );
+            final String message = "Something went wrong while committing transaction";
+            if (getQueryExceptionHandler().isRetryableException(ex)) {
+                throw new DatabaseEngineRetryableRuntimeException(message + " [retryable]", ex);
+            }
+            throw new DatabaseEngineRuntimeException(message, ex);
         }
     }
 
@@ -858,7 +923,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             s = conn.createStatement();
             return s.executeUpdate(query);
         } catch (final Exception ex) {
-            throw new DatabaseEngineException("Error handling native query", ex);
+            throw handleException(ex, "Error handling native query");
         } finally {
             if (s != null) {
                 try {
@@ -1209,7 +1274,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             logger.trace(query);
             return createResultIterator(stmt, query);
 
-        } catch (final DatabaseEngineTimeoutException e) {
+        } catch (final DatabaseEngineTimeoutException | DatabaseEngineRetryableException e) {
             throw e;
 
         } catch (final Exception e) {
@@ -2057,12 +2122,41 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * Checks if an Exception is to be retried on client-side.
+     * Handles the Exception, disambiguating it into a specific PDB Exception and throwing it.
+     * <p>
+     * If a specific type does not match the info in the provided Exception, throws a {@link DatabaseEngineException}.
      *
-     * @param ex SQLException.
-     * @return True if it is an Exception that needs to be retried, False otherwise.
+     * @param exception The exception to handle.
+     * @param message   The message to associate with the thrown exception.
+     * @return the {@link PreparedStatement}.
+     * @implNote This method uses the specific engine {@link QueryExceptionHandler} (obtained from
+     * {@link #getQueryExceptionHandler()}); even though this method throws exceptions, to keep Java type system happy
+     * it also declares that it returns {@link DatabaseEngineException}.
+     * @since 2.5.1
      */
-    protected boolean isRetryableException(final SQLException ex) {
-        return ex.getSQLState().equals(Constants.SQL_STATE_TRANSACTION_FAILURE);
+    private DatabaseEngineException handleException(final Exception exception,
+                                                    final String message) throws DatabaseEngineException {
+        if (exception instanceof SQLException) {
+            final SQLException sqlException = (SQLException) exception;
+            if (getQueryExceptionHandler().isTimeoutException(sqlException)) {
+                throw new DatabaseEngineTimeoutException(message + " [timeout]", sqlException);
+            }
+
+            if (getQueryExceptionHandler().isRetryableException(sqlException)) {
+                throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
+            }
+        }
+
+        throw new DatabaseEngineException(message, exception);
+    }
+
+    /**
+     * Gets the instance of {@link QueryExceptionHandler} to be used in disambiguating SQL exceptions.
+     *
+     * @return the {@link QueryExceptionHandler}.
+     * @since 2.5.1
+     */
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return DEFAULT_QUERY_EXCEPTION_HANDLER;
     }
 }

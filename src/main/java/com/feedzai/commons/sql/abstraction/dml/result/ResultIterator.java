@@ -17,6 +17,8 @@ package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,12 +26,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLTimeoutException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import static com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine.DEFAULT_QUERY_EXCEPTION_HANDLER;
 
 /**
  * The abstract result iterator. Extending classes will create the specific {@link ResultColumn}
@@ -81,7 +84,6 @@ public abstract class ResultIterator implements AutoCloseable {
         this.columnNames = new ArrayList<>();
 
         // Process column names.
-        ResultSetMetaData meta;
         try {
             long start = System.currentTimeMillis();
             if (isPreparedStatement) {
@@ -94,29 +96,15 @@ public abstract class ResultIterator implements AutoCloseable {
 
             logger.trace("[{} ms] {}", (System.currentTimeMillis() - start), sql == null ? "" : sql);
 
-            meta = resultSet.getMetaData();
+            final ResultSetMetaData meta = resultSet.getMetaData();
             final int columnCount = meta.getColumnCount();
             for (int i = 1; i <= columnCount; i++) {
                 columnNames.add(meta.getColumnLabel(i));
             }
 
         } catch (final Exception e) {
-            close();
-            throw (isTimeoutException(e) ?
-                new DatabaseEngineTimeoutException("Timeout waiting for query execution", e) :
-                new DatabaseEngineException("Could not process result set.", e));
+            throw handleException(e, "Could not process result set.");
         }
-    }
-
-    /**
-     * Indicates if a given exception is a timeout. Logic for this may be driver-specific, so
-     * drivers that support query timeouts may have to override this method.
-     *
-     * @param exception  The exception to check.
-     * @return {@code true} if the exception is a timeout, {@code false} otherwise.
-     */
-    protected boolean isTimeoutException(final Exception exception) {
-        return (exception instanceof SQLTimeoutException);
     }
 
     /**
@@ -177,8 +165,7 @@ public abstract class ResultIterator implements AutoCloseable {
 
             return temp;
         } catch (final Exception e) {
-            close();
-            throw new DatabaseEngineException("Could not fetch data.", e);
+            throw handleException(e, "Could not fetch data.");
         }
     }
 
@@ -219,8 +206,7 @@ public abstract class ResultIterator implements AutoCloseable {
             }
             return temp;
         } catch (final Exception e) {
-            close();
-            throw new DatabaseEngineException("Could not fetch data.", e);
+            throw handleException(e, "Could not fetch data.");
         }
     }
 
@@ -301,4 +287,45 @@ public abstract class ResultIterator implements AutoCloseable {
      * @return A specific result column given the implementation.
      */
     public abstract ResultColumn createResultColumn(final String name, final Object value);
+
+    /**
+     * Closes this iterator and handles the Exception, disambiguating it into a specific PDB Exception and throwing it.
+     * <p>
+     * If a specific type does not match the info in the provided Exception, throws a {@link DatabaseEngineException}.
+     *
+     * @param exception The exception to handle.
+     * @param message   The message to associate with the thrown exception.
+     * @return the {@link PreparedStatement}.
+     * @implNote This method uses the specific engine {@link QueryExceptionHandler} (obtained from
+     * {@link #getQueryExceptionHandler()}); even though this method throws exceptions, to keep Java type system happy
+     * it also declares that it returns {@link DatabaseEngineException}.
+     * @since 2.5.1
+     */
+    private DatabaseEngineException handleException(final Exception exception,
+                                                    final String message) throws DatabaseEngineException {
+        close();
+
+        if (exception instanceof SQLException) {
+            final SQLException sqlException = (SQLException) exception;
+            if (getQueryExceptionHandler().isTimeoutException(sqlException)) {
+                throw new DatabaseEngineTimeoutException(message + " [timeout]", sqlException);
+            }
+
+            if (getQueryExceptionHandler().isRetryableException(sqlException)) {
+                throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
+            }
+
+        }
+        throw new DatabaseEngineException(message, exception);
+    }
+
+    /**
+     * Gets the instance of {@link QueryExceptionHandler} to be used in disambiguating SQL exceptions.
+     *
+     * @return the {@link QueryExceptionHandler}.
+     * @since 2.5.1
+     */
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return DEFAULT_QUERY_EXCEPTION_HANDLER;
+    }
 }

@@ -16,11 +16,13 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
-import com.mysql.jdbc.exceptions.MySQLTimeoutException;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+
+import static com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine.MYSQL_QUERY_EXCEPTION_HANDLER;
 
 /**
  * Result iterator for the {@link MySqlEngine} engine.
@@ -56,7 +58,7 @@ public class MySqlResultIterator extends ResultIterator {
     }
 
     @Override
-    protected boolean isTimeoutException(final Exception exception) {
-        return exception instanceof MySQLTimeoutException;
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return MYSQL_QUERY_EXCEPTION_HANDLER;
     }
 }

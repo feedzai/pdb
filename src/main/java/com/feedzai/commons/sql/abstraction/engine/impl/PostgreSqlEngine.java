@@ -33,6 +33,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
@@ -49,6 +51,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
@@ -82,12 +88,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * Constraint name already exists.
      */
     public static final String CONSTRAINT_NAME_ALREADY_EXISTS = "42710";
-    /**
-     * The SQL State code PostgreSQL uses for "transaction failure due to deadlocks".
-     * This may be caused by serialization failure due to a deadlock detected in the DB server in concurrent; this code
-     * indicates that the client app may retry the transaction.
-     */
-    public static final String SQL_STATE_DEADLOCK_TRANSACTION_FAILURE = "40P01";
 
     /**
      * The default SSL mode for the connection, when that PostgreSQL property is not set in the JDBC URL but SSL is
@@ -104,13 +104,20 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     private static final String LEGACY_DEFAULT_SSL_MODE = "require";
 
     /**
+     * An instance of {@link QueryExceptionHandler} specific for PostgreSQL engine, to be used in disambiguating
+     * SQL exceptions.
+     * @since 2.5.1
+     */
+    public static final QueryExceptionHandler PG_QUERY_EXCEPTION_HANDLER = new PostgresSqlQueryExceptionHandler();
+
+    /**
      * Creates a new PostgreSql connection.
      *
      * @param properties The properties for the database connection.
      * @throws DatabaseEngineException When the connection fails.
      */
     public PostgreSqlEngine(PdbProperties properties) throws DatabaseEngineException {
-        super(POSTGRESQL_DRIVER, properties, Dialect.POSTGRESQL);
+        this(properties, POSTGRESQL_DRIVER);
     }
 
     /**
@@ -194,11 +201,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     @Override
     public boolean isStringAggDistinctCapable() {
         return true;
-    }
-
-    @Override
-    protected boolean isRetryableException(final SQLException ex) {
-        return super.isRetryableException(ex) || ex.getSQLState().equals(SQL_STATE_DEADLOCK_TRANSACTION_FAILURE);
     }
 
     /**
@@ -559,27 +561,11 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
-        try {
-            getConnection();
-
-            final MappedEntity me = entities.get(name);
-
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = me.getInsertReturning();
-            } else {
-                ps = me.getInsertWithAutoInc();
-            }
-
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-            generatedKeys = ps.executeQuery();
-
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
+        try (final ResultSet generatedKeys = ps.executeQuery()) {
 
             long ret = 0;
 
@@ -588,27 +574,33 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                     ret = generatedKeys.getLong(1);
                 }
             } else if (hasIdentityColumn(me.getEntity())) {
-                final List<Map<String, ResultColumn>> q = query("select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\"");
+                final List<Map<String, ResultColumn>> q = query(
+                        select(max(column(me.getAutoIncColumn()))).from(table(me.getEntity().getName()))
+                );
                 if (!q.isEmpty()) {
                     ret = q.get(0).values().iterator().next().toLong();
                 }
 
-                executeUpdateSilently("ALTER SEQUENCE \"" + name + "_" + me.getAutoIncColumn() + "_seq\" RESTART " + (ret + 1));
-                ret = 0;
+                updatePersistAutoIncSequence(me, ret);
             }
 
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
-            }
+            return ret;
         }
+    }
+
+    /**
+     * Updates the autoInc sequence value after a persist operation.
+     *
+     * @param mappedEntity      The mapped entity to for which to update the autoInc sequence.
+     * @param currentAutoIncVal The current value for the autoInc column.
+     * @since 2.5.1
+     */
+    protected void updatePersistAutoIncSequence(final MappedEntity mappedEntity, long currentAutoIncVal) {
+        executeUpdateSilently(format(
+                "ALTER SEQUENCE %s RESTART %d",
+                quotize(mappedEntity.getEntity().getName() + "_" + mappedEntity.getAutoIncColumn() + "_seq"),
+                currentAutoIncVal + 1
+        ));
     }
 
     @Override
@@ -745,5 +737,10 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     @Override
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new PostgreSqlResultIterator(ps);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return PG_QUERY_EXCEPTION_HANDLER;
     }
 }
