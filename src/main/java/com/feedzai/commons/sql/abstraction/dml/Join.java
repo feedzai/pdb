@@ -27,15 +27,15 @@ public class Join extends Expression {
     /**
      * The join type represented in a String (INNER, OUTER, etc).
      */
-    private String join = null;
+    private String join;
     /**
      * The Table to join.
      */
-    private Expression joinTable = null;
+    private Expression joinTable;
     /**
      * The Expression to join.
      */
-    private Expression joinExpr = null;
+    private Expression joinExpr;
 
     /**
      * Creates a new instance of {@link Join}.

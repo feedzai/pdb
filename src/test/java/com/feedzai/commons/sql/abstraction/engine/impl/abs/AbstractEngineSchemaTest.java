@@ -581,12 +581,13 @@ public abstract class AbstractEngineSchemaTest {
                 expectedAllowColumnDrop, engine.getProperties().allowColumnDrop());
 
         // guarantee that is deleted and doesn't come from previous tests.
-        engine.dropEntity(TABLE_NAME);
+        final DbEntity entity = createSpecialValuesEntity();
+        engine.updateEntity(entity);
+        engine.dropEntity(entity);
+        engine.addEntity(entity);
 
         try {
-            final DbEntity entity = createSpecialValuesEntity();
             engine.beginTransaction();
-            engine.updateEntity(entity);
             engine.addBatch(TABLE_NAME, createSpecialValueEntry(10));
             engine.flush();
             engine.commit();
@@ -603,7 +604,7 @@ public abstract class AbstractEngineSchemaTest {
 
         } finally {
             // drop the entity, not needed anymore
-            engine.dropEntity(TABLE_NAME);
+            engine.dropEntity(entity);
 
             if (engine.isTransactionActive()) {
                 engine.rollback();

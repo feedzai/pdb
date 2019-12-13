@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
@@ -155,10 +156,12 @@ public class DB2Translator extends AbstractTranslator {
     public String translate(RepeatDelimiter rd) {
         final String delimiter = rd.getDelimiter();
 
-        final List<Object> all = Lists.transform(rd.getExpressions(), input -> {
-            inject(input);
-            return input.translate();
-        });
+        final List<Object> all = rd.getExpressions().stream()
+                .map(input -> {
+                    inject(input);
+                    return input.translate();
+                })
+                .collect(Collectors.toList());
 
         if (RepeatDelimiter.DIV.equals(delimiter)) {
             /* DB2 operations are type sensitive...must convert to  double first (why IBM??)*/

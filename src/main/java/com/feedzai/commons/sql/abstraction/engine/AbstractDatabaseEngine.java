@@ -471,13 +471,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
             final PreparedStatement insertWithAutoInc = mappedEntity.getInsertWithAutoInc();
 
-            insert.executeBatch();
+            if (!insert.isClosed()) {
+                insert.executeBatch();
+            }
 
-            if (insertReturning != null) {
+            if (insertReturning != null && !insertReturning.isClosed()) {
                 insertReturning.executeBatch();
             }
 
-            if (insertWithAutoInc != null) {
+            if (insertWithAutoInc != null && !insertWithAutoInc.isClosed()) {
                 insertWithAutoInc.executeBatch();
             }
 
@@ -617,7 +619,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
                 if (!toRemove.isEmpty()) {
                     if (properties.allowColumnDrop()) {
-                        dropColumn(entity, toRemove.toArray(new String[toRemove.size()]));
+                        dropColumn(entity, toRemove.toArray(new String[0]));
                     } else {
                         logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.",
                                 StringUtils.join(toRemove, ","), entity.getName());
@@ -631,7 +633,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     }
                 }
                 if (!columns.isEmpty()) {
-                    addColumn(entity, columns.toArray(new DbColumn[columns.size()]));
+                    addColumn(entity, columns.toArray(new DbColumn[0]));
                 }
                 addFks(entity);
             }
@@ -734,10 +736,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     @Override
-    public abstract Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException;
+    public Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException {
+        return persist(name, entry, true);
+    }
 
     /**
-     * <p>
      * Persists a given entry. Persisting a query implies executing the statement.
      * If define useAutoInc as false, PDB will disable the auto increments for the current insert and advance the sequences if needed.
      * </p>
@@ -1102,7 +1105,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entity The entity.
      * @param ps     The prepared statement.
      * @param entry  The entry.
-     * @return The prepared statement filled in.
+     * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
      * @throws DatabaseEngineException if something occurs during the translation.
      *
      * @since 2.4.2
@@ -1117,7 +1120,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entity The entity.
      * @param ps     The prepared statement.
      * @param entry  The entry.
-     * @return The prepared statement filled in.
+     * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
      * @throws DatabaseEngineException if something occurs during the translation.
      */
     protected abstract int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException;
@@ -1225,6 +1228,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     protected abstract ResultIterator createResultIterator(Statement statement, String sql) throws DatabaseEngineException;
 
     /**
+     * Creates a specific {@link ResultIterator} for the engine in place given given prepared statement.
+     *
+     * @param ps The prepared statement.
+     * @return The result iterator.
+     * @throws DatabaseEngineException If a database access error occurs.
+     */
+    protected abstract ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException;
+
+    /**
      * Creates the table.
      *
      * @param entity The entity.
@@ -1311,21 +1323,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Translates the type present in the given column.
      *
-     * @param c The column.
+     * @param column The column.
      * @return The translation.
      * @throws DatabaseEngineException If the type cannot be found.
      */
-    protected abstract String translateType(final DbColumn c) throws DatabaseEngineException;
-
-    /**
-     * Creates a specific {@link ResultIterator} for the engine in place given given prepared statement.
-     *
-     * @param ps The prepared statement.
-     * @return The result iterator.
-     * @throws DatabaseEngineException If a database access error occurs.
-     */
-    protected abstract ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException;
-
+    protected String translateType(final DbColumn column) throws DatabaseEngineException {
+        return translator.translate(column);
+    }
 
     /**
      * Drops this table foreign keys.
@@ -1969,13 +1973,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * using for that matter the {@link #setExceptionHandler(ExceptionHandler)} method to provide a
      * specific implementation.
      *
-     * @param op The operation that originated the exception.
-     * @param e  The exception.
+     * @param opFault   The operation that originated the exception.
+     * @param exception The exception.
      * @throws DatabaseEngineException If the faulty operation must stop the execution.
      */
-    protected void handleOperation(OperationFault op, Exception e) throws DatabaseEngineException {
-        if (!eh.proceed(op, e)) {
-            throw new DatabaseEngineException("An error occurred adding the entity.", e);
+    protected void handleOperation(final OperationFault opFault, final Exception exception) throws DatabaseEngineException {
+        if (!eh.proceed(opFault, exception)) {
+            throw new DatabaseEngineException(
+                    String.format("An error occurred performing an operation on entity '%s'; cause: %s",
+                            opFault.getEntity(), opFault.getType().toString()),
+                    exception
+            );
         }
     }
 

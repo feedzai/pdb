@@ -58,7 +58,7 @@ public final class DatabaseFactory {
         try {
             Class<?> c = Class.forName(engine);
 
-            Constructor cons = c.getConstructor(PdbProperties.class);
+            final Constructor<?> cons = c.getConstructor(PdbProperties.class);
             final AbstractDatabaseEngine de = (AbstractDatabaseEngine) cons.newInstance(pdbProperties);
 
             Class<? extends AbstractTranslator> tc = de.getTranslatorClass();

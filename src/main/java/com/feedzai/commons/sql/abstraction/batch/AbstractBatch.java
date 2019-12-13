@@ -381,7 +381,7 @@ public abstract class AbstractBatch implements Runnable {
                     logger.trace("[{}] Batch failed to check the flush transaction state", name, ee);
                 }
 
-                onFlushFailure(temp.toArray(new BatchEntry[temp.size()]));
+                onFlushFailure(temp.toArray(new BatchEntry[0]));
                 logger.error(dev, "[{}] Error occurred while flushing. Aborting batch flush.", name, e);
             } else {
                 logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name,

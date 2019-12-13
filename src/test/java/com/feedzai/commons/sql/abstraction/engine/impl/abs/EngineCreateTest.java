@@ -26,6 +26,7 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import org.hamcrest.CoreMatchers;
 import org.hamcrest.core.AnyOf;
 import org.hamcrest.core.IsEqual;
 import org.junit.Before;
@@ -180,9 +181,6 @@ public class EngineCreateTest {
 
     @Test
     public void stopsWhenTableAlreadyExistsTest() throws Exception {
-        expected.expect(DatabaseEngineException.class);
-        expected.expectMessage("An error occurred adding the entity.");
-
         final DatabaseEngine conn = DatabaseFactory.getConnection(properties);
         DatabaseEngine conn2 = conn.duplicate(new Properties(), false);
 
@@ -193,8 +191,12 @@ public class EngineCreateTest {
                 .addColumn("COL1", INT).build();
 
         conn.addEntity(entity);
-        conn2.addEntity(entity);
 
+        expected.expect(DatabaseEngineException.class);
+        expected.expectMessage(CoreMatchers.startsWith(
+                String.format("An error occurred performing an operation on entity '%s'; cause: ", entity.getName())
+        ));
+        conn2.addEntity(entity);
     }
 
     /**
