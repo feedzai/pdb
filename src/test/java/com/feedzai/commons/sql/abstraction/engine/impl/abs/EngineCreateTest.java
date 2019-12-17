@@ -221,8 +221,11 @@ public class EngineCreateTest {
                     .build();
 
             expected.expect(DatabaseEngineException.class);
-            expected.expectMessage(AnyOf.anyOf(IsEqual.equalTo("Something went wrong persisting the entity"),
-                    IsEqual.equalTo("Something went wrong handling statement")));
+            expected.expectMessage(AnyOf.anyOf(
+                    IsEqual.equalTo("Something went wrong persisting the entity"),
+                    IsEqual.equalTo("Something went wrong handling statement"),
+                    IsEqual.equalTo("Error while mapping variables to database")
+            ));
             engine.loadEntity(entity);
 
             // some of the databases will throw the error on loadEntity, the others only on persist

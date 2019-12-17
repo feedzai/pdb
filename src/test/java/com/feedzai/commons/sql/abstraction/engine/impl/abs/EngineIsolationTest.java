@@ -28,7 +28,9 @@ import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -79,6 +81,10 @@ import static org.junit.Assert.fail;
  */
 @RunWith(Parameterized.class)
 public class EngineIsolationTest {
+
+    @Rule
+    public Timeout timeout = Timeout.seconds(120);
+
     protected Properties properties;
 
     @Parameterized.Parameters
@@ -482,10 +488,9 @@ public class EngineIsolationTest {
      */
     @Test
     public void directDeadlockRecoveryTest() throws Exception {
-        final AtomicInteger counter = new AtomicInteger();
         final DbEngineAction updateAction = (engine, tableIdx) -> engine.executeUpdate(
                 update(table("TEST" + tableIdx))
-                        .set(eq(column("COL2"), k(counter.incrementAndGet())))
+                        .set(eq(column("COL2"), k(tableIdx + 1)))
                         .where(eq(column("COL1"), k(1)))
         );
 
@@ -525,17 +530,14 @@ public class EngineIsolationTest {
                         executorService
                 );
 
-        catchThrowable(() -> successFutures[0].get(5, TimeUnit.SECONDS));
-
         // retry failed transactions
         for (int i = 0; i < successFutures.length; i++) {
-            if (!successFutures[i].get(5, TimeUnit.SECONDS)) {
+            if (!successFutures[i].get(10, TimeUnit.SECONDS)) {
                 repeatTransaction(engines, i, updateAction, updateAction);
             }
         }
 
-        final Integer[][] expected = successFutures[0].get() ? new Integer[][]{{6}, {5}} : new Integer[][]{{5}, {6}};
-        assertEntityValues(engines[0], expected);
+        assertEntityValues(engines[0], new Integer[][]{{1}, {2}});
     }
 
     /**
@@ -627,10 +629,19 @@ public class EngineIsolationTest {
                                    final DbEngineAction action2) throws Exception {
         final DatabaseEngine engine = engines[engineIdx];
 
-        engine.beginTransaction();
-        action1.runFor(engine, engineIdx);
-        action2.runFor(engine, 1 - engineIdx);
-        engine.commit();
+        while(true) {
+            try {
+                engine.beginTransaction();
+                action1.runFor(engine, engineIdx);
+                action2.runFor(engine, 1 - engineIdx);
+                engine.commit();
+                break;
+            } catch (final Exception ex) {
+                if (!RETRYABLE_EXCEPTIONS.contains(ex.getClass())) {
+                    throw ex;
+                }
+            }
+        }
     }
 
     /**

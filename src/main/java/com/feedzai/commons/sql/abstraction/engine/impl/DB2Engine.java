@@ -686,7 +686,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                                           int lastBindPosition) throws Exception {
         ps.execute();
 
-        if (me.getAutoIncColumn() != null) {
+        if (me.getAutoIncColumn() == null) {
             return 0;
         }
 
