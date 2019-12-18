@@ -26,6 +26,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
@@ -115,10 +116,12 @@ public class MySqlTranslator extends AbstractTranslator {
     public String translate(RepeatDelimiter rd) {
         final String delimiter = rd.getDelimiter();
 
-        List<Object> all = Lists.transform(rd.getExpressions(), input -> {
-            inject(input);
-            return input.translate();
-        });
+        final List<Object> all = rd.getExpressions().stream()
+                .map(input -> {
+                    inject(input);
+                    return input.translate();
+                })
+                .collect(Collectors.toList());
 
         if (rd.isEnclosed()) {
             return "(" + StringUtils.join(all, delimiter) + ")";

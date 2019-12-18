@@ -236,7 +236,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
      * @param fromBatch     Indicates if this is being requested in the context of a
      *                      batch update or not.
      *
-     * @return The prepared statement filled in.
+     * @return The position of the last bind parameter that was filled in a prepared statement.
      * @throws DatabaseEngineException if something occurs during the translation.
      *
      * @since 2.4.2
@@ -855,17 +855,6 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 logger.trace("Error closing statement.", e);
             }
         }
-
-    }
-
-    @Override
-    protected String translateType(DbColumn c) throws DatabaseEngineException {
-        return translator.translate(c);
-    }
-
-    @Override
-    public synchronized Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        return persist(name, entry, true);
 
     }
 

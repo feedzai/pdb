@@ -557,18 +557,8 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String translateType(final DbColumn c) throws DatabaseEngineException {
-        return translator.translate(c);
-    }
-
-    @Override
     public Class<? extends AbstractTranslator> getTranslatorClass() {
         return SqlServerTranslator.class;
-    }
-
-    @Override
-    public synchronized Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        return persist(name, entry, true);
     }
 
     @Override

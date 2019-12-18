@@ -312,7 +312,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If something goes wrong executing the query.
      */
     default List<Map<String, ResultColumn>> query(final Expression query, final int readTimeoutOverride) throws DatabaseEngineException {
-        return query(query);
+        return query(translate(query), readTimeoutOverride);
     }
 
     /**
@@ -633,7 +633,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If a database access error occurs.
      */
     default ResultIterator iterator(final Expression query, final int fetchSize, final int readTimeoutOverride) throws DatabaseEngineException {
-        return iterator(query, fetchSize);
+        return iterator(translate(query), fetchSize, readTimeoutOverride);
     }
 
     /**

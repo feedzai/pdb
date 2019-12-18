@@ -29,7 +29,6 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
@@ -51,12 +50,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
-import static java.sql.ResultSet.CONCUR_READ_ONLY;
-import static java.sql.ResultSet.TYPE_FORWARD_ONLY;
 import static org.apache.commons.lang3.StringUtils.join;
 
 /**
@@ -540,18 +536,8 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String translateType(DbColumn c) throws DatabaseEngineException {
-        return translator.translate(c);
-    }
-
-    @Override
     public Class<? extends AbstractTranslator> getTranslatorClass() {
         return MySqlTranslator.class;
-    }
-
-    @Override
-    public synchronized Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        return persist(name, entry, true);
     }
 
     @Override

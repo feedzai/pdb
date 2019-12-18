@@ -517,16 +517,6 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String translateType(DbColumn c) throws DatabaseEngineException {
-        return translator.translate(c);
-    }
-
-    @Override
-    public synchronized Long persist(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        return persist(name, entry, true);
-    }
-
-    @Override
     public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
 
         ResultSet generatedKeys = null;

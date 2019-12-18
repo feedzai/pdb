@@ -21,7 +21,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 /**
  * Class to provide encryption and decryption using AES algorithm.
@@ -141,9 +143,7 @@ public final class AESHelper {
      */
     public static void encryptToFile(String path, byte[] buf, String key) {
         try {
-            FileOutputStream fos = new FileOutputStream(path);
-            fos.write(encrypt(buf, key).getBytes());
-            fos.close();
+            Files.write(Paths.get(path), encrypt(buf, key).getBytes());
         } catch (final Exception e) {
             logger.warn("Could not encrypt to file {}", path, e);
         }
@@ -154,22 +154,9 @@ public final class AESHelper {
      *
      * @param filePath The file path.
      * @return a byte[] The file data.
-     * @throws java.io.IOException if an error occurs reading the file or if the file does not exists.
+     * @throws IOException if an error occurs reading the file or if the file does not exists.
      */
-    public static byte[] readFile(String filePath) throws IOException {
-        byte[] buffer = new byte[(int) new File(filePath).length()];
-        BufferedInputStream f = null;
-        try {
-            f = new BufferedInputStream(new FileInputStream(filePath));
-            f.read(buffer);
-        } finally {
-            if (f != null) {
-                try {
-                    f.close();
-                } catch (final IOException ignored) {
-                }
-            }
-        }
-        return buffer;
+    public static byte[] readFile(final String filePath) throws IOException {
+        return Files.readAllBytes(Paths.get(filePath));
     }
 }
