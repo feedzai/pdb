@@ -16,6 +16,9 @@
 
 package com.feedzai.commons.sql.abstraction.engine.handler;
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 
 import java.sql.SQLException;
@@ -55,5 +58,32 @@ public class QueryExceptionHandler {
      */
     public boolean isRetryableException(final SQLException exception) {
         return Constants.SQL_STATE_TRANSACTION_FAILURE.equals(exception.getSQLState());
+    }
+
+    /**
+     * Handles the Exception, disambiguating it into a specific PDB Exception and throwing it.
+     * <p>
+     * If a specific type does not match the info in the provided Exception, throws a {@link DatabaseEngineException}.
+     *
+     * @param exception The exception to handle.
+     * @param message   The message to associate with the thrown exception.
+     * @return a {@link DatabaseEngineException} (declared, but only to keep Java type system happy; this method will
+     * always throw an exception).
+     * @since 2.5.1
+     */
+    public DatabaseEngineException handleException(final Exception exception,
+                                                   final String message) throws DatabaseEngineException {
+        if (exception instanceof SQLException) {
+            final SQLException sqlException = (SQLException) exception;
+            if (isTimeoutException(sqlException)) {
+                throw new DatabaseEngineTimeoutException(message + " [timeout]", sqlException);
+            }
+
+            if (isRetryableException(sqlException)) {
+                throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
+            }
+        }
+
+        throw new DatabaseEngineException(message, exception);
     }
 }

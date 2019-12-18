@@ -790,7 +790,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         } catch (final DatabaseEngineException | DatabaseEngineRuntimeException dbex) {
             throw dbex;
         } catch (final Exception ex) {
-            throw handleException(ex, "Something went wrong persisting the entity");
+            throw getQueryExceptionHandler().handleException(ex, "Something went wrong persisting the entity");
         }
     }
 
@@ -923,7 +923,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             s = conn.createStatement();
             return s.executeUpdate(query);
         } catch (final Exception ex) {
-            throw handleException(ex, "Error handling native query");
+            throw getQueryExceptionHandler().handleException(ex, "Error handling native query");
         } finally {
             if (s != null) {
                 try {
@@ -2119,35 +2119,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         } else {
             ps.setObject(index, param);
         }
-    }
-
-    /**
-     * Handles the Exception, disambiguating it into a specific PDB Exception and throwing it.
-     * <p>
-     * If a specific type does not match the info in the provided Exception, throws a {@link DatabaseEngineException}.
-     *
-     * @param exception The exception to handle.
-     * @param message   The message to associate with the thrown exception.
-     * @return the {@link PreparedStatement}.
-     * @implNote This method uses the specific engine {@link QueryExceptionHandler} (obtained from
-     * {@link #getQueryExceptionHandler()}); even though this method throws exceptions, to keep Java type system happy
-     * it also declares that it returns {@link DatabaseEngineException}.
-     * @since 2.5.1
-     */
-    private DatabaseEngineException handleException(final Exception exception,
-                                                    final String message) throws DatabaseEngineException {
-        if (exception instanceof SQLException) {
-            final SQLException sqlException = (SQLException) exception;
-            if (getQueryExceptionHandler().isTimeoutException(sqlException)) {
-                throw new DatabaseEngineTimeoutException(message + " [timeout]", sqlException);
-            }
-
-            if (getQueryExceptionHandler().isRetryableException(sqlException)) {
-                throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
-            }
-        }
-
-        throw new DatabaseEngineException(message, exception);
     }
 
     /**

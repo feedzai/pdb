@@ -16,9 +16,7 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,7 +101,7 @@ public abstract class ResultIterator implements AutoCloseable {
             }
 
         } catch (final Exception e) {
-            throw handleException(e, "Could not process result set.");
+            throw closeAndHandleException(e, "Could not process result set.");
         }
     }
 
@@ -165,7 +163,7 @@ public abstract class ResultIterator implements AutoCloseable {
 
             return temp;
         } catch (final Exception e) {
-            throw handleException(e, "Could not fetch data.");
+            throw closeAndHandleException(e, "Could not fetch data.");
         }
     }
 
@@ -206,7 +204,7 @@ public abstract class ResultIterator implements AutoCloseable {
             }
             return temp;
         } catch (final Exception e) {
-            throw handleException(e, "Could not fetch data.");
+            throw closeAndHandleException(e, "Could not fetch data.");
         }
     }
 
@@ -295,28 +293,14 @@ public abstract class ResultIterator implements AutoCloseable {
      *
      * @param exception The exception to handle.
      * @param message   The message to associate with the thrown exception.
-     * @return the {@link PreparedStatement}.
-     * @implNote This method uses the specific engine {@link QueryExceptionHandler} (obtained from
-     * {@link #getQueryExceptionHandler()}); even though this method throws exceptions, to keep Java type system happy
-     * it also declares that it returns {@link DatabaseEngineException}.
+     * @return a {@link DatabaseEngineException} (declared, but only to keep Java type system happy; this method will
+     * always throw an exception).
      * @since 2.5.1
      */
-    private DatabaseEngineException handleException(final Exception exception,
-                                                    final String message) throws DatabaseEngineException {
+    private DatabaseEngineException closeAndHandleException(final Exception exception,
+                                                            final String message) throws DatabaseEngineException {
         close();
-
-        if (exception instanceof SQLException) {
-            final SQLException sqlException = (SQLException) exception;
-            if (getQueryExceptionHandler().isTimeoutException(sqlException)) {
-                throw new DatabaseEngineTimeoutException(message + " [timeout]", sqlException);
-            }
-
-            if (getQueryExceptionHandler().isRetryableException(sqlException)) {
-                throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
-            }
-
-        }
-        throw new DatabaseEngineException(message, exception);
+        return getQueryExceptionHandler().handleException(exception, message);
     }
 
     /**
