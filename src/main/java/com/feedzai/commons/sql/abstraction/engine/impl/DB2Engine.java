@@ -680,75 +680,62 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        try {
-            getConnection();
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
+        ps.execute();
 
-            final MappedEntity me = entities.get(name);
+        if (me.getAutoIncColumn() == null) {
+            return 0;
+        }
 
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
+        // the entity has autoinc columns: retrieve the sequence number or adjust it
+
+        final String name = me.getEntity().getName();
+        final String quotizedSeqName = quotize(
+                md5(format("%s_%s_SEQ", name, me.getAutoIncColumn()), properties.getMaxIdentifierSize())
+        );
+
+        long ret = 0;
+
+        if (useAutoInc) {
+            final List<Map<String, ResultColumn>> q = query(format("SELECT PREVIOUS VALUE FOR %s FROM sysibm.sysdummy1", quotizedSeqName));
+            if (!q.isEmpty()) {
+                for (final ResultColumn rc : q.get(0).values()) {
+                    return rc.toLong();
+                }
             }
 
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = me.getInsertReturning();
-            } else {
-                ps = me.getInsertWithAutoInc();
-            }
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
+        } else {
+            final String sql = "select (select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\") , " + quotizedSeqName + ".NEXTVAL FROM sysibm.sysdummy1";
+            final List<Map<String, ResultColumn>> q = query(sql);
 
-            ps.execute();
+            if (!q.isEmpty()) {
+                final Iterator<ResultColumn> it = q.get(0).values().iterator();
+                long max = Optional.ofNullable(it.next().toLong()).orElse(-1L);
+                long seqCurVal = Optional.ofNullable(it.next().toLong()).orElse(-1L);
 
-            long ret = 0;
-
-            // if the entity has autoinc columns then retrieve the sequence number or adjust it
-            if (me.getAutoIncColumn() != null) {
-                final String sequenceName = md5(format("%s_%s_SEQ", name, me.getAutoIncColumn()), properties.getMaxIdentifierSize());
-                if (useAutoInc) {
-
-                    final List<Map<String, ResultColumn>> q = query(String.format("SELECT PREVIOUS VALUE FOR \"%s\" FROM sysibm.sysdummy1", sequenceName));
-                    if (!q.isEmpty()) {
-                        for (ResultColumn rc : q.get(0).values()) {
-                            ret = rc.toLong();
-                            break;
-                        }
-                    }
-
-                } else {
-                    final String sql = "select (select max(\"" + me.getAutoIncColumn() + "\") from \"" + name + "\") , \"" + sequenceName + "\".NEXTVAL FROM sysibm.sysdummy1";
-                    final List<Map<String, ResultColumn>> q = query(sql);
-
-                    if (!q.isEmpty()) {
-                        final Iterator<ResultColumn> it = q.get(0).values().iterator();
-                        long max = Optional.ofNullable(it.next().toLong()).orElse(-1L);
-                        long seqCurVal = Optional.ofNullable(it.next().toLong()).orElse(-1L);
-
-                        if (seqCurVal != max) {
-                            //table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
-                            executeUpdateSilently("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
-                        }
-                    }
-
-
-                    final List<Map<String, ResultColumn>> keys = query(sql);
-                    if (!keys.isEmpty()) {
-                        final Iterator<ResultColumn> it = keys.get(0).values().iterator();
-                        ret = it.next().toLong();
-                        long seqCurVal = it.next().toLong();
-                        if (seqCurVal != ret) {
-                            // table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
-                            executeUpdateSilently("ALTER SEQUENCE \"" + sequenceName + "\" RESTART WITH " + (ret + 1));
-                        }
-                    }
+                if (seqCurVal != max) {
+                    //table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
+                    executeUpdateSilently("ALTER SEQUENCE " + quotizedSeqName + " RESTART WITH " + (ret + 1));
                 }
             }
 
 
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
+            final List<Map<String, ResultColumn>> keys = query(sql);
+            if (!keys.isEmpty()) {
+                final Iterator<ResultColumn> it = keys.get(0).values().iterator();
+                ret = it.next().toLong();
+                long seqCurVal = it.next().toLong();
+                if (seqCurVal != ret) {
+                    // table and sequence are not synchronized, readjust sequence max+1 (next val will return max+1)
+                    executeUpdateSilently("ALTER SEQUENCE " + quotizedSeqName + " RESTART WITH " + (ret + 1));
+                }
+            }
         }
+
+        return ret;
     }
 
     @Override

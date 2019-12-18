@@ -32,6 +32,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.impl.mysql.MySqlQueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
@@ -87,6 +89,12 @@ public class MySqlEngine extends AbstractDatabaseEngine {
      * Foreign Key already exists.
      */
     public static final List<Integer> CONSTRAINT_NAME_ALREADY_EXISTS = Arrays.asList(1005, 1022);
+
+    /**
+     * An instance of {@link QueryExceptionHandler} specific for MySQL engine, to be used in disambiguating SQL exceptions.
+     * @since 2.5.1
+     */
+    public static final QueryExceptionHandler MYSQL_QUERY_EXCEPTION_HANDLER = new MySqlQueryExceptionHandler();
 
     /**
      * Creates a new MySQL connection.
@@ -541,51 +549,25 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
-        try {
-            getConnection();
+    protected PreparedStatement getPreparedStatementForPersist(final boolean useAutoInc, final MappedEntity mappedEntity) {
+        return useAutoInc ? mappedEntity.getInsert() : mappedEntity.getInsertWithAutoInc();
+    }
 
-            final MappedEntity me = entities.get(name);
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
+        ps.execute();
 
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = entities.get(name).getInsert();
-            } else {
-                ps = entities.get(name).getInsertWithAutoInc();
-            }
-
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-
-            ps.execute();
-
-            long ret = 0;
-            if (useAutoInc) {
-                generatedKeys = ps.getGeneratedKeys();
-
+        if (useAutoInc) {
+            try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
+                    return generatedKeys.getLong(1);
                 }
-
-                generatedKeys.close();
-            }
-
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
             }
         }
+
+        return 0;
     }
 
     @Override
@@ -871,5 +853,10 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     @Override
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new MySqlResultIterator(ps);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return MYSQL_QUERY_EXCEPTION_HANDLER;
     }
 }

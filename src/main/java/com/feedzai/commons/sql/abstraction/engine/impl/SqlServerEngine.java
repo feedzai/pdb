@@ -562,61 +562,30 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
-        ResultSet generatedKeys = null;
-        MappedEntity me = null;
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
         try {
-            getConnection();
-            me = entities.get(name);
-
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = entities.get(name).getInsertReturning();
-            } else {
-                ps = entities.get(name).getInsertWithAutoInc();
-            }
-
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-
-            if (!useAutoInc) {
+            if (!useAutoInc && hasIdentityColumn(me.getEntity())) {
                 // Only SET IDENTITY_INSERT for tables that have an identity column
-                if (hasIdentityColumn(me.getEntity())) {
-                    executeUpdateSilently("SET IDENTITY_INSERT \"" + name + "\" ON");
-                }
-                ps.execute();
-            } else {
-                ps.execute();
+                executeUpdateSilently("SET IDENTITY_INSERT " + quotize(me.getEntity().getName()) + " ON");
             }
+            ps.execute();
 
-            long ret = 0;
             if (useAutoInc) {
-                generatedKeys = ps.getGeneratedKeys();
-
-                if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
-                }
-            }
-
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-                if (!useAutoInc) {
-                    // Only SET IDENTITY_INSERT for tables that have an identity column
-                    if (me != null && hasIdentityColumn(me.getEntity())) {
-                        getConnection().createStatement().execute("SET IDENTITY_INSERT \"" + name + "\" OFF");
+                try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getLong(1);
                     }
                 }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
+            }
+
+            return 0;
+        } finally {
+            if (!useAutoInc && hasIdentityColumn(me.getEntity())) {
+                // Only SET IDENTITY_INSERT for tables that have an identity column
+                executeUpdateSilently("SET IDENTITY_INSERT " + quotize(me.getEntity().getName()) + " OFF");
             }
         }
     }

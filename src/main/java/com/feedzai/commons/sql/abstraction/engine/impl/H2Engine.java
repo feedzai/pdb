@@ -30,6 +30,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
@@ -91,6 +93,12 @@ public class H2Engine extends AbstractDatabaseEngine {
      * @since 2.1.13
      */
     public static final String OPTIONAL_FEATURE_NOT_SUPPORTED = "HYC00";
+
+    /**
+     * An instance of {@link QueryExceptionHandler} specific for H2 engine, to be used in disambiguating SQL exceptions.
+     * @since 2.5.1
+     */
+    public static final QueryExceptionHandler H2_QUERY_EXCEPTION_HANDLER = new H2QueryExceptionHandler();
 
     /**
      * Creates a new PostgreSql connection.
@@ -517,49 +525,26 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    public synchronized Long persist(String name, EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
+    protected PreparedStatement getPreparedStatementForPersist(final boolean useAutoInc, final MappedEntity mappedEntity) {
+        return useAutoInc ? mappedEntity.getInsert() : mappedEntity.getInsertWithAutoInc();
+    }
 
-        ResultSet generatedKeys = null;
-        try {
-            getConnection();
+    @Override
+    protected synchronized long doPersist(final PreparedStatement ps,
+                                          final MappedEntity me,
+                                          final boolean useAutoInc,
+                                          int lastBindPosition) throws Exception {
+        ps.execute();
 
-            final MappedEntity me = entities.get(name);
-
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
-
-            final PreparedStatement ps;
-            if (useAutoInc) {
-                ps = entities.get(name).getInsert();
-            } else {
-                ps = entities.get(name).getInsertWithAutoInc();
-            }
-
-            entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
-            ps.execute();
-
-            long ret = 0;
-            if (useAutoInc) {
-                generatedKeys = ps.getGeneratedKeys();
+        if (useAutoInc) {
+            try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
-                    ret = generatedKeys.getLong(1);
+                    return generatedKeys.getLong(1);
                 }
-                generatedKeys.close();
-            }
-
-            return ret == 0 ? null : ret;
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong persisting the entity", ex);
-        } finally {
-            try {
-                if (generatedKeys != null) {
-                    generatedKeys.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
             }
         }
+
+        return 0;
     }
 
     @Override
@@ -694,5 +679,10 @@ public class H2Engine extends AbstractDatabaseEngine {
     @Override
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new H2ResultIterator(ps);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return H2_QUERY_EXCEPTION_HANDLER;
     }
 }
