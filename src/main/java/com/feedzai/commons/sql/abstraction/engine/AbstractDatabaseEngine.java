@@ -1228,7 +1228,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     protected abstract ResultIterator createResultIterator(Statement statement, String sql) throws DatabaseEngineException;
 
     /**
-     * Creates a specific {@link ResultIterator} for the engine in place given given prepared statement.
+     * Creates a specific {@link ResultIterator} for the engine in place given a prepared statement.
      *
      * @param ps The prepared statement.
      * @return The result iterator.
