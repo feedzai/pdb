@@ -57,16 +57,10 @@
                 <artifactId>postgresql</artifactId>
                 <version>42.2.6</version>
             </dependency>
-            <!--
-             Needed for compilation even if Oracle DB won't be used;
-             This driver is not (officially) available in public repositories, download the driver from Oracle driver page
-             and run the following to install the driver in your local maven repository:
-                mvn install:install-file -DgroupId=com.oracle.jdbc -DartifactId=ojdbc8 -Dversion=12.2.0.1 -Dpackaging=jar -Dfile=ojdbc8.jar
-              -->
             <dependency>
-                <groupId>com.oracle.jdbc</groupId>
+                <groupId>com.oracle.ojdbc</groupId>
                 <artifactId>ojdbc8</artifactId>
-                <version>18.3.0.0</version>
+                <version>19.3.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -146,7 +140,7 @@
         </dependency>
         <!-- Oracle -->
         <dependency>
-            <groupId>com.oracle.jdbc</groupId>
+            <groupId>com.oracle.ojdbc</groupId>
             <artifactId>ojdbc8</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -388,38 +382,6 @@
             </plugin>
         </plugins>
     </build>
-
-    <repositories>
-        <repository>
-            <id>central</id>
-            <name>Maven Repository Switchboard</name>
-            <url>http://repo.maven.apache.org/maven2/</url>
-        </repository>
-
-        <repository>
-            <id>sonatype-nexus-public</id>
-            <name>SonaType public snapshots and releases repository</name>
-            <url>https://oss.sonatype.org/content/groups/public</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-
-        <repository>
-            <id>maven.oracle.com</id>
-            <name>Oracle repository</name>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <url>https://maven.oracle.com</url>
-        </repository>
-    </repositories>
 
     <distributionManagement>
         <snapshotRepository>
