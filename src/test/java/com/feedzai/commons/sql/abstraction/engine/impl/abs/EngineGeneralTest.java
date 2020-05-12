@@ -2266,6 +2266,45 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be KEK", "KEK", result.get(4).get("case").toString());
     }
 
+    /**
+     * Reproduces an issue when using CASE ... WHEN expressions in SqlServer and MySql.
+     * <p>
+     * Since we don't have the type information for a column that is generated from the result of a WHEN expression,
+     * we need to rely on the user calling one of the ResultColumn.toXXX methods to understand what the user is
+     * expecting. In the case of ResultColumn.toBoolean(), we're first checking if the result is of boolean type,
+     * as happens normally when the driver knows that the column is of type boolean, but then we also try to parse the
+     * underlying database boolean representation. This is necessary because in WHEN expressions, the driver doesn't
+     * know the expected return type.
+     * <p>
+     * I also tried to fix this using {@code cast(1 as BIT)}, which seemed more appropriate because we would be hinting
+     * the driver about the type, but it's not possible to follow this approach in MySql because we cannot cast to
+     * tinyint(1), which is the native type for booleans in MySql.
+     *
+     * @throws DatabaseEngineException propagate
+     */
+    @Test
+    public void testCaseToBoolean() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL2", false).build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL2", true).set("COL5", "xpto").build());
+
+        final Query query = select(
+                column("COL2"),
+                caseWhen()
+                        .when(column("COL5").isNotNull(), k(true))
+                        .otherwise(k(false))
+                        .alias("COL5_NOT_NULL"))
+                .from(table("TEST"))
+                .orderby(column("COL1").asc());
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertFalse("COL2 should be false", result.get(0).get("COL2").toBoolean());
+        assertFalse("COL5_NOT_NULL should be false", result.get(0).get("COL5_NOT_NULL").toBoolean());
+        assertTrue("COL2 should be true", result.get(1).get("COL2").toBoolean());
+        assertTrue("COL5_NOT_NULL should be true", result.get(1).get("COL5_NOT_NULL").toBoolean());
+    }
+
     @Test
     public void testUnion() throws DatabaseEngineException {
         test5Columns();

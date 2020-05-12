@@ -15,8 +15,10 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.result;
 
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+
 /**
- * The PostgreSql column result implementation.
+ * The Sql Server column result implementation.
  *
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
@@ -31,5 +33,34 @@ public class SqlServerResultColumn extends ResultColumn {
      */
     public SqlServerResultColumn(final String name, final Object val) {
         super(name, val);
+    }
+
+    @Override
+    public Boolean toBoolean() {
+        if (isNull()) {
+            return null;
+        }
+
+        /*
+        This is needed because when fetching a value from a column of type BIT, the driver automatically converts
+        to Java boolean. When retrieving values from a computed column the driver doesn't know if it's boolean and
+        just returns the numeric 1 or 0 values. See the commit message and the test EngineGeneralTest#testCaseToBoolean
+        for more details.
+         */
+        if (super.val instanceof Boolean) {
+            return (Boolean) super.val;
+        }
+
+        final String val = super.val.toString();
+
+        if (val.equals("1")) {
+            return true;
+        }
+
+        if (val.equals("0")) {
+            return false;
+        }
+
+        throw new DatabaseEngineRuntimeException(val + " is not a boolean type");
     }
 }
