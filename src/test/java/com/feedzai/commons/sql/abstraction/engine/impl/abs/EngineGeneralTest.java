@@ -103,6 +103,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.delete;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.div;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropView;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
@@ -1811,17 +1812,19 @@ public class EngineGeneralTest {
     @Category(SkipTestCockroachDB.class)
     // unimplemented in CockroachDB: views do not currently support * expressions
     // https://github.com/cockroachdb/cockroach/issues/10028
-    public void createViewTest() throws DatabaseEngineException {
+    public void createAndDropViewTest() throws DatabaseEngineException {
         test5Columns();
 
         try {
-            engine.executeUpdate("DROP VIEW " + quotize("VN", engine.escapeCharacter()));
+            engine.executeUpdate(dropView("VN"));
         } catch (final Throwable a) {
         }
 
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST")))
         );
+
+        engine.executeUpdate(dropView("VN"));
     }
 
     @Test

@@ -24,6 +24,7 @@ import com.feedzai.commons.sql.abstraction.dml.Case;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
+import com.feedzai.commons.sql.abstraction.dml.DropView;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -615,6 +616,19 @@ public abstract class AbstractTranslator {
      * @return The string representation of the given object.
      */
     public abstract String translate(View v);
+
+    /**
+     * Translates {@link DropView}.
+     *
+     * @param v The object to translate.
+     * @return The string representation of the given object.
+     */
+    public String translate(final DropView v) {
+        final List<String> res = new ArrayList<>();
+        res.add("DROP VIEW");
+        res.add(quotize(v.getName(), translateEscape()));
+        return StringUtils.join(res, " ");
+    }
 
     /**
      * Translates {@link DbColumn}.
