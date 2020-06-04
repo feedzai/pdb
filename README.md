@@ -815,6 +815,17 @@ engine.executeUpdate(view);
 |[as](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#as(com.feedzai.commons.sql.abstraction.dml.Expression))|Defines the query that provides the data for this view.|
 |[replace](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/View.html#replace())|Whether or not the view creation is authorized to overwrite over existing views.|
 
+### Drop View
+
+After creating a view, you may also want to delete it.
+
+```java
+engine.dropView("view_name");
+```
+|Function|Description|
+|:---|:---|
+|[dropView](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropView(java.lang.String))|Drops a view with the given name.|
+
 
 ## Further Documentation
 

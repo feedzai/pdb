@@ -133,6 +133,16 @@ public interface DatabaseEngine extends AutoCloseable {
     void dropEntity(final DbEntity entity) throws DatabaseEngineException;
 
     /**
+     * Drops a view.
+     *
+     * @param view The view name.
+     * @throws DatabaseEngineException If something goes wrong while dropping the view.
+     *
+     * @since 2.5.3
+     */
+    void dropView(final String view) throws DatabaseEngineException;
+
+    /**
      * Persists a given entry. Persisting a query implies executing the statement.
      * <p>
      * If you are inside of an explicit transaction, changes will only be visible upon explicit commit, otherwise a

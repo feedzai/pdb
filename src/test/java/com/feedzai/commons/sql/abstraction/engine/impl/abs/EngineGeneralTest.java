@@ -1811,17 +1811,14 @@ public class EngineGeneralTest {
     @Category(SkipTestCockroachDB.class)
     // unimplemented in CockroachDB: views do not currently support * expressions
     // https://github.com/cockroachdb/cockroach/issues/10028
-    public void createViewTest() throws DatabaseEngineException {
+    public void createAndDropViewTest() throws DatabaseEngineException {
         test5Columns();
-
-        try {
-            engine.executeUpdate("DROP VIEW " + quotize("VN", engine.escapeCharacter()));
-        } catch (final Throwable a) {
-        }
 
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST")))
         );
+
+        engine.dropView("VN");
     }
 
     @Test
@@ -1834,6 +1831,8 @@ public class EngineGeneralTest {
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST"))).replace()
         );
+
+        engine.dropView("VN");
     }
 
     @Test

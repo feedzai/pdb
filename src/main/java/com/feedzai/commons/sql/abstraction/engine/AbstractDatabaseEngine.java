@@ -82,6 +82,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
+import static java.lang.String.format;
 
 /**
  * Provides a set of functions to interact with the database.
@@ -732,6 +733,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             } catch (final DatabaseEngineException ex) {
                 logger.debug(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()), ex);
             }
+        }
+    }
+
+    @Override
+    public synchronized void dropView(final String view) throws DatabaseEngineException {
+        try (final Statement statement = conn.createStatement()) {
+            final String query = format("DROP VIEW %s", quotize(view, escapeCharacter()));
+            logger.trace(query);
+            statement.executeUpdate(query);
+        } catch (final SQLException ex) {
+            throw new DatabaseEngineException("Error dropping view", ex);
         }
     }
 
