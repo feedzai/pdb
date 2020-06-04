@@ -738,22 +738,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public synchronized void dropView(final String view) throws DatabaseEngineException {
-        Statement drop = null;
-        try {
-            drop = conn.createStatement();
+        try (final Statement statement = conn.createStatement()) {
             final String query = format("DROP VIEW %s", quotize(view, escapeCharacter()));
             logger.trace(query);
-            drop.executeUpdate(query);
+            statement.executeUpdate(query);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Error dropping view", ex);
-        } finally {
-            try {
-                if (drop != null) {
-                    drop.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
         }
     }
 

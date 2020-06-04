@@ -1814,11 +1814,6 @@ public class EngineGeneralTest {
     public void createAndDropViewTest() throws DatabaseEngineException {
         test5Columns();
 
-        try {
-            engine.dropView("VN");
-        } catch (final Throwable a) {
-        }
-
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST")))
         );
@@ -1836,6 +1831,8 @@ public class EngineGeneralTest {
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST"))).replace()
         );
+
+        engine.dropView("VN");
     }
 
     @Test
