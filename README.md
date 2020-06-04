@@ -820,11 +820,11 @@ engine.executeUpdate(view);
 After creating a view, you may also want to delete it.
 
 ```java
-engine.executeUpdate(dropView("view_name"));
+engine.dropView("view_name");
 ```
 |Function|Description|
 |:---|:---|
-|[dropView](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#dropView(java.lang.String))|Drops a view with the given name.|
+|[dropView](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropView(java.lang.String))|Drops a view with the given name.|
 
 
 ## Further Documentation

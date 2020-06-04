@@ -103,7 +103,6 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbFk;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.delete;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.div;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropPK;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dropView;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.entry;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
@@ -1816,7 +1815,7 @@ public class EngineGeneralTest {
         test5Columns();
 
         try {
-            engine.executeUpdate(dropView("VN"));
+            engine.dropView("VN");
         } catch (final Throwable a) {
         }
 
@@ -1824,7 +1823,7 @@ public class EngineGeneralTest {
                 createView("VN").as(select(all()).from(table("TEST")))
         );
 
-        engine.executeUpdate(dropView("VN"));
+        engine.dropView("VN");
     }
 
     @Test

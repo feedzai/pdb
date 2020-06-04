@@ -561,16 +561,6 @@ public final class SqlBuilder {
     }
 
     /**
-     * Drops a view.
-     *
-     * @param name The name of the view.
-     * @return The drop view representation.
-     */
-    public static DropView dropView(final String name) {
-        return new DropView(name);
-    }
-
-    /**
      * Creates a cast expression.
      * PDB does not support cast to JSON, CLOB and BLOB.
      * An exception will be thrown when trying to translate the data type.
