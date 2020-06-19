@@ -27,6 +27,8 @@ Add the following dependency to your Maven pom (example for PDB v2.1.13):
 ## Breaking changes
 The timeout properties have been redefined in PdbProperties as numeric instead of strings since v2.4.6 - avoid using versions 2.4.4 and 2.4.5.
 
+DatabaseEngine interface has a new method #dropView() since v2.5.3. This method was created without a default so this lead to a breaking change. Use 2.5.5 and avoid using 2.5.3 and 2.5.4.
+
 ## Changes from 2.0.0
 * It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
 * Added lower and upper functions
