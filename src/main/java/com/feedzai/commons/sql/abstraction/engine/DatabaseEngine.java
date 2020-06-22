@@ -137,12 +137,10 @@ public interface DatabaseEngine extends AutoCloseable {
      *
      * @param view The view name.
      * @throws DatabaseEngineException If something goes wrong while dropping the view.
-     * @implNote This method has a default to not create a breaking change.
-     * @since 2.5.3
+     *
+     * @since 2.6.0
      */
-    default void dropView(final String view) throws DatabaseEngineException {
-        // NoOp
-    }
+    void dropView(final String view) throws DatabaseEngineException;
 
     /**
      * Persists a given entry. Persisting a query implies executing the statement.
