@@ -482,7 +482,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The result.
      * @throws DatabaseEngineException If something occurs getting the result.
      */
-    List<Map<String, ResultColumn>> getPSResultSet(final String name) throws DatabaseEngineException;
+    List<Map<String, ResultColumn>> getPSResultSet(final String name) throws DatabaseEngineException, ConnectionResetException;
 
     /**
      * Sets the parameters on the specified prepared statement.
@@ -653,7 +653,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return An iterator for the results of the prepared statement of the given name.
      * @throws DatabaseEngineException If a database access error occurs.
      */
-    ResultIterator getPSIterator(final String name) throws DatabaseEngineException;
+    ResultIterator getPSIterator(final String name) throws DatabaseEngineException, ConnectionResetException;
 
     /**
      * Creates an iterator for the {@link java.sql.PreparedStatement} bound to the given name.
@@ -663,7 +663,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return An iterator for the results of the prepared statement of the given name.
      * @throws DatabaseEngineException If a database access error occurs.
      */
-    ResultIterator getPSIterator(final String name, final int fetchSize) throws DatabaseEngineException;
+    ResultIterator getPSIterator(final String name, final int fetchSize) throws DatabaseEngineException, ConnectionResetException;
 
     /**
      * Sets the given exception handler in the engine.

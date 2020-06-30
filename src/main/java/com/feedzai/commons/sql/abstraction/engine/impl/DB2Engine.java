@@ -981,11 +981,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 }
 
                 // At this point maybe it is an error with the connection, so we try to re-establish it.
-                try {
-                    getConnection();
-                } catch (final Exception e2) {
-                    throw new DatabaseEngineException("Connection is down", e2);
-                }
+                reconnectExceptionally("Connection is down");
 
                 throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
             }
@@ -1012,11 +1008,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
             }
 
             // At this point maybe it is an error with the connection, so we try to re-establish it.
-            try {
-                getConnection();
-            } catch (final Exception e2) {
-                throw new DatabaseEngineException("Connection is down", e2);
-            }
+            reconnectExceptionally("Connection is down");
 
             throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
         }
