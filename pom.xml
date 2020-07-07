@@ -65,7 +65,7 @@
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
-                <version>1.4.197</version>
+                <version>1.4.200</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.db2</groupId>
@@ -440,6 +440,8 @@
                                 <!-- set local file inside test output directory -->
                                 <argument>-baseDir</argument>
                                 <argument>${project.build.testOutputDirectory}/pdb-h2-remote</argument>
+                                <!-- allows databases to be created when accessed -->
+                                <argument>-ifNotExists</argument>
                             </arguments>
                             <async>true</async>
                             <asyncDestroyOnShutdown>true</asyncDestroyOnShutdown>

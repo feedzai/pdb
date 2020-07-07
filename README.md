@@ -27,7 +27,7 @@ Add the following dependency to your Maven pom (example for PDB v2.1.13):
 ## Breaking changes
 The timeout properties have been redefined in PdbProperties as numeric instead of strings since v2.4.6 - avoid using versions 2.4.4 and 2.4.5.
 
-DatabaseEngine interface has a new method #dropView() since v2.5.3. This method was created without a default so this lead to a breaking change. Use 2.5.5 and avoid using 2.5.3 and 2.5.4.
+DatabaseEngine interface has a new method #dropView() since v2.5.3. This method was created without a default so this led to a breaking change. Use 2.5.5 and avoid using 2.5.3 and 2.5.4.
 
 ## Changes from 2.0.0
 * It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
@@ -53,7 +53,7 @@ Alternatively you can setup the username/password for accessing Oracle's Maven r
 ## Running PDB tests
 
 To test PDB with different database engines there are several Maven profiles that can be used,
-one for each vendor (check list of supported vendors below, under [Establishing connection](#establishing-connection)).
+one for each vendor (check list of supported vendors below, under [Establishing a connection](#establishing-a-connection)).
 
 Run the following to run the tests for the chosen vendor **specified in lowercase**:
 ```bash
@@ -75,7 +75,7 @@ IBM DB2: https://hub.docker.com/r/ibmcom/db2express-c/
 ### Index
 
 - [Example Description](#example-description)
-- [Establishing connection](#establishing-connection)
+- [Establishing a connection](#establishing-a-connection)
 - Table Manipulation
 	- [Create Table](#create-table)
 	- [Drop Table](#drop-table)
