@@ -560,11 +560,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     private void addEntity(DbEntity entity, boolean recovering) throws DatabaseEngineException {
         if (!recovering) {
-            try {
-                getConnection();
-            } catch (final Exception e) {
-                throw new DatabaseEngineException("Could not add entity", e);
-            }
+            reconnectExceptionally("Could not add entity");
 
             validateEntity(entity);
 
@@ -780,11 +776,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     public final synchronized Long persist(final String name,
                                            final EntityEntry entry,
                                            final boolean useAutoInc) throws DatabaseEngineException {
-        try {
-            getConnection();
-        } catch (final Exception ex) {
-            throw new DatabaseEngineException(String.format("Connection error while persisting entity '%s'", name), ex);
-        }
+        reconnectExceptionally(String.format("Connection error while persisting entity '%s'", name));
 
         final MappedEntity me = entities.get(name);
         if (me == null) {
@@ -1799,19 +1791,20 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param name The prepared statement name.
      * @return The result.
      * @throws DatabaseEngineException If something occurs getting the result.
+     * @throws ConnectionResetException If the first Result Iterated fails to create.
      */
     @Override
-    public synchronized List<Map<String, ResultColumn>> getPSResultSet(final String name) throws DatabaseEngineException {
+    public synchronized List<Map<String, ResultColumn>> getPSResultSet(final String name) throws DatabaseEngineException, ConnectionResetException {
         return processResultIterator(getPSIterator(name));
     }
 
     @Override
-    public synchronized ResultIterator getPSIterator(String name) throws DatabaseEngineException {
+    public synchronized ResultIterator getPSIterator(String name) throws DatabaseEngineException, ConnectionResetException {
         return getPSIterator(name, properties.getFetchSize());
     }
 
     @Override
-    public ResultIterator getPSIterator(String name, int fetchSize) throws DatabaseEngineException {
+    public ResultIterator getPSIterator(String name, int fetchSize) throws DatabaseEngineException, ConnectionResetException {
         final PreparedStatementCapsule ps = stmts.get(name);
         if (ps == null) {
             throw new DatabaseEngineRuntimeException(String.format("PreparedStatement named '%s' does not exist", name));
@@ -1823,7 +1816,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             throw new DatabaseEngineException("Error creating PS Iterator", e);
         }
 
-        return createResultIterator(ps.ps);
+        try {
+            return createResultIterator(ps.ps);
+        } catch (final DatabaseEngineException e2) {
+           reconnectExceptionally("Connection is down");
+           throw new ConnectionResetException("Connection was lost and restablished. You need to reset the prepared statement parameters and re-execute the statement");
+        }
     }
 
     @Override
@@ -1842,11 +1840,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
 
                 // At this point maybe it is an error with the connection, so we try to re-establish it.
-                try {
-                    getConnection();
-                } catch (final Exception e2) {
-                    throw new DatabaseEngineException("Connection is down", e2);
-                }
+                reconnectExceptionally("Connection is down");
 
                 throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
             }
@@ -1869,11 +1863,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             // At this point maybe it is an error with the connection, so we try to re-establish it.
-            try {
-                getConnection();
-            } catch (final Exception e2) {
-                throw new DatabaseEngineException("Connection is down", e2);
-            }
+            reconnectExceptionally("Connection is down");
 
             throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
         }
@@ -1909,11 +1899,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             // At this point maybe it is an error with the connection, so we try to re-establish it.
-            try {
-                getConnection();
-            } catch (final Exception e2) {
-                throw new DatabaseEngineException("Connection is down", e2);
-            }
+            reconnectExceptionally("Connection is down");
 
             throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
         }
@@ -1940,11 +1926,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             // At this point maybe it is an error with the connection, so we try to re-establish it.
-            try {
-                getConnection();
-            } catch (final Exception e2) {
-                throw new DatabaseEngineException("Connection is down", e2);
-            }
+            reconnectExceptionally("Connection is down");
 
             throw new ConnectionResetException("Connection was reset.");
         }
@@ -1985,11 +1967,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             // At this point maybe it is an error with the connection, so we try to re-establish it.
-            try {
-                getConnection();
-            } catch (final Exception e2) {
-                throw new DatabaseEngineException("Connection is down", e2);
-            }
+            reconnectExceptionally("Connection is down");
 
             throw new ConnectionResetException("Connection was lost, you must reset the prepared statement parameters and re-execute the statement");
         }
@@ -2011,11 +1989,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             if (stmts.containsKey(name)) {
                 throw new NameAlreadyExistsException(String.format("There's already a PreparedStatement with the name '%s'", name));
             }
-            try {
-                getConnection();
-            } catch (final Exception e) {
-                throw new DatabaseEngineException("Could not create prepared statement", e);
-            }
+            reconnectExceptionally("Could not create prepared statement");
         }
 
         PreparedStatement ps;
@@ -2141,5 +2115,21 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return DEFAULT_QUERY_EXCEPTION_HANDLER;
+    }
+
+    /**
+     * Verifies if a connection to the database is available, if not, an attempts to reestablished it are made by
+     * the {@link #getConnection()}.
+     *
+     * @param message The exception message.
+     * @throws DatabaseEngineException if an error occurs while reestablishing the connection.
+     * @since 2.7.0
+     */
+    protected void reconnectExceptionally(final String message) throws DatabaseEngineException {
+        try {
+            getConnection();
+        } catch (final Exception e) {
+            throw new DatabaseEngineException(message, e);
+        }
     }
 }

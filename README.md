@@ -29,6 +29,10 @@ The timeout properties have been redefined in PdbProperties as numeric instead o
 
 DatabaseEngine interface has a new method #dropView() since v2.5.3. This method was created without a default so this led to a breaking change. Use 2.5.5 and avoid using 2.5.3 and 2.5.4.
 
+DatabaseEngine methods `#getPSResultSet(final String name)`, `#getPSIterator(final String name)`, `#getPSIterator
+(final String name, final int fetchSize)`, since 2.7.0, throw an extra `ConnectionResetException` when the database
+connection is lost and recovered.
+
 ## Changes from 2.0.0
 * It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
 * Added lower and upper functions
