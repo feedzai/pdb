@@ -570,7 +570,7 @@
         <profile>
             <id>postgresql</id>
             <properties>
-                <image.postgresql>postgres:9.6.14</image.postgresql>
+                <image.postgresql>postgres:12.3</image.postgresql>
             </properties>
             <build>
                 <plugins>
