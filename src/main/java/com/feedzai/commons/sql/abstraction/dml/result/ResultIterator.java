@@ -67,6 +67,11 @@ public abstract class ResultIterator implements AutoCloseable {
     private boolean statementCloseable;
 
     /**
+     * The number of rows processed by the iterator so far.
+     */
+    private int currentRowCount;
+
+    /**
      * Creates a new instance of {@link ResultIterator} for regular statements (on-demand query).
      * <p>
      * This constructor will also create a result set and get all the projection names of the query.
@@ -80,6 +85,7 @@ public abstract class ResultIterator implements AutoCloseable {
     private ResultIterator(Statement statement, String sql, boolean isPreparedStatement) throws DatabaseEngineException {
         this.statement = statement;
         this.columnNames = new ArrayList<>();
+        this.currentRowCount = 0;
 
         // Process column names.
         try {
@@ -127,6 +133,17 @@ public abstract class ResultIterator implements AutoCloseable {
     }
 
     /**
+     * Retrieves the number of rows processed by the iterator so far. If the iteration
+     * hasn't started, this method returns 0.
+     *
+     * @return The number of rows processed by the iterator so far or 0 if the
+     *         iteration hasn't started.
+     */
+    public int getCurrentRowCount() {
+        return this.currentRowCount;
+    }
+
+    /**
      * Retrieves the next row in the result set.
      * <p>
      * This method also closes the result set upon the last call on the result set.
@@ -154,6 +171,8 @@ public abstract class ResultIterator implements AutoCloseable {
                 return null;
             }
 
+            ++currentRowCount;
+
             Map<String, ResultColumn> temp = new LinkedHashMap<>(columnNames.size());
             int i = 1;
             for (String cname : columnNames) {
@@ -168,7 +187,7 @@ public abstract class ResultIterator implements AutoCloseable {
     }
 
     /**
-     * Retrieves the values of the next row in the result set as an array oj objects.
+     * Retrieves the values of the next row in the result set as an array of objects.
      * <p>
      * This method provides an optimized version of the {@link #next()} method with less overhead.
      * <p>
@@ -197,6 +216,8 @@ public abstract class ResultIterator implements AutoCloseable {
 
                 return null;
             }
+
+            ++currentRowCount;
 
             ResultColumn[] temp = new ResultColumn[columnNames.size()];
             for (int i = 0; i < columnNames.size(); i++) {
