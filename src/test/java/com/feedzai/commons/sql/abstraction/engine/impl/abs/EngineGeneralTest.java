@@ -51,7 +51,6 @@ import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
-import mockit.Mocked;
 import mockit.Verifications;
 import org.junit.After;
 import org.junit.Before;
@@ -66,9 +65,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
