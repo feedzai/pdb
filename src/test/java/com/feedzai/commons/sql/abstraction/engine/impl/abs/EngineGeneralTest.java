@@ -4149,4 +4149,40 @@ public class EngineGeneralTest {
         }};
 
     }
+
+    /**
+     * Assesses whether the current row count is incremented if the .next()/.nextResult()
+     * methods are called in the iterator.
+     *
+     * @throws DatabaseEngineException If a database access error happens.
+     */
+    @Test
+    public void doesRowCountIncrementTest()
+            throws DatabaseEngineException {
+
+        final ResultIterator resultIterator = engine.iterator(select(all()).from(table("TEST")));
+
+
+        assertEquals("The current row count should be 0 if the iteration hasn't started",
+                0,
+                resultIterator.getCurrentRowCount());
+
+        // If the .next() method is called once then the current row count
+        // should be updated to 1
+        resultIterator.next();
+
+        assertEquals("The current row count is equal to 1",
+                1,
+                resultIterator.getCurrentRowCount());
+
+        // If for the same iterator the .nextResult() method is called 3 additional
+        // times then the current row count should be updated to 4
+        for(int i = 0; i < 3; i++) {
+            resultIterator.nextResult();
+        }
+
+        assertEquals("The current row count is equal to 4",
+                4,
+                resultIterator.getCurrentRowCount());
+    }
 }
