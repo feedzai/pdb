@@ -1,0 +1,28 @@
+version: 2
+updates:
+# Enable version updates for Maven
+- package-ecosystem: "maven"
+  # Look for a `pom.xml` in the `root` directory
+  directory: "/"
+  # Check for updates every day (weekdays)
+  schedule:
+    interval: "daily"
+    # Check for Maven updates at 4am UTC
+    time: "04:00"
+    timezone: "Europe/Lisbon"
+  open-pull-requests-limit: 3
+  # Raise all Maven pull requests with reviewers
+  #reviewers:
+  #  - "<someone>"
+  # Raise all Maven pull requests with an assignee
+  #assignees:
+  #  - "<someone>"
+  # Raise pull requests for Maven version updates against the "master" branch
+  target-branch: "master"
+  # Raise all Maven pull requests with custom labels
+  labels:
+    - "dependencies"
+  rebase-strategy: "auto"
+  allow:
+    # Allow both direct and indirect updates for all packages
+    - dependency-type: "all"
