@@ -752,28 +752,6 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected boolean checkConnection(final Connection conn) {
-        Statement s = null;
-        try {
-            s = conn.createStatement();
-            s.executeQuery("select 1");
-
-            return true;
-        } catch (final SQLException e) {
-            logger.debug("Connection is down.", e);
-            return false;
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
-        }
-    }
-
-    @Override
     protected String getSchema() throws DatabaseEngineException {
         try {
             return this.conn.getCatalog();

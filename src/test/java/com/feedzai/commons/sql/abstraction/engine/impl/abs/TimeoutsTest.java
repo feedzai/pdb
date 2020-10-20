@@ -45,6 +45,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.CHECK_CONNECTION_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.LOGIN_TIMEOUT;
@@ -91,16 +92,22 @@ public class TimeoutsTest {
      * The test value for the socket timeout (this must be greater than the sum of {@link #LOGIN_TIMEOUT_SECONDS}
      * and {@link #TIMEOUT_TOLERANCE_SECONDS}).
      */
-    private static final int SOCKET_TIMEOUT_SECONDS = 6;
+    private static final int SOCKET_TIMEOUT_SECONDS = 20;
 
     /**
      * The tolerance to use when checking timeouts.
      *
      * This is needed because the drivers may take a few milliseconds after the set timeout value to effectively return;
-     * some other databases may take double the amount of time configured, because they consider login timeout
+     * some other databases may take double the amount or more of time configured, because they consider login timeout
      * separately from connection timeout when first establishing a connection to the DB.
      */
-    private static final int TIMEOUT_TOLERANCE_SECONDS = 3;
+    private static final int TIMEOUT_TOLERANCE_SECONDS = 8;
+
+    /**
+     * The test value for the socket timeout (this must be greater than the sum of {@link #LOGIN_TIMEOUT_SECONDS}
+     * and {@link #TIMEOUT_TOLERANCE_SECONDS}).
+     */
+    private static final int CHECK_CONNECTION_TIMEOUT_SECONDS = 15;
 
     /**
      * A test "router" that simply forwards the data sent between a {@link DatabaseEngine} in this test and the DB.
@@ -120,7 +127,7 @@ public class TimeoutsTest {
     public void setupTest() throws IOException {
         assertThat(SOCKET_TIMEOUT_SECONDS)
                 .as("This test should be configured with a socket timeout greater than login timeout (plus timeout tolerance)")
-                .isGreaterThan(LOGIN_TIMEOUT_SECONDS+ TIMEOUT_TOLERANCE_SECONDS);
+                .isGreaterThan(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS);
 
         dbProps = new Properties() {
             {
@@ -131,6 +138,7 @@ public class TimeoutsTest {
                 setProperty(SCHEMA_POLICY, "create-drop");
                 put(LOGIN_TIMEOUT, LOGIN_TIMEOUT_SECONDS);
                 put(SOCKET_TIMEOUT, SOCKET_TIMEOUT_SECONDS);
+                put(CHECK_CONNECTION_TIMEOUT, CHECK_CONNECTION_TIMEOUT_SECONDS);
             }
         };
 
@@ -164,11 +172,28 @@ public class TimeoutsTest {
         final DatabaseEngine de = DatabaseFactory.getConnection(this.dbProps);
 
         int loginTimeoutInSeconds = DriverManager.getLoginTimeout();
-        int connectionTimeoutInMs = de.getConnection().getNetworkTimeout();
+        int socketConnectionTimeoutInMs = de.getConnection().getNetworkTimeout();
+        int checkConnectionTimeoutInSec = de.getProperties().getCheckConnectionTimeout();
 
         assertEquals("Is the login timeout of the DB connection the expected?", LOGIN_TIMEOUT_SECONDS, loginTimeoutInSeconds);
         assertEquals("Is the socket timeout of the DB connection the expected?",
-                TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS), connectionTimeoutInMs);
+                TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS), socketConnectionTimeoutInMs);
+        assertEquals("Is the check connection timeout of the DB connection the expected?",
+                CHECK_CONNECTION_TIMEOUT_SECONDS, checkConnectionTimeoutInSec);
+    }
+
+    /**
+     * Tests if the timeout settings are invalid a exception is thrown.
+     *
+     * @throws Exception if the invalid config were detected.
+     */
+    @Test(expected = DatabaseFactoryException.class)
+    public void testInvalidTimeoutsConfigured() throws Exception {
+        final Properties invalidProperties = new Properties();
+        invalidProperties.putAll(this.dbProps);
+        invalidProperties.put(SOCKET_TIMEOUT, 1);
+
+        DatabaseFactory.getConnection(invalidProperties);
     }
 
     /**
@@ -197,8 +222,12 @@ public class TimeoutsTest {
      */
     @Test
     public void testNetworkTimeout() throws Exception {
+        final Properties props = new Properties();
+        props.putAll(dbProps);
+        props.put(CHECK_CONNECTION_TIMEOUT_SECONDS, 0);
         testRouter.init();
-        final Properties testProps = getPatchedDbProperties(dbProps, testRouter.getDbPort(), testRouter.getLocalPort());
+
+        final Properties testProps = getPatchedDbProperties(props, testRouter.getDbPort(), testRouter.getLocalPort());
 
         final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
                 .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
@@ -221,6 +250,48 @@ public class TimeoutsTest {
 
         assertFalse("After breaking connection, PDB should detect that it is not connected to the DB server",
                 connCheckFuture.get(SOCKET_TIMEOUT_SECONDS - LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+    }
+
+    /**
+     * Tests that after a connection with the DB server has been successfully established, if that connection is broken
+     * a given action returns in a timely fashion (with an Exception), according to the configured connection check
+     * timeout.
+     *
+     * This test is similar to {@link #testNetworkTimeout()} but it introduces a new configuration for the
+     * {@link DatabaseEngine#checkConnection()}.
+     */
+    @Test
+    public void testConnectionVerificationTimeout() throws Exception {
+        testRouter.init();
+        final Properties testProps = getPatchedDbProperties(dbProps,
+                testRouter.getDbPort(),
+                testRouter.getLocalPort());
+
+        final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
+                .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
+
+        Future<Boolean> connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+        assertTrue("PDB should be connected to the DB server", connCheckFuture.get(LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+
+        assertEquals("Socket timeout should remain the same.",
+                TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS),
+                dbEngine.getConnection().getNetworkTimeout());
+
+        testRouter.breakConnections();
+
+        connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+
+        /*
+         we want to make sure that the login timeout (which is usually lower than socket timeout)
+          is not being used for timing out already established connections
+         */
+        TimeUnit.SECONDS.sleep(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS);
+        assertThat(connCheckFuture)
+                .as("Connection check should only timeout after at least %d seconds", CHECK_CONNECTION_TIMEOUT_SECONDS)
+                .isNotDone();
+
+        assertFalse("PDB should detect that it is not connected to the server before the socket timeout",
+                connCheckFuture.get(CHECK_CONNECTION_TIMEOUT_SECONDS - LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
     }
 
     /**
