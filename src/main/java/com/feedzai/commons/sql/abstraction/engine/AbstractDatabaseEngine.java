@@ -165,7 +165,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * An {@link ExecutorService} to be used by the DB drivers to break a connection if it has been blocked for longer
      * than the specified socket timeout
      */
-    private final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
+    protected final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
 
     /**
      * The default instance of {@link QueryExceptionHandler} to be used in disambiguating SQL exceptions.
@@ -1101,7 +1101,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param conn The connection to test.
      * @return True if the connection is valid, false otherwise.
      */
-    protected abstract boolean checkConnection(final Connection conn);
+    protected boolean checkConnection(final Connection conn) {
+        try {
+            return conn.isValid(this.properties.getCheckConnectionTimeout());
+        } catch (final Exception ex) {
+            logger.debug("Connection is down.", ex);
+            return false;
+        }
+    };
 
     /**
      * Checks if the connection is alive.

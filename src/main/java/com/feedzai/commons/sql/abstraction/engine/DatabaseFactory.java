@@ -55,6 +55,11 @@ public final class DatabaseFactory {
             throw new DatabaseFactoryException("pdb.engine property is mandatory");
         }
 
+        if (pdbProperties.getSocketTimeout() > 0 &&
+                pdbProperties.getCheckConnectionTimeout() > pdbProperties.getSocketTimeout()) {
+            throw new DatabaseFactoryException("pdb.check_connection_timeout cannot be greater than pdb.socket_timeout");
+        }
+
         try {
             Class<?> c = Class.forName(engine);
 

@@ -29,6 +29,7 @@ import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_ALLOW_COLUMN_DROP;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_BLOB_BUFFER_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_CHECK_CONNECTION_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_COMPRESS_LOBS;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_DISABLE_LOB_CACHING;
 import static com.feedzai.commons.sql.abstraction.util.Constants.DEFAULT_FETCH_SIZE;
@@ -181,6 +182,12 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
     public static final String SELECT_QUERY_TIMEOUT = "pdb.query_select_timeout";
 
     /**
+     * Property that indicates the maximum time taken when checking if a connection is available.
+     * @since 2.7.2
+     */
+    public static final String CHECK_CONNECTION_TIMEOUT = "pdb.check_connection_timeout";
+
+    /**
      * Creates a new instance of an empty {@link PdbProperties}.
      */
     public PdbProperties() {
@@ -214,6 +221,7 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
             setProperty(LOGIN_TIMEOUT, DEFAULT_LOGIN_TIMEOUT);
             setProperty(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
             setProperty(SELECT_QUERY_TIMEOUT, DEFAULT_SELECT_QUERY_TIMEOUT);
+            setProperty(CHECK_CONNECTION_TIMEOUT, DEFAULT_CHECK_CONNECTION_TIMEOUT);
         }
     }
 
@@ -527,6 +535,21 @@ public class PdbProperties extends Properties implements com.feedzai.commons.sql
      */
     public int getSelectQueryTimeout() {
         return Integer.parseInt(getProperty(SELECT_QUERY_TIMEOUT));
+    }
+
+    /**
+     * Gets the check connection timeout (in seconds).
+     *
+     * @return The check connection timeout.
+     * @since 2.7.2
+     */
+    public int getCheckConnectionTimeout() {
+        final int checkConnectionTimeout = Integer.parseInt(getProperty(CHECK_CONNECTION_TIMEOUT));
+        if (checkConnectionTimeout > 0) {
+            return checkConnectionTimeout;
+        } else {
+            return getSocketTimeout();
+        }
     }
 
     /**

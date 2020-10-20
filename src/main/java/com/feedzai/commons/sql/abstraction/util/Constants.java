@@ -129,4 +129,10 @@ public final class Constants {
             DatabaseEngineRetryableRuntimeException.class,
             DatabaseEngineTimeoutException.class
     );
+
+    /**
+     * The default timeout when checking if a connection is down.
+     * @since 2.7.2
+     */
+    public static final int DEFAULT_CHECK_CONNECTION_TIMEOUT = 60;
 }
