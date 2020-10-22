@@ -1,4 +1,5 @@
 # PDB
+![Build PDB](https://github.com/feedzai/pdb/workflows/Build%20PDB/badge.svg)
 
 PulseDB is a database-mapping software library written in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
