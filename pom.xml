@@ -59,12 +59,12 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.2.14</version>
+                <version>42.2.18</version>
             </dependency>
             <dependency>
-                <groupId>com.oracle.ojdbc</groupId>
+                <groupId>com.oracle.database.jdbc</groupId>
                 <artifactId>ojdbc8</artifactId>
-                <version>19.3.0.0</version>
+                <version>19.7.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -74,12 +74,12 @@
             <dependency>
                 <groupId>com.ibm.db2</groupId>
                 <artifactId>jcc</artifactId>
-                <version>11.1.4.4</version>
+                <version>11.5.4.0</version>
             </dependency>
             <dependency>
                 <groupId>com.microsoft.sqlserver</groupId>
                 <artifactId>mssql-jdbc</artifactId>
-                <version>7.2.2.jre8</version>
+                <version>8.4.1.jre8</version>
             </dependency>
             <dependency>
                 <groupId>org.jmockit</groupId>
@@ -144,7 +144,7 @@
         </dependency>
         <!-- Oracle -->
         <dependency>
-            <groupId>com.oracle.ojdbc</groupId>
+            <groupId>com.oracle.database.jdbc</groupId>
             <artifactId>ojdbc8</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -713,7 +713,7 @@
         <profile>
             <id>db2</id>
             <properties>
-                <image.db2>ibmcom/db2:11.5.0.0</image.db2>
+                <image.db2>ibmcom/db2:11.5.4.0</image.db2>
             </properties>
             <build>
                 <plugins>
@@ -746,10 +746,14 @@
                                             <LICENSE>accept</LICENSE>
                                             <DB2INST1_PASSWORD>AaBb12.#</DB2INST1_PASSWORD>
                                             <DBNAME>testdb</DBNAME>
+                                            <ARCHIVE_LOGS>false</ARCHIVE_LOGS>
+                                            <AUTOCONFIG>false</AUTOCONFIG>
+                                            <SAMPLEDB>false</SAMPLEDB>
+                                            <HADR_ENABLED>false</HADR_ENABLED>
                                         </env>
                                         <wait>
                                             <time>360000</time>
-                                            <log>All databases are now active.</log>
+                                            <log>Setup has completed.</log>
                                         </wait>
                                     </run>
                                 </image>
