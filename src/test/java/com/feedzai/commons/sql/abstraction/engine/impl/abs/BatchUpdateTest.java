@@ -455,7 +455,7 @@ public class BatchUpdateTest {
             resultOrder.add("first");
         });
         // make sure that second flush doesn't start before the first. Should not start a transaction because the data was cleaned up by first flush.
-        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(5, TimeUnit.SECONDS);
         pool.submit(() -> {
             batch.flush(true);
             resultOrder.add("second");
