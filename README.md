@@ -1,7 +1,8 @@
 # PDB
-![Build PDB](https://github.com/feedzai/pdb/workflows/Build%20PDB/badge.svg)
-![PDB tests with H2 embedded](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20H2%20embedded/badge.svg)
-![PDB tests with PostgreSQL](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20PostgreSQL/badge.svg)
+![Build PDB](https://github.com/feedzai/pdb/workflows/Build%20PDB/badge.svg) \
+![PDB tests with H2 embedded](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20H2%20embedded/badge.svg) \
+![PDB tests with PostgreSQL](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20PostgreSQL/badge.svg) \
+![PDB tests with SQLServer](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20SQLServer/badge.svg)
 
 PulseDB is a database-mapping software library written in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
