@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
@@ -22,6 +21,9 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import java.sql.Connection;
+import java.time.Duration;
+import java.util.concurrent.Callable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,6 +57,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -76,7 +79,7 @@ public class TimeoutsTest {
     /**
      * An executor to run actions asynchronously.
      */
-    private ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     /**
      * The database properties to use in the tests.
@@ -170,14 +173,17 @@ public class TimeoutsTest {
     @Test
     public void testTimeoutsConfigured() throws Exception {
         final DatabaseEngine de = DatabaseFactory.getConnection(this.dbProps);
-
         int loginTimeoutInSeconds = DriverManager.getLoginTimeout();
-        int socketConnectionTimeoutInMs = de.getConnection().getNetworkTimeout();
         int checkConnectionTimeoutInSec = de.getProperties().getCheckConnectionTimeout();
 
+        // Some engines (e.g. mysql) set the network timeout asynchronously.
+        await("await network timeout set")
+                .atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> assertEquals("Is the socket timeout of the DB connection the expected?",
+                        TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS), de.getConnection().getNetworkTimeout())
+                );
+
         assertEquals("Is the login timeout of the DB connection the expected?", LOGIN_TIMEOUT_SECONDS, loginTimeoutInSeconds);
-        assertEquals("Is the socket timeout of the DB connection the expected?",
-                TimeUnit.SECONDS.toMillis(SOCKET_TIMEOUT_SECONDS), socketConnectionTimeoutInMs);
         assertEquals("Is the check connection timeout of the DB connection the expected?",
                 CHECK_CONNECTION_TIMEOUT_SECONDS, checkConnectionTimeoutInSec);
     }
@@ -232,12 +238,12 @@ public class TimeoutsTest {
         final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
                 .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
 
-        Future<Boolean> connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+        Future<Boolean> connCheckFuture = executor.submit((Callable<Boolean>) dbEngine::checkConnection);
         assertTrue("PDB should be connected to the DB server", connCheckFuture.get(LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
 
         testRouter.breakConnections();
 
-        connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+        connCheckFuture = executor.submit((Callable<Boolean>) dbEngine::checkConnection);
 
         /*
          we want to make sure that the login timeout (which is usually lower than socket timeout)
@@ -270,7 +276,7 @@ public class TimeoutsTest {
         final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
                 .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
 
-        Future<Boolean> connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+        Future<Boolean> connCheckFuture = executor.submit((Callable<Boolean>) dbEngine::checkConnection);
         assertTrue("PDB should be connected to the DB server", connCheckFuture.get(LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
 
         assertEquals("Socket timeout should remain the same.",
@@ -279,7 +285,7 @@ public class TimeoutsTest {
 
         testRouter.breakConnections();
 
-        connCheckFuture = executor.submit(() -> dbEngine.checkConnection());
+        connCheckFuture = executor.submit((Callable<Boolean>) dbEngine::checkConnection);
 
         /*
          we want to make sure that the login timeout (which is usually lower than socket timeout)
@@ -321,7 +327,7 @@ public class TimeoutsTest {
 
         private final ServerSocket serverSocket = new ServerSocket(0);
         private final Socket socketRouterToDb = new Socket();
-        private ExecutorService executor;
+        private final ExecutorService executor;
         private final int dbPort;
         private volatile boolean isRunning = true;
 
