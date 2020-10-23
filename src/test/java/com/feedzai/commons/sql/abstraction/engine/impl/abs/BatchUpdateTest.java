@@ -443,7 +443,10 @@ public class BatchUpdateTest {
         engine.addEntity(entity);
 
         batch = DefaultBatch.create(engine, "test", 5, 1000000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
-        batch.add("TEST", entry().set("COL1", 1).build());
+        // Make a proper batch
+        for (int i = 0; i < 500; i++) {
+            batch.add("TEST", entry().set("COL1", i).build());
+        }
 
         final ArrayList<String> resultOrder = new ArrayList<>();
 
