@@ -818,7 +818,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param me               The mapped entity on which to persist.
      * @param useAutoInc       Whether to use autoInc.
      * @param lastBindPosition The position (1-based) of the last bind parameter that was filled in the prepared statement.
-     * @return The ID of the auto generated value ({@code 0} if there's no auto generated value).
+     * @return The ID of the auto generated value ({@code 0} if there's no auto generated value). If the table has more
+     * than 1 column with auto generated values, then it will return the first column found.
      * @throws Exception if any problem occurs while persisting.
      * @since 2.5.1
      */
