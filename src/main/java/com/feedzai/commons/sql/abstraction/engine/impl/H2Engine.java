@@ -375,7 +375,7 @@ public class H2Engine extends AbstractDatabaseEngine {
 
     @Override
     protected MappedEntity createPreparedStatementForInserts(final DbEntity entity) throws DatabaseEngineException {
-        List<String> insertInto = new ArrayList<>();
+        final List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName()));
         final List<String> insertIntoWithAutoInc = new ArrayList<>();
@@ -385,10 +385,14 @@ public class H2Engine extends AbstractDatabaseEngine {
         final List<String> values = new ArrayList<>();
         final List<String> columnsWithAutoInc = new ArrayList<>();
         final List<String> valuesWithAutoInc = new ArrayList<>();
+        String columnWithAutoIncName = null;
         for (final DbColumn column : entity.getColumns()) {
             columnsWithAutoInc.add(quotize(column.getName()));
             valuesWithAutoInc.add("?");
-            if (!column.isAutoInc()) {
+            if (column.isAutoInc()) {
+                // Get the only column name with auto incremented values.
+                columnWithAutoIncName = column.getName();
+            } else {
                 columns.add(quotize(column.getName()));
                 values.add("?");
             }
@@ -412,11 +416,19 @@ public class H2Engine extends AbstractDatabaseEngine {
         final PreparedStatement ps, psReturn, psWithAutoInc;
         try {
 
-            ps = conn.prepareStatement(statement, Statement.RETURN_GENERATED_KEYS);
-            psReturn = conn.prepareStatement(insertReturnStatement);
-            psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
+            // Generate keys when the table has at least 1 column with auto generate value.
+            final int generateKeys = columnWithAutoIncName != null? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
+            ps = this.conn.prepareStatement(statement, generateKeys);
+            psReturn = this.conn.prepareStatement(insertReturnStatement, generateKeys);
+            psWithAutoInc = this.conn.prepareStatement(statementWithAutoInt, generateKeys);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc);
+            return new MappedEntity()
+                .setInsert(ps)
+                .setInsertReturning(psReturn)
+                .setInsertWithAutoInc(psWithAutoInc)
+                // The auto incremented column must be set, so when persisting a row, its possible to retrieve its value
+                // by consulting the column name from this MappedEntity.
+                .setAutoIncColumn(columnWithAutoIncName);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
@@ -533,13 +545,17 @@ public class H2Engine extends AbstractDatabaseEngine {
     protected synchronized long doPersist(final PreparedStatement ps,
                                           final MappedEntity me,
                                           final boolean useAutoInc,
-                                          int lastBindPosition) throws Exception {
+                                          final int lastBindPosition) throws Exception {
         ps.execute();
 
-        if (useAutoInc) {
+        final String autoIncColumnName = me.getAutoIncColumn();
+        if (useAutoInc && autoIncColumnName != null) {
             try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
-                    return generatedKeys.getLong(1);
+                    // These generated keys belong to the primary key and might not have auto incremented values nor
+                    // even have integer values.
+                    // That's why its necessary to only retrieve the value from a column that is auto incremented.
+                    return generatedKeys.getLong(autoIncColumnName);
                 }
             }
         }

@@ -47,6 +47,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.google.common.collect.ImmutableSet;
 import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
@@ -136,6 +137,8 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -1548,25 +1551,50 @@ public class EngineGeneralTest {
         }
     }
 
+    /**
+     * Tests that when persisting an entity in table that does not contain any auto generated values, the
+     * {@link DatabaseEngine#persist(String, EntityEntry)} method returns {@code null}.
+     *
+     * @throws DatabaseEngineException If any error occurs.
+     */
     @Test
     public void getGeneratedKeysWithNoAutoIncTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", INT)
+        final DbEntity entity = dbEntity()
+            .name("TEST")
+            .addColumn("COL1", STRING)
+            .addColumn("COL2", STRING)
+            // Set the two columns as fields of primary key, so they belong to the generated keys.
+            .pkFields(ImmutableSet.of("COL1", "COL2"))
+            .build();
+
+        this.engine.addEntity(entity);
+
+        final EntityEntry ee = entry()
+                .set("COL1", "VAL1")
+                .set("COL2", "VAL2")
                 .build();
 
+        assertThat(this.engine.persist("TEST", ee))
+            .as("The auto generated value should be null!")
+            .isNull();
+    }
 
-        engine.addEntity(entity);
+    /**
+     * Tests that when trying to add {@link DbEntity} with multiple columns with auto incremented values, the
+     * {@link DatabaseEngine#addEntity(DbEntity)} method throws a {@link DatabaseEngineException}.
+     */
+    @Test
+    public void addMultipleAutoIncColumnsTest() {
+        final DbEntity entity = dbEntity()
+            .name("TEST")
+            .addColumn("COL1", INT, true)
+            .addColumn("COL2", INT, true)
+            .build();
 
-        EntityEntry ee = entry()
-                .set("COL1", 1)
-                .set("COL2", 2)
-                .build();
+        assertThatCode(() -> this.engine.addEntity(entity))
+            .as("The DatabaseEngine should not allow to setup a DbEntity with multiple auto incremented columns")
+            .isInstanceOf(DatabaseEngineException.class);
 
-        Long persist = engine.persist("TEST", ee);
-
-        assertNull("ret null?", persist);
     }
 
     @Test
