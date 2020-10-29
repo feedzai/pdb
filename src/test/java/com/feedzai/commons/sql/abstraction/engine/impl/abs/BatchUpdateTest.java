@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -455,7 +456,7 @@ public class BatchUpdateTest {
             resultOrder.add("first");
         });
         // make sure that second flush doesn't start before the first. Should not start a transaction because the data was cleaned up by first flush.
-        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
         pool.submit(() -> {
             batch.flush(true);
             resultOrder.add("second");
