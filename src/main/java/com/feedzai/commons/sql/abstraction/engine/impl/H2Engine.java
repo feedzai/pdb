@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandle
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -385,10 +384,13 @@ public class H2Engine extends AbstractDatabaseEngine {
         final List<String> values = new ArrayList<>();
         final List<String> columnsWithAutoInc = new ArrayList<>();
         final List<String> valuesWithAutoInc = new ArrayList<>();
+        String columnWithAutoIncName = null;
         for (final DbColumn column : entity.getColumns()) {
             columnsWithAutoInc.add(quotize(column.getName()));
             valuesWithAutoInc.add("?");
-            if (!column.isAutoInc()) {
+            if (column.isAutoInc()) {
+                columnWithAutoIncName = column.getName();
+            } else {
                 columns.add(quotize(column.getName()));
                 values.add("?");
             }
@@ -416,7 +418,10 @@ public class H2Engine extends AbstractDatabaseEngine {
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc);
+            return new MappedEntity().setInsert(ps)
+                                     .setInsertReturning(psReturn)
+                                     .setInsertWithAutoInc(psWithAutoInc)
+                                     .setAutoIncColumn(columnWithAutoIncName);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
@@ -536,10 +541,10 @@ public class H2Engine extends AbstractDatabaseEngine {
                                           int lastBindPosition) throws Exception {
         ps.execute();
 
-        if (useAutoInc) {
+        if (useAutoInc && me.getAutoIncColumn() != null) {
             try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
                 if (generatedKeys.next()) {
-                    return generatedKeys.getLong(1);
+                    return generatedKeys.getLong(me.getAutoIncColumn());
                 }
             }
         }
