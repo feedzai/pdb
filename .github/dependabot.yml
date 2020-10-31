@@ -26,3 +26,29 @@ updates:
   allow:
     # Allow both direct and indirect updates for all packages
     - dependency-type: "all"
+
+# Set update schedule for GitHub Actions
+- package-ecosystem: "github-actions"
+  directory: "/"
+  # Check for updates every day (weekdays)
+  schedule:
+    interval: "daily"
+    # Check for GitHub Actions updates at 4am UTC
+    time: "04:00"
+    timezone: "Europe/Lisbon"
+  open-pull-requests-limit: 3
+  # Raise all GitHub Actions pull requests with reviewers
+#  reviewers:
+#    - "<someone>"
+  # Raise all GitHub Actions pull requests with an assignee
+#  assignees:
+#    - "<someone>"
+  # Raise pull requests for GitHub Actions version updates against the "master" branch
+  target-branch: "master"
+  # Raise all GitHub Actions pull requests with custom labels
+  labels:
+    - "dependencies"
+  rebase-strategy: "auto"
+  allow:
+    # Allow both direct and indirect updates for all packages
+    - dependency-type: "all"
