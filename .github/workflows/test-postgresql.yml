@@ -13,6 +13,19 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:12.3 # docker
+        env:
+          POSTGRES_PASSWORD: AaBb12.#
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
@@ -28,4 +41,4 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Test with PostgreSQL
-      run: mvn -B clean test -Ppostgresql
+      run: mvn -B clean test -PpostgresqlActions
