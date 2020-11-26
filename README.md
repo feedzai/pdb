@@ -44,6 +44,9 @@ connection is lost and recovered.
 * Fixed several connection leaks
 * Fixed MySQL large result fetching
 
+## Changes from 2.8.0
+* It now uses Guava 25.1-jre version, which might require the client to also upgrade it to match the same version
+
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.  
