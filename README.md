@@ -9,10 +9,6 @@ PulseDB is a database-mapping software library written in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
 PDB provides a DSL that covers most of SQL functionalities and allows to easily integrate persistence into your projects and modules.
 
-[![Build Status](https://feedzaios.ci.cloudbees.com/buildStatus/icon?job=pdb-master-java-8)](https://feedzaios.ci.cloudbees.com/job/pdb-master-java-8/)
-
-[![CloudbeesDevCloud](http://www.cloudbees.com/sites/default/files/Button-Built-on-CB-1.png)](http://www.cloudbees.com/dev)
-
 ## Using PDB
 
 Add the following dependency to your Maven pom (example for PDB v2.1.13):
