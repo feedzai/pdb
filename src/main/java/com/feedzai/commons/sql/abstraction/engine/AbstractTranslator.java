@@ -539,13 +539,16 @@ public abstract class AbstractTranslator {
      * @return the translated concat.
      */
     public String translate(final Concat concat) {
+        inject(concat.getDelimiter());
+        inject(concat.getExpressions());
+
         final String toConcat =
                 concat.getExpressions().stream()
                       .map(Expression::translate)
                       .collect(Collectors.joining(", "));
 
         return String.format("CONCAT_WS(%s, %s)",
-                             concat.getDelimiter(),
+                             concat.getDelimiter().translate(),
                              toConcat);
     }
 

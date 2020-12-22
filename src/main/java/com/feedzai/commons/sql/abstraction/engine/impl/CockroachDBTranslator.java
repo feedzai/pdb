@@ -16,15 +16,17 @@
 
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static java.lang.String.format;
@@ -103,6 +105,18 @@ public class CockroachDBTranslator extends PostgreSqlTranslator {
                 type);
 
         return cast.isEnclosed() ? "(" + translation + ")" : translation;
+    }
+
+    @Override
+    public String translate(final Concat concat) {
+        inject(concat.getDelimiter());
+        inject(concat.getExpressions());
+
+        final String concatWs = format(" || %s || ", concat.getDelimiter().translate());
+
+        return concat.getExpressions().stream()
+                     .map(Expression::translate)
+                     .collect(Collectors.joining(concatWs));
     }
 
     @Override

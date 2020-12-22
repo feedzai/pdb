@@ -15,12 +15,19 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -35,12 +42,6 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
@@ -383,6 +384,18 @@ public class DB2Translator extends AbstractTranslator {
                 type);
 
         return cast.isEnclosed() ? "(" + translation + ")" : translation;
+    }
+
+    @Override
+    public String translate(final Concat concat) {
+        inject(concat.getDelimiter());
+        inject(concat.getExpressions());
+
+        final String concatWs = format(" || %s || ", concat.getDelimiter().translate());
+
+        return concat.getExpressions().stream()
+                     .map(Expression::translate)
+                     .collect(Collectors.joining(concatWs));
     }
 
     @Override

@@ -16,7 +16,7 @@ import java.util.Collection;
  * @author Francisco Santos (francisco.santos@feedzai.com)
  * @since @@@feedzai.next.release@@@
  */
-public final class Concat extends Expression {
+public class Concat extends Expression {
 
     /**
      * The concatenation delimiter.
@@ -70,9 +70,5 @@ public final class Concat extends Expression {
     @Override
     public String translate() {
         return translator.translate(this);
-
-        /*injector.injectMembers(delimiter);
-
-        */
     }
 }

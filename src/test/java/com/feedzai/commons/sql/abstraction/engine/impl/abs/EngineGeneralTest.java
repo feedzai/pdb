@@ -17,6 +17,37 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.google.common.collect.ImmutableSet;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import mockit.Expectations;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Verifications;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
@@ -47,37 +78,6 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.collect.ImmutableSet;
-import mockit.Expectations;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import mockit.Verifications;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -96,6 +96,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.cast;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.concat;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.createView;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbColumn;
@@ -2291,6 +2292,36 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be ROFL", "ROFL", result.get(2).get("case").toString());
         assertEquals("COL5 must be LOL", "LOL", result.get(3).get("case").toString());
         assertEquals("COL5 must be KEK", "KEK", result.get(4).get("case").toString());
+    }
+
+    @Test
+    public void testConcat() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+                .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre")
+                .build());
+
+        final Query query =
+                select(
+                        concat(k("."),
+                               column("COL5"),
+                               cast(column("COL1"), STRING)).alias("concat"))
+                        .from(table("TEST"));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("Concat must be 'teste.1'", "teste.1", result.get(0).get("concat").toString());
+        assertEquals("Concat must be 'xpto.2'", "xpto.2", result.get(1).get("concat").toString());
+        assertEquals("Concat must be 'xpto.3'", "xpto.3", result.get(2).get("concat").toString());
+        assertEquals("Concat must be 'teste.4'", "teste.4", result.get(3).get("concat").toString());
+        assertEquals("Concat must be 'pomme de terre.5'", "pomme de terre.5", result.get(4).get("concat").toString());
     }
 
     /**
