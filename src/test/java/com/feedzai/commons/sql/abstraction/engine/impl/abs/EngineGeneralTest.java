@@ -17,6 +17,37 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.google.common.collect.ImmutableSet;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import mockit.Expectations;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Verifications;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
@@ -47,37 +78,6 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.collect.ImmutableSet;
-import mockit.Expectations;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import mockit.Verifications;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -109,6 +109,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.eq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.floor;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.isNull;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
@@ -2219,6 +2220,29 @@ public class EngineGeneralTest {
         assertEquals("Name must be 'manuel'", "manuel", resultSorted.get(1));
         assertEquals("Name must be 'rita'", "rita", resultSorted.get(2));
         assertEquals("Name must be 'rui'", "rui", resultSorted.get(3));
+    }
+
+    @Test
+    public void testIsNull() throws DatabaseEngineException {
+        test5Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", null)
+                                      .build());
+
+        final Query query = select(column("COL1"), column("COL5"))
+                .from(table("TEST"))
+                .where(isNull(column("COL5")));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals(1, result.size());
+        assertEquals(4, result.get(0).get("COL1").toInt().intValue());
+        assertTrue(result.get(0).get("COL5").isNull());
     }
 
     @Test
