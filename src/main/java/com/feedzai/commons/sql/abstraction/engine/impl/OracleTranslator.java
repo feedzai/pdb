@@ -251,19 +251,19 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(UpdateFrom u) {
-        final Expression from = u.getFrom();
+    public String translate(UpdateFrom updateFrom) {
+        final Expression from = updateFrom.getFrom();
 
         if (from == null) {
-            return translate((Update) u);
+            return translate((Update) updateFrom);
         }
 
         inject(from);
 
         // This engine does not support UPDATE FROM.
         // to workaround this, we do the following https://stackoverflow.com/a/44845278
-        final Update update = new Update(u.getTable());
-        for (final Expression column : u.getColumns()) {
+        final Update update = new Update(updateFrom.getTable());
+        for (final Expression column : updateFrom.getColumns()) {
             final RepeatDelimiter eq = (RepeatDelimiter) column;
             final Expression leftColumn = eq.getExpressions().get(0);
             final Expression rightColumn = eq.getExpressions().get(1);
@@ -272,14 +272,14 @@ public class OracleTranslator extends AbstractTranslator {
                                            ImmutableList.of(leftColumn,
                                                             select(rightColumn)
                                                                     .from(from)
-                                                                    .where(u.getWhere())
+                                                                    .where(updateFrom.getWhere())
                                                                     .enclose())));
         }
 
         inject(update);
 
         return update.translate() + " WHERE EXISTS (SELECT * FROM "
-                + from.translate() + " WHERE " + u.getWhere().translate() + ");";
+                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ");";
     }
 
     @Override

@@ -410,30 +410,30 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(UpdateFrom u) {
-        final Expression from = u.getFrom();
+    public String translate(final UpdateFrom updateFrom) {
+        final Expression from = updateFrom.getFrom();
 
         // if from == null fallback to a regular update.
         // else translate update from.
         if (from == null) {
-            return translate((Update) u);
+            return translate((Update) updateFrom);
         } else {
             inject(from);
-            return translate(u, from);
+            return translate(updateFrom, from);
         }
     }
 
     /**
      * Translates {@link Update} considering the from clause.
      *
-     * @param u The update to translate.
+     * @param update The update to translate.
      * @param from The from clause.
      * @return The update string representation.
      */
-    private String translate(final Update u, final Expression from) {
-        final List<Expression> columns = u.getColumns();
-        final Expression table = u.getTable();
-        final Expression where = u.getWhere();
+    private String translate(final Update update, final Expression from) {
+        final List<Expression> columns = update.getColumns();
+        final Expression table = update.getTable();
+        final Expression where = update.getWhere();
         inject(table, where);
 
         final List<String> temp = new ArrayList<>();

@@ -346,19 +346,19 @@ public abstract class AbstractTranslator {
     /**
      * Translates {@link UpdateFrom}.
      *
-     * @param u The object to translate.
+     * @param updateFrom The object to translate.
      * @return The string representation of the given object.
      */
-    public String translate(UpdateFrom u) {
-        final Expression from = u.getFrom();
+    public String translate(final UpdateFrom updateFrom) {
+        final Expression from = updateFrom.getFrom();
 
         if (from == null) {
-            return translate((Update) u);
+            return translate((Update) updateFrom);
         }
 
         inject(from);
 
-        final String translate = translate((Update) u);
+        final String translate = translate((Update) updateFrom);
         final StringBuilder stringBuilder = new StringBuilder(translate);
 
         final int where = translate.indexOf("WHERE");
