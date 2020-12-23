@@ -15,6 +15,11 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
@@ -30,16 +35,12 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.UpdateFrom;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-
-import java.util.ArrayList;
-import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
@@ -404,6 +405,32 @@ public class SqlServerTranslator extends AbstractTranslator {
 
     @Override
     public String translate(Update u) {
+        // in SQL server, we need to specify the table in the from clause.
+        return translate(u, u.getTable());
+    }
+
+    @Override
+    public String translate(UpdateFrom u) {
+        final Expression from = u.getFrom();
+
+        // if from == null fallback to a regular update.
+        // else translate update from.
+        if (from == null) {
+            return translate((Update) u);
+        } else {
+            inject(from);
+            return translate(u, from);
+        }
+    }
+
+    /**
+     * Translates {@link Update} considering the from clause.
+     *
+     * @param u The update to translate.
+     * @param from The from clause.
+     * @return The update string representation.
+     */
+    private String translate(final Update u, final Expression from) {
         final List<Expression> columns = u.getColumns();
         final Expression table = u.getTable();
         final Expression where = u.getWhere();
@@ -427,9 +454,9 @@ public class SqlServerTranslator extends AbstractTranslator {
         temp.add(join(setTranslations, ", "));
 
         temp.add("FROM");
-        temp.add(table.translate());
-        if (table.isAliased()) {
-            temp.add(quotize(table.getAlias()));
+        temp.add(from.translate());
+        if (from.isAliased()) {
+            temp.add(quotize(from.getAlias()));
         }
 
         if (where != null) {

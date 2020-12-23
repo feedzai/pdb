@@ -17,6 +17,37 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import com.google.common.collect.ImmutableSet;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import mockit.Expectations;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Verifications;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
@@ -47,37 +78,6 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.collect.ImmutableSet;
-import mockit.Expectations;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import mockit.Verifications;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
-
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -127,6 +127,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.updateFrom;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.values;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
@@ -2620,6 +2621,45 @@ public class EngineGeneralTest {
     }
 
     @Test
+    public void updateFrom1ColTest() throws DatabaseEngineException {
+        test5Columns();
+        test1Column();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre")
+                                      .build());
+
+        engine.persist("TEST2", entry().set("COL1", 1).set("COL2", "update1")
+                                      .build());
+        engine.persist("TEST2", entry().set("COL1", 5).set("COL2", "update2")
+                                      .build());
+
+        final Update updateFrom =
+                updateFrom(table("TEST"))
+                        .from(table("TEST2"))
+                        .set(eq(column("COL5"), column("TEST2", "COL2")))
+                        .where(eq(column("TEST", "COL1"), column("TEST2", "COL1")));
+
+        engine.executeUpdate(updateFrom);
+
+        // check to see if TEST has changed
+        final Query query = select(column("COL5"))
+                .from(table("TEST"))
+                .where(in(column("COL1"), L(k(1), k(5))));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("update1", result.get(0).get("COL5").toString());
+        assertEquals("update2", result.get(1).get("COL5").toString());
+    }
+
+    @Test
     public void deleteTest() throws DatabaseEngineException {
         test5Columns();
 
@@ -3695,6 +3735,16 @@ public class EngineGeneralTest {
                 .addColumn("COL3", DOUBLE)
                 .addColumn("COL4", LONG)
                 .addColumn("COL5", STRING)
+                .build();
+
+        engine.addEntity(entity);
+    }
+
+    protected void test1Column() throws DatabaseEngineException {
+        DbEntity entity = dbEntity()
+                .name("TEST2")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", STRING)
                 .build();
 
         engine.addEntity(entity);
