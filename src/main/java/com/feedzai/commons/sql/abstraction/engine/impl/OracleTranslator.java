@@ -279,7 +279,7 @@ public class OracleTranslator extends AbstractTranslator {
         inject(update);
 
         return update.translate() + " WHERE EXISTS (SELECT * FROM "
-                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ");";
+                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ")";
     }
 
     @Override
