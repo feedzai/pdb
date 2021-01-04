@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandle
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -211,37 +210,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     protected void createTable(DbEntity entity) throws DatabaseEngineException {
         entity = injectNotNullIfMissing(entity);
 
-        List<String> createTable = new ArrayList<>();
-
-        createTable.add("CREATE TABLE");
-        createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<>();
-        List<String> pkFields = entity.getPkFields();
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
-            column.add(quotize(c.getName()));
-            column.add(translateType(c));
-
-            // If this column is PK, it must be forced to be NOT NULL (only if it's not already...)
-            if (pkFields.contains(c.getName()) && !c.getColumnConstraints().contains(DbColumnConstraint.NOT_NULL)) {
-                // Create a NOT NULL constraint
-                c.getColumnConstraints().add(DbColumnConstraint.NOT_NULL);
-            }
-
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
-                column.add(cc.translate());
-            }
-
-            if (c.isDefaultValueSet()) {
-                column.add("DEFAULT");
-                column.add(translate(c.getDefaultValue()));
-            }
-
-            columns.add(join(column, " "));
-        }
-        createTable.add("(" + join(columns, ", ") + ")");
-
-        final String createTableStatement = join(createTable, " ");
+        final String createTableStatement = translator.translateCreateTable(entity);
 
         logger.trace(createTableStatement);
 

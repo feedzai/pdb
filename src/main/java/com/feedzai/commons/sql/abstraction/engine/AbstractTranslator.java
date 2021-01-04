@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Between;
@@ -631,4 +632,6 @@ public abstract class AbstractTranslator {
      * @return The string representation of the given object.
      */
     public abstract String translate(StringAgg stringAgg);
+
+    public abstract String translateCreateTable(DbEntity entity);
 }

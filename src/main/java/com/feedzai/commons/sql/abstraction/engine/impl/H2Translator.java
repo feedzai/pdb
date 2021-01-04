@@ -30,6 +30,7 @@ import java.util.List;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for H2.
@@ -350,5 +351,40 @@ public class H2Translator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "FALSE";
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+        final List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName()));
+        final List<String> columns = new ArrayList<>();
+        final List<String> pkFields = entity.getPkFields();
+        for (DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName()));
+            column.add(translate(c));
+
+            // If this column is PK, it must be forced to be NOT NULL (only if it's not already...)
+            if (pkFields.contains(c.getName()) && !c.getColumnConstraints().contains(DbColumnConstraint.NOT_NULL)) {
+                // Create a NOT NULL constraint
+                c.getColumnConstraints().add(DbColumnConstraint.NOT_NULL);
+            }
+
+            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+
+            if (c.isDefaultValueSet()) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            columns.add(join(column, " "));
+        }
+        createTable.add("(" + join(columns, ", ") + ")");
+
+        return join(createTable, " ");
     }
 }

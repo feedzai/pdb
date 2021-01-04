@@ -17,7 +17,6 @@
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
@@ -31,9 +30,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -80,54 +77,7 @@ public class CockroachDBEngine extends PostgreSqlEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
-
-        createTable.add("CREATE TABLE");
-        createTable.add(quotize(entity.getName()));
-
-        // COLUMNS
-        List<String> columns = new ArrayList<>();
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
-            column.add(quotize(c.getName()));
-            column.add(translateType(c));
-
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
-                column.add(cc.translate());
-            }
-
-            if (c.isDefaultValueSet()) {
-                column.add("DEFAULT");
-                column.add(translate(c.getDefaultValue()));
-            }
-
-            columns.add(join(column, " "));
-        }
-        createTable.add("(" + join(columns, ", "));
-        // COLUMNS end
-
-
-        // PRIMARY KEY
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
-            pks.add(quotize(pk));
-        }
-
-        if (!pks.isEmpty()) {
-            createTable.add(",");
-
-            final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
-
-            createTable.add("CONSTRAINT");
-            createTable.add(quotize(pkName));
-            createTable.add("PRIMARY KEY");
-            createTable.add("(" + join(pks, ", ") + ")");
-        }
-        // PK end
-
-        createTable.add(")");
-
-        final String createTableStatement = join(createTable, " ");
+        final String createTableStatement = translator.translateCreateTable(entity);
 
         logger.trace(createTableStatement);
 

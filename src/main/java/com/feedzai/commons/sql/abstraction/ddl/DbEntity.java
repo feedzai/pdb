@@ -15,6 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.ddl;
 
+import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.K;
 import com.google.common.collect.ImmutableList;
 
@@ -31,7 +32,7 @@ import java.util.List;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public class DbEntity implements Serializable {
+public class DbEntity extends Expression {
     /**
      * The entity name.
      */
@@ -139,6 +140,11 @@ public class DbEntity implements Serializable {
                 .addFk(fks)
                 .pkFields(pkFields)
                 .addIndexes(indexes);
+    }
+
+    @Override
+    public String translate() {
+        return translator.translateCreateTable(this);
     }
 
     /**

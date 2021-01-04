@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.impl.mysql.MySqlQueryException
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -180,59 +179,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
-
-        createTable.add("CREATE TABLE");
-        createTable.add(quotize(entity.getName(), escapeCharacter()));
-        List<String> columns = new ArrayList<>();
-        String autoIncName = "";
-        // Remember that MySQL only supports one!
-        int numberOfAutoIncs = 0;
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
-            column.add(quotize(c.getName(), escapeCharacter()));
-
-            column.add(translateType(c));
-
-            /*
-             * In MySQL only one column can be auto incremented and it must
-             * be set as primary key.
-             */
-            if (c.isAutoInc()) {
-                autoIncName = c.getName();
-                column.add("AUTO_INCREMENT");
-                numberOfAutoIncs++;
-            }
-
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
-                column.add(cc.translate());
-            }
-
-            if (c.isDefaultValueSet()) {
-                column.add("DEFAULT");
-                column.add(translate(c.getDefaultValue()));
-            }
-
-            columns.add(join(column, " "));
-        }
-
-        if (numberOfAutoIncs > 1) {
-            throw new DatabaseEngineException("In MySQL you can only define one auto increment column");
-        }
-
-        String pks = "";
-        if (numberOfAutoIncs == 1) {
-            if (entity.getPkFields().size() == 0) {
-                pks = ", PRIMARY KEY(" + autoIncName + ")";
-            } else {
-
-                pks = ", PRIMARY KEY(" + join(entity.getPkFields(), ", ") + ")";
-            }
-        }
-
-        createTable.add("(" + join(columns, ", ") + pks + ")");
-
-        final String createTableStatement = join(createTable, " ");
+        final String createTableStatement = translator.translateCreateTable(entity);
         logger.trace(createTableStatement);
 
         Statement s = null;

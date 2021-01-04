@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.google.common.base.Joiner;
@@ -32,6 +33,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for MySQL.
@@ -322,5 +324,62 @@ public class MySqlTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "0";
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+        final List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName(), translateEscape()));
+        final List<String> columns = new ArrayList<>();
+        String autoIncName = "";
+        // Remember that MySQL only supports one!
+        int numberOfAutoIncs = 0;
+        for (DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName(), translateEscape()));
+
+            column.add(translate(c));
+
+            /*
+             * In MySQL only one column can be auto incremented and it must
+             * be set as primary key.
+             */
+            if (c.isAutoInc()) {
+                autoIncName = c.getName();
+                column.add("AUTO_INCREMENT");
+                numberOfAutoIncs++;
+            }
+
+            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+
+            if (c.isDefaultValueSet()) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            columns.add(join(column, " "));
+        }
+
+        if (numberOfAutoIncs > 1) {
+            throw new DatabaseEngineRuntimeException("In MySQL you can only define one auto increment column");
+        }
+
+        String pks = "";
+        if (numberOfAutoIncs == 1) {
+            if (entity.getPkFields().size() == 0) {
+                pks = ", PRIMARY KEY(" + autoIncName + ")";
+            } else {
+
+                pks = ", PRIMARY KEY(" + join(entity.getPkFields(), ", ") + ")";
+            }
+        }
+
+        createTable.add("(" + join(columns, ", ") + pks + ")");
+
+        return join(createTable, " ");
     }
 }

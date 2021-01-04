@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
@@ -46,6 +47,7 @@ import java.util.stream.Collectors;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for PostgreSQL.
@@ -415,4 +417,32 @@ public class PostgreSqlTranslator extends AbstractTranslator {
         return "FALSE";
     }
 
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+
+        List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName()));
+        List<String> columns = new ArrayList<>();
+        for (DbColumn c : entity.getColumns()) {
+            List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName()));
+            column.add(translate(c));
+
+            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+
+            if (c.isDefaultValueSet()) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            columns.add(join(column, " "));
+        }
+        createTable.add("(" + join(columns, ", ") + ")");
+
+        return join(createTable, " ");
+    }
 }

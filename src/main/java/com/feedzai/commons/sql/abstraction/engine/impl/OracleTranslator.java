@@ -18,6 +18,8 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for Oracle.
@@ -362,5 +365,34 @@ public class OracleTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "'0'";
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+        final List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName()));
+        final List<String> columns = new ArrayList<>();
+        for (final DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName()));
+            column.add(translate(c));
+
+            if (c.isDefaultValueSet() && !c.getDbColumnType().equals(DbColumnType.BOOLEAN)) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            for (final DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+            columns.add(join(column, " "));
+        }
+        createTable.add("(" + join(columns, ", ") + ")");
+        // segment creation deferred can cause unexpected behaviour in sequences
+        // see: http://dirknachbar.blogspot.pt/2011/01/deferred-segment-creation-under-oracle.html
+        createTable.add("SEGMENT CREATION IMMEDIATE");
+        return join(createTable, " ");
     }
 }

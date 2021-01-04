@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -177,43 +176,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
-
-        createTable.add("CREATE TABLE");
-        createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<>();
-
-        int numberOfAutoIncs = 0;
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
-            column.add(quotize(c.getName()));
-
-            column.add(translateType(c));
-
-            if (c.isAutoInc()) {
-                column.add("IDENTITY");
-                numberOfAutoIncs++;
-            }
-
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
-                column.add(cc.translate());
-            }
-
-            if (c.isDefaultValueSet()) {
-                column.add("DEFAULT");
-                column.add(translate(c.getDefaultValue()));
-            }
-
-            columns.add(join(column, " "));
-        }
-
-        if (numberOfAutoIncs > 1) {
-            throw new DatabaseEngineException("In SQLServer you can only define one auto increment column");
-        }
-
-        createTable.add("(" + join(columns, ", ") + ")");
-
-        final String createTableStatement = join(createTable, " ");
+        final String createTableStatement = translator.translateCreateTable(entity);
 
         logger.trace(createTableStatement);
 

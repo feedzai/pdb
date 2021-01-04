@@ -225,30 +225,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
-
-        createTable.add("CREATE TABLE");
-        createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<>();
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
-            column.add(quotize(c.getName()));
-            column.add(translateType(c));
-
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
-                column.add(cc.translate());
-            }
-
-            if (c.isDefaultValueSet()) {
-                column.add("DEFAULT");
-                column.add(translate(c.getDefaultValue()));
-            }
-
-            columns.add(join(column, " "));
-        }
-        createTable.add("(" + join(columns, ", ") + ")");
-
-        final String createTableStatement = join(createTable, " ");
+        final String createTableStatement = translator.translateCreateTable(entity);
 
         logger.trace(createTableStatement);
 

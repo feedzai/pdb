@@ -17,6 +17,7 @@ package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.*;
@@ -95,6 +96,11 @@ public class CustomTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final StringAgg stringAgg) {
+        return null;
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
         return null;
     }
 }

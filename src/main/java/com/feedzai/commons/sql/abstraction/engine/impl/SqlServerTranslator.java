@@ -18,6 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
@@ -32,6 +33,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
@@ -46,6 +48,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for SQLServer.
@@ -453,6 +456,47 @@ public class SqlServerTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "0";
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+        final List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName()));
+        final List<String> columns = new ArrayList<>();
+
+        int numberOfAutoIncs = 0;
+        for (DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName()));
+
+            column.add(translate(c));
+
+            if (c.isAutoInc()) {
+                column.add("IDENTITY");
+                numberOfAutoIncs++;
+            }
+
+            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+
+            if (c.isDefaultValueSet()) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            columns.add(join(column, " "));
+        }
+
+        if (numberOfAutoIncs > 1) {
+            throw new DatabaseEngineRuntimeException("In SQLServer you can only define one auto increment column");
+        }
+
+        createTable.add("(" + join(columns, ", ") + ")");
+
+        return join(createTable, " ");
     }
 
     /**

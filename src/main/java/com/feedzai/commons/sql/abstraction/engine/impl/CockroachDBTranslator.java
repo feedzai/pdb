@@ -17,6 +17,8 @@
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
@@ -27,7 +29,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for CockroachDB.
@@ -125,5 +130,57 @@ public class CockroachDBTranslator extends PostgreSqlTranslator {
         } else {
             return join(all, delimiter);
         }
+    }
+
+    @Override
+    public String translateCreateTable(final DbEntity entity) {
+        final List<String> createTable = new ArrayList<>();
+
+        createTable.add("CREATE TABLE");
+        createTable.add(quotize(entity.getName()));
+
+        // COLUMNS
+        final List<String> columns = new ArrayList<>();
+        for (DbColumn c : entity.getColumns()) {
+            final List<String> column = new ArrayList<>();
+            column.add(quotize(c.getName()));
+            column.add(translate(c));
+
+            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+                column.add(cc.translate());
+            }
+
+            if (c.isDefaultValueSet()) {
+                column.add("DEFAULT");
+                column.add(translate(c.getDefaultValue()));
+            }
+
+            columns.add(join(column, " "));
+        }
+        createTable.add("(" + join(columns, ", "));
+        // COLUMNS end
+
+
+        // PRIMARY KEY
+        final List<String> pks = new ArrayList<>();
+        for (String pk : entity.getPkFields()) {
+            pks.add(quotize(pk));
+        }
+
+        if (!pks.isEmpty()) {
+            createTable.add(",");
+
+            final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
+
+            createTable.add("CONSTRAINT");
+            createTable.add(quotize(pkName));
+            createTable.add("PRIMARY KEY");
+            createTable.add("(" + join(pks, ", ") + ")");
+        }
+        // PK end
+
+        createTable.add(")");
+
+        return join(createTable, " ");
     }
 }
