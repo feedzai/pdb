@@ -2296,32 +2296,92 @@ public class EngineGeneralTest {
 
     @Test
     public void testConcat() throws DatabaseEngineException {
-        test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
+        test6Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
                 .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
                 .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto")
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
                 .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste")
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
                 .build());
-        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre")
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
                 .build());
 
         final Query query =
                 select(
                         concat(k("."),
                                column("COL5"),
-                               cast(column("COL1"), STRING)).alias("concat"))
+                               column("COL6")).alias("concat"))
                         .from(table("TEST"));
 
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
-        assertEquals("Concat must be 'teste.1'", "teste.1", result.get(0).get("concat").toString());
-        assertEquals("Concat must be 'xpto.2'", "xpto.2", result.get(1).get("concat").toString());
-        assertEquals("Concat must be 'xpto.3'", "xpto.3", result.get(2).get("concat").toString());
-        assertEquals("Concat must be 'teste.4'", "teste.4", result.get(3).get("concat").toString());
-        assertEquals("Concat must be 'pomme de terre.5'", "pomme de terre.5", result.get(4).get("concat").toString());
+        assertEquals("teste.teste", result.get(0).get("concat").toString());
+        assertEquals("xpto.xpto", result.get(1).get("concat").toString());
+        assertEquals("xpto.xpto", result.get(2).get("concat").toString());
+        assertEquals("teste.teste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terre.pomme de terre", result.get(4).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatEmpty() throws DatabaseEngineException {
+        test6Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
+                                      .build());
+
+        final Query query =
+                select(
+                        concat(k(""),
+                               column("COL5"),
+                               column("COL6")).alias("concat"))
+                        .from(table("TEST"));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("testeteste", result.get(0).get("concat").toString());
+        assertEquals("xptoxpto", result.get(1).get("concat").toString());
+        assertEquals("xptoxpto", result.get(2).get("concat").toString());
+        assertEquals("testeteste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terrepomme de terre", result.get(4).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatColumn() throws DatabaseEngineException {
+        test6Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
+                                      .build());
+        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
+                                      .build());
+
+        final Query query =
+                select(
+                        concat(column("COL5"),
+                               column("COL5"),
+                               column("COL6")).alias("concat"))
+                        .from(table("TEST"));
+
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+
+        assertEquals("testetesteteste", result.get(0).get("concat").toString());
+        assertEquals("xptoxptoxpto", result.get(1).get("concat").toString());
+        assertEquals("xptoxptoxpto", result.get(2).get("concat").toString());
+        assertEquals("testetesteteste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terrepomme de terrepomme de terre", result.get(4).get("concat").toString());
     }
 
     /**
@@ -3717,6 +3777,19 @@ public class EngineGeneralTest {
         assertEquals("col4 ok?", 8L, (long) test.get(7).get("COL4").toLong());
     }
 
+    protected void test6Columns() throws DatabaseEngineException {
+        DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING)
+                .addColumn("COL6", STRING)
+                .build();
+
+        engine.addEntity(entity);
+    }
 
     protected void test5Columns() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
