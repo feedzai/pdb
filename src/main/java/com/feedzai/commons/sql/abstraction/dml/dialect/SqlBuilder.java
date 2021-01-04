@@ -798,10 +798,13 @@ public final class SqlBuilder {
      * The UPDATE FROM operator.
      *
      * @param table The table.
+     * @param from The from.
      * @return The UPDATE FROM expression.
+     * @implNote Apart from PostgreSQL, engines do not support this operator, so the final SQL will be different.
+     * @implNote Check https://stackoverflow.com/a/44845278
      */
-    public static UpdateFrom updateFrom(final Expression table) {
-        return new UpdateFrom(table);
+    public static UpdateFrom updateFrom(final Expression table, final Expression from) {
+        return new UpdateFrom(table, from);
     }
 
     /**

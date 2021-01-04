@@ -453,6 +453,7 @@ In this section we describe queries that make changes to the database, while in 
 |Function|Description|
 |:---|:---|
 |[update](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#update(com.feedzai.commons.sql.abstraction.dml.Expression))|Creates an update query that will affect the table referred by the given expression.|
+|[updateFrom](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#updateFrom(com.feedzai.commons.sql.abstraction.dml.Expression, com.feedzai.commons.sql.abstraction.dml.Expression))|Creates an update query that will affect the table referred by the first expression, with data from the second expression.|
 |[set](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#set(com.feedzai.commons.sql.abstraction.dml.Expression...))|Expression that defines the values that will be assigned to each given column.|
 |[where](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/Update.html#where(com.feedzai.commons.sql.abstraction.dml.Expression))|Expression for filtering/selecting the affected entries.|
 |[table](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/dml/dialect/SqlBuilder.html#table(java.lang.String))|Creates a reference to a table of your choice.|

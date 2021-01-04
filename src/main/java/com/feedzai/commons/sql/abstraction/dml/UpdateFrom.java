@@ -26,26 +26,19 @@ public class UpdateFrom extends Update {
     /**
      * The from clause.
      */
-    private Expression from;
+    private final Expression from;
 
     /**
      * Creates a new {@link UpdateFrom} instance.
      *
      * @param table the table to update.
+     * @param from the from.
+     * @implNote Apart from PostgreSQL, engines do not support this operator, so the final SQL will be different.
+     * @implNote Check https://stackoverflow.com/a/44845278
      */
-    public UpdateFrom(final Expression table) {
+    public UpdateFrom(final Expression table, final Expression from) {
         super(table);
-    }
-
-    /**
-     * Sets the from clause.
-     *
-     * @param from the from clause.
-     * @return this instance.
-     */
-    public UpdateFrom from(final Expression from) {
         this.from = from;
-        return this;
     }
 
     /**

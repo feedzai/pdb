@@ -2641,8 +2641,7 @@ public class EngineGeneralTest {
                                       .build());
 
         final Update updateFrom =
-                updateFrom(table("TEST"))
-                        .from(table("TEST2"))
+                updateFrom(table("TEST"), table("TEST2"))
                         .set(eq(column("COL5"), column("TEST2", "COL2")))
                         .where(eq(column("TEST", "COL1"), column("TEST2", "COL1")));
 
