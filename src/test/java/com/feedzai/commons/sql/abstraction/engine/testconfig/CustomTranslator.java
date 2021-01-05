@@ -120,4 +120,9 @@ public class CustomTranslator extends AbstractTranslator {
     public List<String> translateCreateIndexes(final DbEntity entity) {
         return null;
     }
+
+    @Override
+    public List<String> translateCreateSequences(final DbEntity entity) {
+        return null;
+    }
 }

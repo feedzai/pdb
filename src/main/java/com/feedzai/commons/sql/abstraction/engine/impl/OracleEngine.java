@@ -544,35 +544,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void addSequences(DbEntity entity) throws DatabaseEngineException {
-        for (DbColumn column : entity.getColumns()) {
-            if (!column.isAutoInc()) {
-                continue;
-            }
-
-            final String sequenceName = md5(format("%s_%s_SEQ", entity.getName(), column.getName()), properties.getMaxIdentifierSize());
-
-            List<String> createSequence = new ArrayList<>();
-            createSequence.add("CREATE SEQUENCE ");
-            createSequence.add(quotize(sequenceName));
-            createSequence.add("MINVALUE 0");
-            createSequence.add("MAXVALUE");
-            switch (column.getDbColumnType()) {
-                case INT:
-                    createSequence.add(format("%d", Integer.MAX_VALUE));
-
-                    break;
-                case LONG:
-                    createSequence.add(format("%d", Long.MAX_VALUE));
-
-                    break;
-                default:
-                    throw new DatabaseEngineException("Auto incrementation is only supported on INT and LONG");
-            }
-            createSequence.add("START WITH 1");
-            createSequence.add("INCREMENT BY 1");
-
-            String statement = join(createSequence, " ");
-
+        for (final String statement : translator.translateCreateSequences(entity)) {
             logger.trace(statement);
 
             Statement s = null;
@@ -581,7 +553,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
-                    logger.debug(dev, "'{}' is already defined", sequenceName);
+                    logger.debug(dev, "Sequence is already defined");
+                    logger.debug(dev, ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);

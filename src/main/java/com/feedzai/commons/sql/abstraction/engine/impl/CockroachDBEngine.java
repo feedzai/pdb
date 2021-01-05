@@ -139,37 +139,7 @@ public class CockroachDBEngine extends PostgreSqlEngine {
 
     @Override
     protected void addSequences(final DbEntity entity) throws DatabaseEngineException {
-        for (final DbColumn column : entity.getColumns()) {
-            if (!column.isAutoInc()) {
-                continue;
-            }
-
-            final String sequenceName = getQuotizedSequenceName(entity, column.getName());
-
-            final StringBuilder createSequence = new StringBuilder()
-                    .append("CREATE SEQUENCE ")
-                    .append(sequenceName)
-                    .append(" MINVALUE 0 MAXVALUE ");
-            switch (column.getDbColumnType()) {
-                case INT:
-                    createSequence.append(Integer.MAX_VALUE);
-                    break;
-                case LONG:
-                    createSequence.append(Long.MAX_VALUE);
-                    break;
-                default:
-                    throw new DatabaseEngineException("Auto incrementation is only supported on INT and LONG");
-            }
-            createSequence.append(" START 1 INCREMENT 1;");
-
-            createSequence.append("ALTER TABLE ")
-                    .append(quotize(entity.getName()))
-                    .append(" ALTER COLUMN ")
-                    .append(quotize(column.getName()))
-                    .append(" SET DEFAULT nextval('").append(sequenceName).append("')");
-
-            final String statement = createSequence.toString();
-
+        for (final String statement : translator.translateCreateSequences(entity)) {
             logger.trace(statement);
 
             Statement s = null;
@@ -178,7 +148,8 @@ public class CockroachDBEngine extends PostgreSqlEngine {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
                 if (ex.getSQLState().equals(NAME_ALREADY_EXISTS)) {
-                    logger.debug(dev, "Sequence {} is already defined", sequenceName);
+                    logger.debug(dev, "Sequence is already defined");
+                    logger.debug(dev, ex.getMessage());
                     handleOperation(
                             new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_ALREADY_EXISTS), ex
                     );

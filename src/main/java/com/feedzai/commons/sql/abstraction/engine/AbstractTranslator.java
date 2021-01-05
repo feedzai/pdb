@@ -45,6 +45,7 @@ import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.commons.lang3.StringUtils;
@@ -641,4 +642,8 @@ public abstract class AbstractTranslator {
     public abstract String translatePrimaryKeysConstraints(DbEntity entity);
     public abstract List<String> translateForeignKey(DbEntity entity);
     public abstract List<String> translateCreateIndexes(DbEntity entity);
+    public List<String> translateCreateSequences(DbEntity entity) {
+        // the majority of engines don't need additional SQL to create sequences.
+        return ImmutableList.of();
+    }
 }

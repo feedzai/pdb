@@ -22,6 +22,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 
@@ -188,5 +189,46 @@ public class CockroachDBTranslator extends PostgreSqlTranslator {
     public String translatePrimaryKeysConstraints(final DbEntity entity) {
         // primary keys are created on table creation.
         return "";
+    }
+
+    @Override
+    public List<String> translateCreateIndexes(final DbEntity entity) {
+        final List<String> createSeqs = new ArrayList<>();
+
+        for (final DbColumn column : entity.getColumns()) {
+            if (!column.isAutoInc()) {
+                continue;
+            }
+
+            final String sequenceName = quotize(md5(format("%s_%s_SEQ", entity.getName(), column.getName()),
+                                                    properties.getMaxIdentifierSize()));
+
+            final StringBuilder createSequence = new StringBuilder()
+                    .append("CREATE SEQUENCE ")
+                    .append(sequenceName)
+                    .append(" MINVALUE 0 MAXVALUE ");
+            switch (column.getDbColumnType()) {
+                case INT:
+                    createSequence.append(Integer.MAX_VALUE);
+                    break;
+                case LONG:
+                    createSequence.append(Long.MAX_VALUE);
+                    break;
+                default:
+                    throw new DatabaseEngineRuntimeException("Auto incrementation is only supported on INT and LONG");
+            }
+            createSequence.append(" START 1 INCREMENT 1;");
+
+            createSequence.append("ALTER TABLE ")
+                          .append(quotize(entity.getName()))
+                          .append(" ALTER COLUMN ")
+                          .append(quotize(column.getName()))
+                          .append(" SET DEFAULT nextval('").append(sequenceName).append("')");
+
+            final String statement = createSequence.toString();
+
+            createSeqs.add(statement);
+        }
+        return createSeqs;
     }
 }

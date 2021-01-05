@@ -35,6 +35,7 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
@@ -542,6 +543,46 @@ public class DB2Translator extends AbstractTranslator {
             createIndexes.add(statement);
         }
         return createIndexes;
+    }
+
+    @Override
+    public List<String> translateCreateSequences(final DbEntity entity) {
+        final List<String> createSeqs = new ArrayList<>();
+
+        for (final DbColumn column : entity.getColumns()) {
+            if (!column.isAutoInc()) {
+                continue;
+            }
+
+            final String sequenceName = md5(format("%s_%s_SEQ", entity.getName(), column.getName()),
+                                            properties.getMaxIdentifierSize()
+            );
+
+            final List<String> createSequence = new ArrayList<>();
+            createSequence.add("CREATE SEQUENCE");
+            createSequence.add(quotize(sequenceName));
+            createSequence.add("MINVALUE 0");
+            switch (column.getDbColumnType()) {
+                case INT:
+                    createSequence.add("MAXVALUE");
+                    createSequence.add(format("%d", Integer.MAX_VALUE));
+
+                    break;
+                case LONG:
+                    createSequence.add("NO MAXVALUE");
+
+                    break;
+                default:
+                    throw new DatabaseEngineRuntimeException("Auto incrementation is only supported on INT and LONG");
+            }
+            createSequence.add("START WITH 1");
+            createSequence.add("INCREMENT BY 1");
+
+            final String statement = join(createSequence, " ");
+
+            createSeqs.add(statement);
+        }
+        return createSeqs;
     }
 
     /**
