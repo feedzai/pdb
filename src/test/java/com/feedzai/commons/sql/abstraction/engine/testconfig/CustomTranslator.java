@@ -115,4 +115,9 @@ public class CustomTranslator extends AbstractTranslator {
     public List<String> translateForeignKey(final DbEntity entity) {
         return null;
     }
+
+    @Override
+    public List<String> translateCreateIndexes(final DbEntity entity) {
+        return null;
+    }
 }

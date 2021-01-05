@@ -444,4 +444,38 @@ public class H2Translator extends AbstractTranslator {
 
         return alterTables;
     }
+
+    @Override
+    public List<String> translateCreateIndexes(final DbEntity entity) {
+        final List<DbIndex> indexes = entity.getIndexes();
+        final List<String> createIndexes = new ArrayList<>();
+
+        for (final DbIndex index : indexes) {
+
+            final List<String> createIndex = new ArrayList<>();
+            createIndex.add("CREATE");
+            if (index.isUnique()) {
+                createIndex.add("UNIQUE");
+            }
+            createIndex.add("INDEX");
+
+            final List<String> columns = new ArrayList<>();
+            final List<String> columnsForName = new ArrayList<>();
+            for (final String column : index.getColumns()) {
+                columns.add(quotize(column));
+                columnsForName.add(column);
+            }
+
+            final String idxName = md5(format("%s_%s_IDX", entity.getName(),
+                                              join(columnsForName, "_")), properties.getMaxIdentifierSize());
+            createIndex.add(quotize(idxName));
+            createIndex.add("ON");
+            createIndex.add(quotize(entity.getName()));
+            createIndex.add("(" + join(columns, ", ") + ")");
+
+            final String statement = join(createIndex, " ");
+            createIndexes.add(statement);
+        }
+        return createIndexes;
+    }
 }

@@ -248,31 +248,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             return;
         }
 
-        List<DbIndex> indexes = entity.getIndexes();
-
-        for (DbIndex index : indexes) {
-
-            List<String> createIndex = new ArrayList<>();
-            createIndex.add("CREATE");
-            if (index.isUnique()) {
-                createIndex.add("UNIQUE");
-            }
-            createIndex.add("INDEX");
-
-            List<String> columns = new ArrayList<>();
-            List<String> columnsForName = new ArrayList<>();
-            for (String column : index.getColumns()) {
-                columns.add(quotize(column, escapeCharacter()));
-                columnsForName.add(column);
-            }
-            final String idxName = md5(format("%s_%s_IDX", entity.getName(), join(columnsForName, "_")), properties.getMaxIdentifierSize());
-            createIndex.add(quotize(idxName, escapeCharacter()));
-            createIndex.add("ON");
-            createIndex.add(quotize(entity.getName(), escapeCharacter()));
-            createIndex.add("(" + join(columns, ", ") + ")");
-
-            final String statement = join(createIndex, " ");
-
+        for (final String statement : translator.translateCreateIndexes(entity)) {
             logger.trace(statement);
 
             Statement s = null;
@@ -281,7 +257,8 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
                 if (ex.getErrorCode() == DUPLICATE_KEY_NAME) {
-                    logger.debug(dev, "'{}' is already defined", idxName);
+                    logger.debug(dev, "Index is already defined");
+                    logger.debug(dev, ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);

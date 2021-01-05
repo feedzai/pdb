@@ -640,4 +640,5 @@ public abstract class AbstractTranslator {
     }
     public abstract String translatePrimaryKeysConstraints(DbEntity entity);
     public abstract List<String> translateForeignKey(DbEntity entity);
+    public abstract List<String> translateCreateIndexes(DbEntity entity);
 }

@@ -251,32 +251,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     protected void addIndexes(final DbEntity entity) throws DatabaseEngineException {
-        List<DbIndex> indexes = entity.getIndexes();
-
-        for (DbIndex index : indexes) {
-
-
-            List<String> createIndex = new ArrayList<>();
-            createIndex.add("CREATE");
-            if (index.isUnique()) {
-                createIndex.add("UNIQUE");
-            }
-            createIndex.add("INDEX");
-
-            List<String> columns = new ArrayList<>();
-            List<String> columnsForName = new ArrayList<>();
-            for (String column : index.getColumns()) {
-                columns.add(quotize(column));
-                columnsForName.add(column);
-            }
-            final String idxName = md5(format("%s_%s_IDX", entity.getName(), join(columnsForName, "_")), properties.getMaxIdentifierSize());
-            createIndex.add(quotize(idxName));
-            createIndex.add("ON");
-            createIndex.add(quotize(entity.getName()));
-            createIndex.add("(" + join(columns, ", ") + ")");
-
-            final String statement = join(createIndex, " ");
-
+        for (final String statement : translator.translateCreateIndexes(entity)) {
             logger.trace(statement);
 
             Statement s = null;
@@ -285,7 +260,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
                 if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
-                    logger.debug(dev, "'{}' is already defined", idxName);
+                    logger.debug(dev, "Index is already defined");
+                    logger.debug(dev, ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);
