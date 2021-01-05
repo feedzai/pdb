@@ -40,12 +40,15 @@ import com.feedzai.commons.sql.abstraction.util.StringUtils;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.join;
@@ -497,6 +500,66 @@ public class SqlServerTranslator extends AbstractTranslator {
         createTable.add("(" + join(columns, ", ") + ")");
 
         return join(createTable, " ");
+    }
+
+    @Override
+    public String translatePrimaryKeysNotNull(final DbEntity entity) {
+        final List<String> notNull = new ArrayList<>();
+        for (final String pk : entity.getPkFields()) {
+            DbColumn toAlter = null;
+            for (DbColumn col : entity.getColumns()) {
+                if (col.getName().equals(pk)) {
+                    toAlter = col;
+                    break;
+                }
+            }
+
+            if (toAlter == null) {
+                throw new DatabaseEngineRuntimeException("The column you specified for Primary Key does not exist.");
+            } else {
+                boolean isNotNull = false;
+                final List<String> cons = new ArrayList<>();
+                cons.add(quotize(toAlter.getName()));
+                cons.add(translate(toAlter));
+                for (DbColumnConstraint cc : toAlter.getColumnConstraints()) {
+                    if (cc == DbColumnConstraint.NOT_NULL) {
+                        isNotNull = true;
+                    }
+
+                    cons.add(cc.translate());
+                }
+
+                if (!isNotNull) {
+                    cons.add(DbColumnConstraint.NOT_NULL.translate());
+
+                    final String alterTable = format("ALTER TABLE %s ALTER COLUMN %s",
+                                                     quotize(entity.getName()), join(cons, " "));
+                    notNull.add(alterTable);
+                }
+            }
+        }
+
+        return join(notNull, " ; ");
+    }
+
+    @Override
+    public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        final List<String> pks = new ArrayList<>();
+        for (final String pk : entity.getPkFields()) {
+            pks.add(quotize(pk));
+        }
+
+        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
+
+        final List<String> statement = new ArrayList<>();
+        statement.add("ALTER TABLE");
+        statement.add(quotize(entity.getName()));
+        statement.add("ADD CONSTRAINT");
+        statement.add(quotize(pkName));
+        statement.add("PRIMARY KEY");
+        statement.add("(" + join(pks, ", ") + ")");
+
+        return join(statement, " ");
     }
 
     /**

@@ -217,23 +217,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
         }
 
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
-            pks.add(quotize(pk, escapeCharacter()));
-        }
-
-        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
-
-        List<String> statement = new ArrayList<>();
-        statement.add("ALTER TABLE");
-        statement.add(quotize(entity.getName(), escapeCharacter()));
-        statement.add("ADD CONSTRAINT");
-        statement.add(quotize(pkName, escapeCharacter()));
-        statement.add("PRIMARY KEY");
-        statement.add("(" + join(pks, ", ") + ")");
-
-        final String addPrimaryKey = join(statement, " ");
-
+        final String addPrimaryKey = translator.translatePrimaryKeysConstraints(entity);
         logger.trace(addPrimaryKey);
 
         Statement s = null;

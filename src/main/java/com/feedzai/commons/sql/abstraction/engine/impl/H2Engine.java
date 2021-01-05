@@ -242,22 +242,7 @@ public class H2Engine extends AbstractDatabaseEngine {
             return;
         }
 
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
-            pks.add(quotize(pk));
-        }
-
-        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
-
-        List<String> statement = new ArrayList<>();
-        statement.add("ALTER TABLE");
-        statement.add(quotize(entity.getName()));
-        statement.add("ADD CONSTRAINT");
-        statement.add(quotize(pkName));
-        statement.add("PRIMARY KEY");
-        statement.add("(" + join(pks, ", ") + ")");
-
-        final String addPrimaryKey = join(statement, " ");
+        final String addPrimaryKey = translator.translatePrimaryKeysConstraints(entity);
 
         logger.trace(addPrimaryKey);
 

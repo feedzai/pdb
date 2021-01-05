@@ -103,4 +103,9 @@ public class CustomTranslator extends AbstractTranslator {
     public String translateCreateTable(final DbEntity entity) {
         return null;
     }
+
+    @Override
+    public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        return null;
+    }
 }

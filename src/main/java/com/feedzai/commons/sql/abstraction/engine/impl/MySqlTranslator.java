@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.join;
@@ -381,5 +382,25 @@ public class MySqlTranslator extends AbstractTranslator {
         createTable.add("(" + join(columns, ", ") + pks + ")");
 
         return join(createTable, " ");
+    }
+
+    @Override
+    public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        final List<String> pks = new ArrayList<>();
+        for (String pk : entity.getPkFields()) {
+            pks.add(quotize(pk, translateEscape()));
+        }
+
+        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
+
+        final List<String> statement = new ArrayList<>();
+        statement.add("ALTER TABLE");
+        statement.add(quotize(entity.getName(), translateEscape()));
+        statement.add("ADD CONSTRAINT");
+        statement.add(quotize(pkName, translateEscape()));
+        statement.add("PRIMARY KEY");
+        statement.add("(" + join(pks, ", ") + ")");
+
+        return join(statement, " ");
     }
 }

@@ -634,4 +634,9 @@ public abstract class AbstractTranslator {
     public abstract String translate(StringAgg stringAgg);
 
     public abstract String translateCreateTable(DbEntity entity);
+    public String translatePrimaryKeysNotNull(DbEntity entity) {
+        // usually engines don't need to specify columns as not nulls to be PK.
+        return "";
+    }
+    public abstract String translatePrimaryKeysConstraints(DbEntity entity);
 }

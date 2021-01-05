@@ -208,75 +208,20 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             return;
         }
 
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
-            DbColumn toAlter = null;
-            for (DbColumn col : entity.getColumns()) {
-                if (col.getName().equals(pk)) {
-                    toAlter = col;
-                    break;
-                }
-            }
-
-            if (toAlter == null) {
-                throw new DatabaseEngineException("The column you specified for Primary Key does not exist.");
-            } else {
-                boolean isNotNull = false;
-                List<String> cons = new ArrayList<>();
-                cons.add(quotize(toAlter.getName()));
-                cons.add(translateType(toAlter));
-                for (DbColumnConstraint cc : toAlter.getColumnConstraints()) {
-                    if (cc == DbColumnConstraint.NOT_NULL) {
-                        isNotNull = true;
-                    }
-
-                    cons.add(cc.translate());
-                }
-
-                if (!isNotNull) {
-                    cons.add(DbColumnConstraint.NOT_NULL.translate());
-
-                    final String alterTable = format("ALTER TABLE %s ALTER COLUMN %s", quotize(entity.getName()), join(cons, " "));
-                    logger.trace(alterTable);
-                    Statement s = null;
-                    try {
-                        s = conn.createStatement();
-                        s.executeUpdate(alterTable);
-                    } catch (final SQLException ex) {
-                        throw new DatabaseEngineException("Something went wrong altering the table. This shouldn't have happened", ex);
-                    } finally {
-                        try {
-                            if (s != null) {
-                                s.close();
-                            }
-                        } catch (final Exception e) {
-                            logger.trace("Error closing statement.", e);
-                        }
-                    }
-                }
-            }
-
-            pks.add(quotize(pk));
-        }
-
-        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
-
-        List<String> statement = new ArrayList<>();
-        statement.add("ALTER TABLE");
-        statement.add(quotize(entity.getName()));
-        statement.add("ADD CONSTRAINT");
-        statement.add(quotize(pkName));
-        statement.add("PRIMARY KEY");
-        statement.add("(" + join(pks, ", ") + ")");
-
-        final String addPrimaryKey = join(statement, " ");
-
-        logger.trace(addPrimaryKey);
+        final String notNullPk = translator.translatePrimaryKeysNotNull(entity);
+        final String addPrimaryKey = translator.translatePrimaryKeysConstraints(entity);
 
         Statement s = null;
         try {
+            logger.trace(notNullPk);
+            s = conn.createStatement();
+            s.executeUpdate(notNullPk);
+            s.close();
+
+            logger.trace(addPrimaryKey);
             s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
+            s.close();
         } catch (final SQLException ex) {
             if (ex.getErrorCode() == TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());

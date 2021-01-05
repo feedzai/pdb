@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
+import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
 import static org.apache.commons.lang3.StringUtils.join;
@@ -446,5 +447,51 @@ public class DB2Translator extends AbstractTranslator {
         createTable.add("(" + join(columns, ", ") + ")");
 
         return join(createTable, " ");
+    }
+
+    @Override
+    public String translatePrimaryKeysNotNull(final DbEntity entity) {
+        return alterColumnSetNotNull(entity.getName(), entity.getPkFields());
+    }
+
+    @Override
+    public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        final List<String> pks = new ArrayList<>();
+        for (final String pk : entity.getPkFields()) {
+            pks.add(quotize(pk));
+        }
+
+        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
+
+        final List<String> statement = new ArrayList<>();
+        statement.add("ALTER TABLE");
+        statement.add(quotize(entity.getName()));
+        statement.add("ADD CONSTRAINT");
+        statement.add(quotize(pkName));
+        statement.add("PRIMARY KEY");
+        statement.add("(" + join(pks, ", ") + ")");
+
+        return join(statement, " ");
+    }
+
+    /**
+     * Generates a command to set the specified columns to enforce non nullability.
+     *
+     * @param tableName   The table name.
+     * @param columnNames The columns.
+     * @return The command to perform the operation.
+     */
+    private String alterColumnSetNotNull(final String tableName, final List<String> columnNames) {
+        final List<String> statement = new ArrayList<>();
+        statement.add("ALTER TABLE");
+        statement.add(quotize(tableName));
+
+        for (final String columnName : columnNames) {
+            statement.add("ALTER COLUMN");
+            statement.add(quotize(columnName));
+            statement.add("SET NOT NULL");
+        }
+
+        return join(statement, " ");
     }
 }

@@ -162,7 +162,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
         final String createTableStatement = translator.translateCreateTable(entity);
-
         logger.trace(createTableStatement);
 
         Statement s = null;
@@ -193,27 +192,9 @@ public class DB2Engine extends AbstractDatabaseEngine {
             return;
         }
 
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
-            pks.add(quotize(pk));
-        }
-
-
-        String alterColumnSetNotNull = alterColumnSetNotNull(entity.getName(), entity.getPkFields());
-
-        final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
-
-        List<String> statement = new ArrayList<>();
-        statement.add("ALTER TABLE");
-        statement.add(quotize(entity.getName()));
-        statement.add("ADD CONSTRAINT");
-        statement.add(quotize(pkName));
-        statement.add("PRIMARY KEY");
-        statement.add("(" + join(pks, ", ") + ")");
-
-        final String addPrimaryKey = join(statement, " ");
-        String reorg = reorg(entity.getName());
-
+        final String alterColumnSetNotNull = translator.translatePrimaryKeysNotNull(entity);
+        final String addPrimaryKey = translator.translatePrimaryKeysConstraints(entity);
+        final String reorg = reorg(entity.getName());
 
         Statement s = null;
         try {
@@ -264,27 +245,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
         statement.add("CALL sysproc.admin_cmd('REORG TABLE");
         statement.add(quotize(tableName));
         statement.add("')");
-
-        return join(statement, " ");
-    }
-
-    /**
-     * Generates a command to set the specified columns to enforce non nullability.
-     *
-     * @param tableName   The table name.
-     * @param columnNames The columns.
-     * @return The command to perform the operation.
-     */
-    private String alterColumnSetNotNull(String tableName, List<String> columnNames) {
-        List<String> statement = new ArrayList<>();
-        statement.add("ALTER TABLE");
-        statement.add(quotize(tableName));
-
-        for (String columnName : columnNames) {
-            statement.add("ALTER COLUMN");
-            statement.add(quotize(columnName));
-            statement.add("SET NOT NULL");
-        }
 
         return join(statement, " ");
     }

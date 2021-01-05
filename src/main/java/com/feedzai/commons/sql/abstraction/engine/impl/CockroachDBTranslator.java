@@ -183,4 +183,10 @@ public class CockroachDBTranslator extends PostgreSqlTranslator {
 
         return join(createTable, " ");
     }
+
+    @Override
+    public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        // primary keys are created on table creation.
+        return "";
+    }
 }
