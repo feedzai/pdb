@@ -639,4 +639,5 @@ public abstract class AbstractTranslator {
         return "";
     }
     public abstract String translatePrimaryKeysConstraints(DbEntity entity);
+    public abstract List<String> translateForeignKey(DbEntity entity);
 }

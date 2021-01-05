@@ -408,4 +408,40 @@ public class H2Translator extends AbstractTranslator {
 
         return join(statement, " ");
     }
+
+    @Override
+    public List<String> translateForeignKey(final DbEntity entity) {
+        final List<String> alterTables = new ArrayList<>();
+
+        for (DbFk fk : entity.getFks()) {
+            final List<String> quotizedLocalColumns = new ArrayList<>();
+            for (String s : fk.getLocalColumns()) {
+                quotizedLocalColumns.add(quotize(s));
+            }
+
+            final List<String> quotizedForeignColumns = new ArrayList<>();
+            for (String s : fk.getForeignColumns()) {
+                quotizedForeignColumns.add(quotize(s));
+            }
+
+            final String table = quotize(entity.getName());
+            final String quotizedLocalColumnsSting = join(quotizedLocalColumns, ", ");
+            final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
+
+            final String alterTable =
+                    format("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+                            table,
+                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                                        properties.getMaxIdentifierSize()
+                            )),
+                            quotizedLocalColumnsSting,
+                            quotize(fk.getForeignTable()),
+                            quotizedForeignColumnsString
+            );
+
+            alterTables.add(alterTable);
+        }
+
+        return alterTables;
+    }
 }

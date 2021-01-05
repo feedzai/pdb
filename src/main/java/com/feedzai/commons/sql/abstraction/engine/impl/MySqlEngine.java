@@ -503,29 +503,9 @@ public class MySqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
-            final List<String> quotizedLocalColumns = new ArrayList<>();
-            for (String s : fk.getLocalColumns()) {
-                quotizedLocalColumns.add(quotize(s, escapeCharacter()));
-            }
+        final List<String> alterTables = translator.translateForeignKey(entity);
 
-            final List<String> quotizedForeignColumns = new ArrayList<>();
-            for (String s : fk.getForeignColumns()) {
-                quotizedForeignColumns.add(quotize(s, escapeCharacter()));
-            }
-
-            final String table = quotize(entity.getName(), escapeCharacter());
-            final String quotizedLocalColumnsSting = join(quotizedLocalColumns, ", ");
-            final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
-
-            final String alterTable =
-                    format(
-                            "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-                            table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize()), escapeCharacter()),
-                            quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable(), escapeCharacter()),
-                            quotizedForeignColumnsString);
+        for (final String alterTable : alterTables) {
 
             Statement alterTableStmt = null;
             try {

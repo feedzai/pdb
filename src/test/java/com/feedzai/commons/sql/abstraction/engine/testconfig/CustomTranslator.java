@@ -15,6 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.testconfig;
 
+import java.util.List;
+
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
@@ -106,6 +108,11 @@ public class CustomTranslator extends AbstractTranslator {
 
     @Override
     public String translatePrimaryKeysConstraints(final DbEntity entity) {
+        return null;
+    }
+
+    @Override
+    public List<String> translateForeignKey(final DbEntity entity) {
         return null;
     }
 }

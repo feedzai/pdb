@@ -566,29 +566,9 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
-            final List<String> quotizedLocalColumns = new ArrayList<>();
-            for (String s : fk.getLocalColumns()) {
-                quotizedLocalColumns.add(quotize(s));
-            }
-
-            final List<String> quotizedForeignColumns = new ArrayList<>();
-            for (String s : fk.getForeignColumns()) {
-                quotizedForeignColumns.add(quotize(s));
-            }
-
-            final String table = quotize(entity.getName());
-            final String quotizedLocalColumnsSting = join(quotizedLocalColumns, ", ");
-            final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
-
-            final String alterTable =
-                    format(
-                            "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-                            table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
-                            quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable()),
-                            quotizedForeignColumnsString);
+        final List<String> alterTables = translator.translateForeignKey(entity);
+        
+        for (final String alterTable : alterTables) {
 
             Statement alterTableStmt = null;
             try {

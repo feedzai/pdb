@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
@@ -415,5 +416,41 @@ public class OracleTranslator extends AbstractTranslator {
         statement.add("(" + join(pks, ", ") + ")");
 
         return join(statement, " ");
+    }
+
+    @Override
+    public List<String> translateForeignKey(final DbEntity entity) {
+        final List<String> alterTables = new ArrayList<>();
+
+        for (final DbFk fk : entity.getFks()) {
+            final List<String> quotizedLocalColumns = new ArrayList<>();
+            for (String s : fk.getLocalColumns()) {
+                quotizedLocalColumns.add(quotize(s));
+            }
+
+            final List<String> quotizedForeignColumns = new ArrayList<>();
+            for (final String s : fk.getForeignColumns()) {
+                quotizedForeignColumns.add(quotize(s));
+            }
+
+            final String quotizedTable = quotize(entity.getName());
+            final String quotizedLocalColumnsString = join(quotizedLocalColumns, ", ");
+            final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
+
+            final String alterTable =
+                    format("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+                           quotizedTable,
+                           quotize(md5(
+                                   "FK_" + quotizedTable + quotizedLocalColumnsString + quotizedForeignColumnsString,
+                                   properties.getMaxIdentifierSize()
+                           )),
+                           quotizedLocalColumnsString,
+                           quotize(fk.getForeignTable()),
+                           quotizedForeignColumnsString
+            );
+
+            alterTables.add(alterTable);
+        }
+        return alterTables;
     }
 }

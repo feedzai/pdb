@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
@@ -45,6 +46,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
@@ -560,6 +562,42 @@ public class SqlServerTranslator extends AbstractTranslator {
         statement.add("(" + join(pks, ", ") + ")");
 
         return join(statement, " ");
+    }
+
+    @Override
+    public List<String> translateForeignKey(final DbEntity entity) {
+        final List<String> alterTables = new ArrayList<>();
+
+        for (final DbFk fk : entity.getFks()) {
+            final List<String> quotizedLocalColumns = new ArrayList<>();
+            for (String s : fk.getLocalColumns()) {
+                quotizedLocalColumns.add(quotize(s));
+            }
+
+            final List<String> quotizedForeignColumns = new ArrayList<>();
+            for (final String s : fk.getForeignColumns()) {
+                quotizedForeignColumns.add(quotize(s));
+            }
+
+            final String table = quotize(entity.getName());
+            final String quotizedLocalColumnsSting = join(quotizedLocalColumns, ", ");
+            final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
+
+            final String alterTable =
+                    format("ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+                            table,
+                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                            properties.getMaxIdentifierSize()
+                            )),
+                            quotizedLocalColumnsSting,
+                            quotize(fk.getForeignTable()),
+                            quotizedForeignColumnsString
+            );
+
+            alterTables.add(alterTable);
+        }
+
+        return alterTables;
     }
 
     /**
