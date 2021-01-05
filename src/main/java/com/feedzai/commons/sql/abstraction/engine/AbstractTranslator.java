@@ -634,14 +634,55 @@ public abstract class AbstractTranslator {
      */
     public abstract String translate(StringAgg stringAgg);
 
+    /**
+     * Translates the given entity table creation to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The create table translation result.
+     */
     public abstract String translateCreateTable(DbEntity entity);
+
+    /**
+     * Translates the primary key not null constraints of the given entity table to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The primary key not null constraints translation result.
+     */
     public String translatePrimaryKeysNotNull(DbEntity entity) {
         // usually engines don't need to specify columns as not nulls to be PK.
         return "";
     }
+
+    /**
+     * Translates the primary key constraints of the given entity table to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The primary key constraints translation result.
+     */
     public abstract String translatePrimaryKeysConstraints(DbEntity entity);
+
+    /**
+     * Translates the foreign key constraints of the given entity table to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The foreign key constraints translation result.
+     */
     public abstract List<String> translateForeignKey(DbEntity entity);
+
+    /**
+     * Translates the index creation of the given entity table to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The index creation translation result.
+     */
     public abstract List<String> translateCreateIndexes(DbEntity entity);
+
+    /**
+     * Translates the sequence creation of the given entity table to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The sequence creation translation result.
+     */
     public List<String> translateCreateSequences(DbEntity entity) {
         // the majority of engines don't need additional SQL to create sequences.
         return ImmutableList.of();

@@ -985,6 +985,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
+     * Translates the given entity creation to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The translation result.
+     */
+    @Override
+    public String translateTableCreation(final DbEntity entity) {
+        return entity.translateEntityCreation(translator);
+    }
+
+    /**
      * @return The dialect being in use.
      */
     @Override

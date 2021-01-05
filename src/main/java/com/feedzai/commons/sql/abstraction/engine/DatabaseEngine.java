@@ -231,6 +231,14 @@ public interface DatabaseEngine extends AutoCloseable {
     String translate(final Expression query);
 
     /**
+     * Translates the given entity creation to the current dialect.
+     *
+     * @param entity The entity to translate.
+     * @return The translation result.
+     */
+    String translateTableCreation(final DbEntity entity);
+
+    /**
      * Gets the dialect being used.
      *
      * @return The dialect being used.
