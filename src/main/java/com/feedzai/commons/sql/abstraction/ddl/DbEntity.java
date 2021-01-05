@@ -143,6 +143,12 @@ public class DbEntity implements Serializable {
                 .addIndexes(indexes);
     }
 
+    /**
+     * Translates the given entity table creation to the translator's dialect.
+     *
+     * @param translator The translator.
+     * @return The create table translation result.
+     */
     public String translateEntityCreation(final AbstractTranslator translator) {
         return translator.translateCreateTable(this)
                 + translator.translatePrimaryKeysNotNull(this)
