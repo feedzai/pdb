@@ -15,43 +15,24 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
-
-import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.ddl.DbFk;
-import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
-import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
-import com.feedzai.commons.sql.abstraction.ddl.Rename;
-import com.feedzai.commons.sql.abstraction.dml.Cast;
-import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.Function;
-import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
-import com.feedzai.commons.sql.abstraction.dml.Name;
-import com.feedzai.commons.sql.abstraction.dml.Query;
-import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
-import com.feedzai.commons.sql.abstraction.dml.StringAgg;
-import com.feedzai.commons.sql.abstraction.dml.Union;
-import com.feedzai.commons.sql.abstraction.dml.View;
-import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
-import static org.apache.commons.lang3.StringUtils.join;
 
 /**
  * Provides SQL translation for MySQL.
