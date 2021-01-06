@@ -15,16 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
-import com.google.common.base.Joiner;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
@@ -54,6 +44,16 @@ import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
+import com.google.common.base.Joiner;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.escapeSql;

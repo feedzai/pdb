@@ -15,68 +15,14 @@
  */
 package com.feedzai.commons.sql.abstraction.dml.dialect;
 
-import java.util.Collection;
-
-import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.ddl.DbFk;
-import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
-import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
-import com.feedzai.commons.sql.abstraction.ddl.Rename;
-import com.feedzai.commons.sql.abstraction.dml.All;
-import com.feedzai.commons.sql.abstraction.dml.Between;
-import com.feedzai.commons.sql.abstraction.dml.Case;
-import com.feedzai.commons.sql.abstraction.dml.Cast;
-import com.feedzai.commons.sql.abstraction.dml.Coalesce;
-import com.feedzai.commons.sql.abstraction.dml.Delete;
-import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.Function;
-import com.feedzai.commons.sql.abstraction.dml.InternalFunction;
-import com.feedzai.commons.sql.abstraction.dml.K;
-import com.feedzai.commons.sql.abstraction.dml.Literal;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
-import com.feedzai.commons.sql.abstraction.dml.Name;
-import com.feedzai.commons.sql.abstraction.dml.Query;
-import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
-import com.feedzai.commons.sql.abstraction.dml.StringAgg;
-import com.feedzai.commons.sql.abstraction.dml.Truncate;
-import com.feedzai.commons.sql.abstraction.dml.Union;
-import com.feedzai.commons.sql.abstraction.dml.Update;
-import com.feedzai.commons.sql.abstraction.dml.UpdateFrom;
-import com.feedzai.commons.sql.abstraction.dml.Values;
-import com.feedzai.commons.sql.abstraction.dml.View;
-import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.ddl.*;
+import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
-import static com.feedzai.commons.sql.abstraction.dml.Function.AVG;
-import static com.feedzai.commons.sql.abstraction.dml.Function.CEILING;
-import static com.feedzai.commons.sql.abstraction.dml.Function.COUNT;
-import static com.feedzai.commons.sql.abstraction.dml.Function.FLOOR;
-import static com.feedzai.commons.sql.abstraction.dml.Function.LOWER;
-import static com.feedzai.commons.sql.abstraction.dml.Function.MAX;
-import static com.feedzai.commons.sql.abstraction.dml.Function.MIN;
-import static com.feedzai.commons.sql.abstraction.dml.Function.STDDEV;
-import static com.feedzai.commons.sql.abstraction.dml.Function.SUM;
-import static com.feedzai.commons.sql.abstraction.dml.Function.UPPER;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.AND;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.COMMA;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.DIV;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.EQ;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.GT;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.GTEQ;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.IN;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LIKE;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LT;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.LTEQ;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.MINUS;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.MULT;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.NEQ;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.NOTIN;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.OR;
-import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.PLUS;
+import java.util.Collection;
+
+import static com.feedzai.commons.sql.abstraction.dml.Function.*;
+import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.*;
 
 /**
  * The SQL Builder that allows representing SQL queries
