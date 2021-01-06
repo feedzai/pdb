@@ -29,6 +29,7 @@ import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
@@ -260,6 +261,12 @@ public class PostgreSqlTranslator extends AbstractTranslator {
 
         String finalQuery = join(query, " ");
         return q.isEnclosed() ? ("(" + finalQuery + ")") : finalQuery;
+    }
+
+    @Override
+    public String translate(final Update update) {
+        // PostgreSQL supports UPDATE FROM. We can ignore the MERGE INTO approach.
+        return translateUpdate(update);
     }
 
     @Override

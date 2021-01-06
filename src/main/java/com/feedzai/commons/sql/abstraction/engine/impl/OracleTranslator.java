@@ -30,7 +30,6 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Update;
-import com.feedzai.commons.sql.abstraction.dml.UpdateFrom;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
@@ -248,38 +247,6 @@ public class OracleTranslator extends AbstractTranslator {
         }
 
         return q.isEnclosed() ? ("(" + finalQuery + ")") : finalQuery;
-    }
-
-    @Override
-    public String translate(UpdateFrom updateFrom) {
-        final Expression from = updateFrom.getFrom();
-
-        if (from == null) {
-            return translate((Update) updateFrom);
-        }
-
-        inject(from);
-
-        // This engine does not support UPDATE FROM.
-        // to workaround this, we do the following https://stackoverflow.com/a/44845278
-        final Update update = new Update(updateFrom.getTable());
-        for (final Expression column : updateFrom.getColumns()) {
-            final RepeatDelimiter eq = (RepeatDelimiter) column;
-            final Expression leftColumn = eq.getExpressions().get(0);
-            final Expression rightColumn = eq.getExpressions().get(1);
-
-            update.set(new RepeatDelimiter(eq.getDelimiter(),
-                                           ImmutableList.of(leftColumn,
-                                                            select(rightColumn)
-                                                                    .from(from)
-                                                                    .where(updateFrom.getWhere())
-                                                                    .enclose())));
-        }
-
-        inject(update);
-
-        return update.translate() + " WHERE EXISTS (SELECT * FROM "
-                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ")";
     }
 
     @Override

@@ -38,6 +38,10 @@ public class Update extends Expression {
      */
     private final List<Expression> columns = new ArrayList<>();
     /**
+     * The from clause.
+     */
+    private Expression from = null;
+    /**
      * The where clause.
      */
     private Expression where = null;
@@ -88,12 +92,39 @@ public class Update extends Expression {
     }
 
     /**
+     * Gets the FROM expression.
+     *
+     * @return The FROM expression.
+     */
+    public Expression getFrom() {
+        return from;
+    }
+
+    /**
+     * Checks whether the FROM expression is defined.
+     *
+     * @return true if the FROM expression is defined, false otherwise.
+     */
+    public boolean hasFrom() {
+        return from != null;
+    }
+
+    /**
      * Gets the WHERE expression.
      *
      * @return The WHERE expression.
      */
     public Expression getWhere() {
         return where;
+    }
+
+    /**
+     * Checks whether the WHERE expression is defined.
+     *
+     * @return true if the WHERE expression is defined, false otherwise.
+     */
+    public boolean hasWhere() {
+        return where != null;
     }
 
     /**
@@ -104,6 +135,18 @@ public class Update extends Expression {
      */
     public Update set(final Collection<? extends Expression> exps) {
         this.columns.addAll(exps);
+
+        return this;
+    }
+
+    /**
+     * Adds the FROM expression.
+     *
+     * @param from The FROM expression.
+     * @return This expression.
+     */
+    public Update from(final Expression from) {
+        this.from = from;
 
         return this;
     }

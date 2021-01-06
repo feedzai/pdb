@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Union;
 import com.feedzai.commons.sql.abstraction.dml.Update;
-import com.feedzai.commons.sql.abstraction.dml.UpdateFrom;
 import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
@@ -313,12 +312,19 @@ public abstract class AbstractTranslator {
      * @param u The object to translate.
      * @return The string representation of the given object.
      */
-    public String translate(Update u) {
-        final List<Expression> columns = u.getColumns();
-        final Expression table = u.getTable();
-        final Expression where = u.getWhere();
-        inject(table, where);
+    public String translate(final Update u) {
+        return u.hasFrom() ? translateUpdateFrom(u) : translateUpdate(u);
+    }
 
+    /**
+     * Translates {@link Update}.
+     *
+     * @param update The update to translate.
+     * @return The string representation of the given object.
+     */
+    protected String translateUpdate(final Update update) {
+        final Expression table = update.getTable();
+        inject(table);
 
         final List<String> temp = new ArrayList<>();
 
@@ -327,15 +333,22 @@ public abstract class AbstractTranslator {
         if (table.isAliased()) {
             temp.add(quotize(table.getAlias(), translateEscape()));
         }
-        temp.add("SET");
-        List<String> setTranslations = new ArrayList<>();
-        for (Expression e : columns) {
-            inject(e);
-            setTranslations.add(e.translate());
-        }
-        temp.add(join(setTranslations, ", "));
 
-        if (where != null) {
+        temp.add("SET");
+        temp.add(translateUpdateSetClause(update));
+
+        if (update.hasFrom()) {
+            final Expression from = update.getFrom();
+            inject(from);
+
+            temp.add("FROM");
+            temp.add(from.translate());
+        }
+
+        if (update.hasWhere()) {
+            final Expression where = update.getWhere();
+            inject(where);
+
             temp.add("WHERE");
             temp.add(where.translate());
         }
@@ -344,31 +357,50 @@ public abstract class AbstractTranslator {
     }
 
     /**
-     * Translates {@link UpdateFrom}.
+     * Translates {@link Update} considering the FROM clause.
      *
-     * @param updateFrom The object to translate.
+     * @param update The update to translate.
      * @return The string representation of the given object.
      */
-    public String translate(final UpdateFrom updateFrom) {
-        final Expression from = updateFrom.getFrom();
+    protected String translateUpdateFrom(final Update update) {
+        final Expression table = update.getTable();
+        final Expression from = update.getFrom();
+        final Expression where = update.getWhere();
+        inject(table, from, where);
 
-        if (from == null) {
-            return translate((Update) updateFrom);
+        final List<String> translate = new ArrayList<>();
+
+        // the majority of engines don't support UPDATE FROM, the most common way is to use MERGE INTO.
+        translate.add("MERGE INTO");
+        translate.add(table.translate());
+        translate.add("USING");
+        translate.add(from.translate());
+        translate.add("ON");
+
+        if (!update.hasWhere()) {
+            throw new DatabaseEngineRuntimeException("UPDATE FROM WHERE clause not defined.");
         }
 
-        inject(from);
+        translate.add(where.enclose().translate());
+        translate.add("WHEN MATCHED THEN UPDATE SET");
+        translate.add(translateUpdateSetClause(update));
 
-        final String translate = translate((Update) updateFrom);
-        final StringBuilder stringBuilder = new StringBuilder(translate);
+        return join(translate, " ");
+    }
 
-        final int where = translate.indexOf("WHERE");
-        if (where == -1) {
-            stringBuilder.append(" FROM ").append(from.translate()).append(";");
-        } else {
-            stringBuilder.insert(where, "FROM " + from.translate() + " ");
+    /**
+     * Translates {@link Update} SET clause.
+     *
+     * @param update The update to translate.
+     * @return The string representation of the SET clause.
+     */
+    protected String translateUpdateSetClause(final Update update) {
+        final List<String> setTranslations = new ArrayList<>();
+        for (final Expression e : update.getColumns()) {
+            inject(e);
+            setTranslations.add(e.translate());
         }
-
-        return stringBuilder.toString();
+        return join(setTranslations, ", ");
     }
 
     public String translate(final With with) {

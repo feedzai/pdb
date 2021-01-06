@@ -238,38 +238,6 @@ public class H2Translator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final UpdateFrom updateFrom) {
-        final Expression from = updateFrom.getFrom();
-
-        if (from == null) {
-            return translate((Update) updateFrom);
-        }
-
-        inject(from);
-
-        // This engine does not support UPDATE FROM.
-        // to workaround this, we do the following https://stackoverflow.com/a/44845278
-        final Update update = new Update(updateFrom.getTable());
-        for (final Expression column : updateFrom.getColumns()) {
-            final RepeatDelimiter eq = (RepeatDelimiter) column;
-            final Expression leftColumn = eq.getExpressions().get(0);
-            final Expression rightColumn = eq.getExpressions().get(1);
-
-            update.set(new RepeatDelimiter(eq.getDelimiter(),
-                                           ImmutableList.of(leftColumn,
-                                                            select(rightColumn)
-                                                                    .from(from)
-                                                                    .where(updateFrom.getWhere())
-                                                                    .enclose())));
-        }
-
-        inject(update);
-
-        return update.translate() + " WHERE EXISTS (SELECT * FROM "
-                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ");";
-    }
-
-    @Override
     public String translate(View v) {
         final Expression as = v.getAs();
         final String name = v.getName();

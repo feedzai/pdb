@@ -232,35 +232,39 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(final UpdateFrom updateFrom) {
-        final Expression from = updateFrom.getFrom();
+    protected String translateUpdateFrom(final Update update) {
+        final Expression table = update.getTable();
+        inject(table);
 
-        if (from == null) {
-            return translate((Update) updateFrom);
+        final List<String> temp = new ArrayList<>();
+
+        temp.add("UPDATE");
+        temp.add(table.translate());
+        if (table.isAliased()) {
+            temp.add(quotize(table.getAlias(), translateEscape()));
         }
 
-        inject(from);
+        // In MySQL, the UPDATE FROM can be replicated using UPDATE A INNER JOIN B ON <condition> approach.
+        if (update.hasFrom()) {
+            final Expression from = update.getFrom();
+            inject(from);
 
-        // This engine does not support UPDATE FROM.
-        // to workaround this, we do the following https://stackoverflow.com/a/44845278
-        final Update update = new Update(updateFrom.getTable());
-        for (final Expression column : updateFrom.getColumns()) {
-            final RepeatDelimiter eq = (RepeatDelimiter) column;
-            final Expression leftColumn = eq.getExpressions().get(0);
-            final Expression rightColumn = eq.getExpressions().get(1);
-
-            update.set(new RepeatDelimiter(eq.getDelimiter(),
-                                           ImmutableList.of(leftColumn,
-                                                            select(rightColumn)
-                                                                    .from(from)
-                                                                    .where(updateFrom.getWhere())
-                                                                    .enclose())));
+            temp.add("INNER JOIN");
+            temp.add(from.translate());
         }
 
-        inject(update);
+        if (update.hasWhere()) {
+            final Expression where = update.getWhere();
+            inject(where);
 
-        return update.translate() + " WHERE EXISTS (SELECT * FROM "
-                + from.translate() + " WHERE " + updateFrom.getWhere().translate() + ");";
+            temp.add("ON");
+            temp.add(where.enclose().translate());
+        }
+
+        temp.add("SET");
+        temp.add(translateUpdateSetClause(update));
+
+        return join(temp, " ");
     }
 
     @Override

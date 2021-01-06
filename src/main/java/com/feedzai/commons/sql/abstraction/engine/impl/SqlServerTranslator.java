@@ -30,7 +30,6 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.Update;
-import com.feedzai.commons.sql.abstraction.dml.UpdateFrom;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
@@ -43,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -404,37 +404,12 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Update u) {
-        // in SQL server, we need to specify the table in the from clause.
-        return translate(u, u.getTable());
-    }
-
-    @Override
-    public String translate(final UpdateFrom updateFrom) {
-        final Expression from = updateFrom.getFrom();
-
-        // if from == null fallback to a regular update.
-        // else translate update from.
-        if (from == null) {
-            return translate((Update) updateFrom);
-        } else {
-            inject(from);
-            return translate(updateFrom, from);
-        }
-    }
-
-    /**
-     * Translates {@link Update} considering the from clause.
-     *
-     * @param update The update to translate.
-     * @param from The from clause.
-     * @return The update string representation.
-     */
-    private String translate(final Update update, final Expression from) {
+    public String translate(final Update update) {
         final List<Expression> columns = update.getColumns();
         final Expression table = update.getTable();
+        final Expression from = update.hasFrom() ? update.getFrom() : update.getTable();
         final Expression where = update.getWhere();
-        inject(table, where);
+        inject(table, from, where);
 
         final List<String> temp = new ArrayList<>();
 
@@ -446,7 +421,7 @@ public class SqlServerTranslator extends AbstractTranslator {
         }
 
         temp.add("SET");
-        List<String> setTranslations = new ArrayList<>();
+        final List<String> setTranslations = new ArrayList<>();
         for (Expression e : columns) {
             inject(e);
             setTranslations.add(e.translate());

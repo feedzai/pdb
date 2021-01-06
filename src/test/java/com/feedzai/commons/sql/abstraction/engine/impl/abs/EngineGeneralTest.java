@@ -127,7 +127,6 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.updateFrom;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.upper;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.values;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.with;
@@ -2641,7 +2640,8 @@ public class EngineGeneralTest {
                                       .build());
 
         final Update updateFrom =
-                updateFrom(table("TEST"), table("TEST2"))
+                update(table("TEST"))
+                        .from(table("TEST2"))
                         .set(eq(column("COL5"), column("TEST2", "COL2")))
                         .where(eq(column("TEST", "COL1"), column("TEST2", "COL1")));
 
