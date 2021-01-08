@@ -42,6 +42,7 @@ import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +67,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -74,6 +76,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_USERNAME;
@@ -616,32 +619,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 addEntity(entity);
             } else {
                 validateEntity(entity);
-                dropFks(entity.getName());
-                List<String> toRemove = new ArrayList<>();
-                for (String dbColumn : tableMetadata.keySet()) {
-                    if (!entity.containsColumn(dbColumn)) {
-                        toRemove.add(dbColumn);
-                    }
-                }
-                if (!toRemove.isEmpty()) {
-                    if (properties.allowColumnDrop()) {
-                        dropColumn(entity, toRemove.toArray(new String[0]));
-                    } else {
-                        logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.",
-                                StringUtils.join(toRemove, ","), entity.getName());
-                    }
-                }
-                List<DbColumn> columns = new ArrayList<>();
-                for (DbColumn localColumn : entity.getColumns()) {
-                    if (!tableMetadata.containsKey(localColumn.getName())) {
-                        columns.add(localColumn);
-
-                    }
-                }
-                if (!columns.isEmpty()) {
-                    addColumn(entity, columns.toArray(new DbColumn[0]));
-                }
-                addFks(entity);
+                updateColumnsAndFks(tableMetadata, entity);
             }
         }
 
@@ -652,6 +630,108 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         entities.put(entity.getName(), me);
         logger.trace("Entity '{}' updated", entity.getName());
+    }
+
+    /**
+     * Updates columns and foreign keys in the entity.
+     * <p>
+     * A diff will be performed between the current entity metadata and the new entity to just add
+     * and remove the necessary columns and foreign keys.
+     * </p>
+     *
+     * @param currentEntityMetadata The existing entity metadata.
+     * @param entity                The updated entity.
+     *
+     * @throws DatabaseEngineException If something goes wrong while updating the entity.
+     */
+    private void updateColumnsAndFks(final Map<String, DbColumnType> currentEntityMetadata, final DbEntity entity) throws DatabaseEngineException {
+        final List<String> columnsToRemove = new LinkedList<>();
+
+        for (final String dbColumn : currentEntityMetadata.keySet()) {
+            if (!entity.containsColumn(dbColumn)) {
+                columnsToRemove.add(dbColumn);
+            }
+        }
+
+        final Map<String, DbFk> currentFks = getCurrentFks(entity.getName());
+        Set<String> fksToDrop = currentFks.entrySet().stream()
+                .filter(entry -> !entity.getFks().contains(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        dropFks(entity.getName(), fksToDrop);
+        if (!columnsToRemove.isEmpty()) {
+            if (properties.allowColumnDrop()) {
+                dropColumn(entity, columnsToRemove.toArray(new String[0]));
+            } else if (logger.isWarnEnabled()) {
+                logger.warn("Need to remove {} columns to update {} entity, but property allowColumnDrop is set to false.",
+                            StringUtils.join(columnsToRemove, ","), entity.getName()
+                );
+            }
+        }
+
+        List<DbColumn> columnsToAdd = new LinkedList<>();
+        for (DbColumn localColumn : entity.getColumns()) {
+            if (!currentEntityMetadata.containsKey(localColumn.getName())) {
+                columnsToAdd.add(localColumn);
+            }
+        }
+
+        if (!columnsToAdd.isEmpty()) {
+            addColumn(entity, columnsToAdd.toArray(new DbColumn[columnsToAdd.size()]));
+        }
+
+        Set<DbFk> fksToAdd = entity.getFks().stream()
+                                   .filter(fk -> !currentFks.containsValue(fk))
+                                   .collect(Collectors.toSet());
+
+        addFks(entity, fksToAdd);
+    }
+
+    /**
+     * Gets the current foreign keys in the table.
+     *
+     * <p>
+     * The entity metadata will be mapped to a {@link DbFk}.
+     * </p>
+     * <p>
+     * The resulting map will be the foreign key constraint name mapped to the {@link DbFk}.
+     * </p>
+     *
+     * @param entityName The entity name.
+     *
+     * @return Mapping between the foreign key constraint name and the {@link DbFk}.
+     *
+     * @throws DatabaseEngineException If it can't get the foreign keys metadata.
+     */
+    private Map<String, DbFk> getCurrentFks(final String entityName) throws DatabaseEngineException {
+        final Map<String, DbFk.Builder> existentFks = new HashMap<>();
+
+        try {
+            getConnection();
+            ResultSet rs = getMetadata().getImportedKeys(null, this.currentSchema, entityName);
+            while (rs.next()) {
+                final String fkName = rs.getString("FK_NAME");
+                final String foreignTable = rs.getString("FKTABLE_NAME");
+                final String localColumnName = rs.getString("PKCOLUMN_NAME");
+                final String foreignColumnName = rs.getString("FKCOLUMN_NAME");
+
+                existentFks.compute(fkName, (name, fk) -> fk == null
+                        ? new DbFk.Builder()
+                        .foreignTable(foreignTable)
+                        .addColumn(localColumnName)
+                        .addForeignColumn(foreignColumnName)
+                        : fk.foreignTable(foreignTable)
+                            .addColumn(localColumnName)
+                            .addForeignColumn(foreignColumnName)
+                );
+            }
+
+            return existentFks.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().build()));
+        } catch (final SQLException | InterruptedException | RetryLimitExceededException | RecoveryException exception) {
+            Thread.currentThread().interrupt();
+            throw new DatabaseEngineException("Error dropping foreign key", exception);
+        }
     }
 
     @Override
@@ -1392,12 +1472,26 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     protected abstract void addColumn(final DbEntity entity, final DbColumn... columns) throws DatabaseEngineException;
 
     /**
-     * Adds the FKs.
+     * Adds all foreign keys.
      *
      * @param entity The entity.
      * @throws DatabaseEngineException If something goes wrong creating the FKs.
      */
-    protected abstract void addFks(final DbEntity entity) throws DatabaseEngineException;
+    protected void addFks(final DbEntity entity) throws DatabaseEngineException {
+        addFks(entity, new HashSet<>(entity.getFks()));
+    }
+
+    /**
+     * Adds foreign keys constraints to an entity.
+     *
+     * @param entity The entity.
+     * @param fks    The foreign keys to be added.
+     *
+     * @throws DatabaseEngineException If something goes wrong creating the FKs.
+     */
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        throw new NotImplementedException();
+    }
 
     /**
      * Creates and gets the prepared statement that will be used for insertions.
@@ -1419,7 +1513,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * Drops this table foreign keys.
+     * Drops all foreign keys from the table.
      *
      * @param table The table name.
      * @throws DatabaseEngineException If something goes wrong dropping the FKs.
@@ -1433,17 +1527,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             while (rs.next()) {
                 fks.add(rs.getString("FK_NAME"));
             }
-            for (final String fk : fks) {
-                try {
-                    executeUpdate(
-                        String.format("ALTER TABLE %s DROP CONSTRAINT %s",
-                            quotize(table, escapeCharacter()), quotize(fk, escapeCharacter()))
-                    );
-                } catch (final Exception e) {
-                    logger.warn("Could not drop foreign key '{}' on table '{}'", fk, table);
-                    logger.debug("Could not drop foreign key.", e);
-                }
-            }
+            dropFks(table, fks);
         } catch (final Exception e) {
             throw new DatabaseEngineException("Error dropping foreign key", e);
         } finally {
@@ -1453,6 +1537,39 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 }
             } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
+            }
+        }
+    }
+
+    /**
+     * Gets the query to drop a foreign key.
+     *
+     * @param table The table name.
+     * @param fkName The foreign key name.
+     * @return The query to drop the foreign key.
+     */
+    protected String dropFkQuery(final String table, final String fkName) {
+        return String.format("ALTER TABLE %s DROP CONSTRAINT %s", table, fkName);
+    }
+
+    /**
+     * Drops foreign keys from a table.
+     *
+     * @param table The table.
+     * @param fks   The foreign key names to be dropped.
+     *
+     * @throws DatabaseEngineException If a foreign key can't be dropped.
+     */
+    protected void dropFks(final String table, final Set<String> fks) throws DatabaseEngineException {
+        for (final String fk : fks) {
+            try {
+                getConnection();
+                executeUpdate(
+                        dropFkQuery(quotize(table, escapeCharacter()), quotize(fk, escapeCharacter()))
+                );
+            } catch (final Exception e) {
+                logger.warn("Could not drop foreign key '{}' on table '{}'", fk, table);
+                logger.debug("Could not drop foreign key.", e);
             }
         }
     }
@@ -1471,7 +1588,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             getConnection();
 
             // get the entities
-            rs = this.conn.getMetaData().getTables(null, schemaPattern, "%", null);
+            rs = getMetadata().getTables(null, schemaPattern, "%", null);
 
             while (rs.next()) {
                 final String entityName = rs.getString("table_name");
@@ -1569,7 +1686,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             getConnection();
 
-            final DatabaseMetaData meta = this.conn.getMetaData();
+            final DatabaseMetaData meta = getMetadata();
             rsColumns = meta.getColumns(null, schemaPattern, tableNamePattern, null);
             while (rsColumns.next()) {
                 metaMap.put(
@@ -1589,6 +1706,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             } catch (final Exception a) {
                 logger.trace("Error closing result set.", a);
             }
+        }
+    }
+
+    private DatabaseMetaData getMetadata() throws DatabaseEngineException {
+        try {
+            return this.conn.getMetaData();
+        } catch (final SQLException exception) {
+            throw new DatabaseEngineException("Could not get metadata", exception);
         }
     }
 

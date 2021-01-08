@@ -57,6 +57,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -981,8 +982,8 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
+    protected void addFks(DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        for (final DbFk fk : fks) {
             final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
@@ -998,15 +999,15 @@ public class OracleEngine extends AbstractDatabaseEngine {
             final String quotizedForeignColumnsString = join(quotizedForeignColumns, ", ");
 
             final String alterTable = format(
-                "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
-                quotizedTable,
-                quotize(md5(
-                    "FK_" + quotizedTable + quotizedLocalColumnsString + quotizedForeignColumnsString,
-                    properties.getMaxIdentifierSize()
-                )),
-                quotizedLocalColumnsString,
-                quotize(fk.getReferencedTable()),
-                quotizedForeignColumnsString
+                    "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
+                    quotizedTable,
+                    quotize(md5(
+                            "FK_" + quotizedTable + quotizedLocalColumnsString + quotizedForeignColumnsString,
+                            properties.getMaxIdentifierSize()
+                    )),
+                    quotizedLocalColumnsString,
+                    quotize(fk.getReferencedTable()),
+                    quotizedForeignColumnsString
             );
 
             Statement alterTableStmt = null;
@@ -1019,7 +1020,11 @@ public class OracleEngine extends AbstractDatabaseEngine {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getMessage(), ex);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
                 } else {
-                    throw new DatabaseEngineException(format("Could not add Foreign Key to entity %s. Error code: %s.", entity.getName(), ex.getMessage()), ex);
+                    throw new DatabaseEngineException(format(
+                            "Could not add Foreign Key to entity %s. Error code: %s.",
+                            entity.getName(),
+                            ex.getMessage()
+                    ), ex);
                 }
             } finally {
                 try {

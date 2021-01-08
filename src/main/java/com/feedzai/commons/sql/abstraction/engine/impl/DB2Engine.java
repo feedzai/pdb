@@ -50,6 +50,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -739,8 +740,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
+    protected void addFks(DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        for (final DbFk fk : fks) {
             final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
@@ -759,10 +760,14 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     format(
                             "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
                             table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
+                            quotize(md5(
+                                    "FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                                    properties.getMaxIdentifierSize()
+                            )),
                             quotizedLocalColumnsSting,
                             quotize(fk.getReferencedTable()),
-                            quotizedForeignColumnsString);
+                            quotizedForeignColumnsString
+                    );
 
             Statement alterTableStmt = null;
             Statement reorgStatement = null;
@@ -780,7 +785,11 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
                 } else {
-                    throw new DatabaseEngineException(format("Could not add Foreign Key to entity %s. Error code: %s.", entity.getName(), ex.getMessage()), ex);
+                    throw new DatabaseEngineException(format(
+                            "Could not add Foreign Key to entity %s. Error code: %s.",
+                            entity.getName(),
+                            ex.getMessage()
+                    ), ex);
                 }
             } finally {
                 try {

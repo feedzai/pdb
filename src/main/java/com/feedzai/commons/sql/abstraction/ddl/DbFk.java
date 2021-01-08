@@ -15,12 +15,14 @@
  */
 package com.feedzai.commons.sql.abstraction.ddl;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -46,6 +48,11 @@ public class DbFk implements Serializable {
      * The referenced table.
      */
     private final String referencedTable;
+
+    /**
+     * Cached hashcode.
+     */
+    private int hashCode = -1;
 
     /**
      * Creates a new instance of {@link DbFk}.
@@ -117,6 +124,30 @@ public class DbFk implements Serializable {
      */
     public String getReferencedTable() {
         return referencedTable;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        final DbFk dbFk = (DbFk) o;
+        return Objects.equal(getLocalColumns(), dbFk.getLocalColumns())
+                && Objects.equal(getForeignColumns(), dbFk.getForeignColumns())
+                && Objects.equal(getForeignTable(), dbFk.getForeignTable());
+    }
+
+    @Override
+    public int hashCode() {
+        // Computing the hashcode might be an expensive operation because it goes through 2 lists,
+        // that's why it is being cached.
+        if(this.hashCode == -1) {
+            this.hashCode = Objects.hashCode(getLocalColumns(), getForeignColumns(), getForeignTable());
+        }
+        return this.hashCode;
     }
 
     /**
