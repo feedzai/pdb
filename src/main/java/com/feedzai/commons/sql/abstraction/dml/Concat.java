@@ -21,7 +21,7 @@ import java.util.Collection;
  * PDB Concat Operator.
  *
  * @author Francisco Santos (francisco.santos@feedzai.com)
- * @since @@@feedzai.next.release@@@
+ * @since 2.8.1
  */
 public class Concat extends Expression {
 
