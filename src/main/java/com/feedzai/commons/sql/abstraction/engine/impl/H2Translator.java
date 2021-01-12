@@ -21,14 +21,12 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;

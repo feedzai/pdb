@@ -42,7 +42,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
-import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.update;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_BLOB_SIZE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
