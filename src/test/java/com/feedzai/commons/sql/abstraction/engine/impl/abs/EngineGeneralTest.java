@@ -2296,26 +2296,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testConcat() throws DatabaseEngineException {
-        test6Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
-                .build());
-
-        final Query query =
-                select(
-                        concat(k("."),
-                               column("COL5"),
-                               column("COL6")).alias("concat"))
-                        .from(table("TEST"));
-
-        final List<Map<String, ResultColumn>> result = engine.query(query);
+        final List<Map<String, ResultColumn>> result = queryConcat(k("."));
 
         assertEquals("teste.teste", result.get(0).get("concat").toString());
         assertEquals("xpto.xpto", result.get(1).get("concat").toString());
@@ -2326,26 +2307,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testConcatEmpty() throws DatabaseEngineException {
-        test6Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
-                                      .build());
-
-        final Query query =
-                select(
-                        concat(k(""),
-                               column("COL5"),
-                               column("COL6")).alias("concat"))
-                        .from(table("TEST"));
-
-        final List<Map<String, ResultColumn>> result = engine.query(query);
+        final List<Map<String, ResultColumn>> result = queryConcat(k(""));
 
         assertEquals("testeteste", result.get(0).get("concat").toString());
         assertEquals("xptoxpto", result.get(1).get("concat").toString());
@@ -2356,32 +2318,39 @@ public class EngineGeneralTest {
 
     @Test
     public void testConcatColumn() throws DatabaseEngineException {
-        test6Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste")
-                                      .build());
-        engine.persist("TEST", entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre")
-                                      .build());
-
-        final Query query =
-                select(
-                        concat(column("COL5"),
-                               column("COL5"),
-                               column("COL6")).alias("concat"))
-                        .from(table("TEST"));
-
-        final List<Map<String, ResultColumn>> result = engine.query(query);
+        final List<Map<String, ResultColumn>> result = queryConcat(column("COL5"));
 
         assertEquals("testetesteteste", result.get(0).get("concat").toString());
         assertEquals("xptoxptoxpto", result.get(1).get("concat").toString());
         assertEquals("xptoxptoxpto", result.get(2).get("concat").toString());
         assertEquals("testetesteteste", result.get(3).get("concat").toString());
         assertEquals("pomme de terrepomme de terrepomme de terre", result.get(4).get("concat").toString());
+    }
+
+    /**
+     * Runs a concat query on the test dataset, given a delimiter.
+     *
+     * @param delimiter the delimiter used in concat.
+     * @return the result set.
+     * @throws DatabaseEngineException if an issue when querying arises.
+     */
+    private List<Map<String, ResultColumn>> queryConcat(final Expression delimiter) throws DatabaseEngineException {
+        test6Columns();
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste").build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste").build());
+        engine.persist(
+                "TEST",
+                entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre").build()
+        );
+
+        final Query query =
+                select(
+                        concat(delimiter, column("COL5"), column("COL6")).alias("concat"))
+                .from(table("TEST"));
+
+        return engine.query(query);
     }
 
     /**
