@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -422,11 +423,19 @@ public class BatchUpdateTest {
     @Test
     public void testFlushBatchSync() throws DatabaseEngineException, InterruptedException {
         final AtomicInteger transactions = new AtomicInteger();
+        final CountDownLatch firstFlushLatch = new CountDownLatch(1);
+        final CountDownLatch allFlushesStartedLatch = new CountDownLatch(3);
+
         // mock the begin transaction to force waiting to cause flushes to wait for others.
         new MockUp<AbstractDatabaseEngine>() {
             @Mock
             void beginTransaction(Invocation inv) throws DatabaseEngineRuntimeException {
-                Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
+                firstFlushLatch.countDown();
+
+                // wait for all flush tasks in the test to be submitted to the executor
+                Uninterruptibles.awaitUninterruptibly(allFlushesStartedLatch);
+
+                Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
                 inv.proceed();
                 transactions.incrementAndGet();
             }
@@ -451,17 +460,22 @@ public class BatchUpdateTest {
 
         // the first flush should collect the data to flush. will be the second to finish because third will not be blocking and will not have data.
         pool.submit(() -> {
+            allFlushesStartedLatch.countDown();
             batch.flush();
             resultOrder.add("first");
         });
+
         // make sure that second flush doesn't start before the first. Should not start a transaction because the data was cleaned up by first flush.
-        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+        firstFlushLatch.await();
+
         pool.submit(() -> {
+            allFlushesStartedLatch.countDown();
             batch.flush(true);
             resultOrder.add("second");
         });
         // this should be in fact the first to finish because is not blocking and there is no data to flush. Should not even start a transaction.
         pool.submit(() -> {
+            allFlushesStartedLatch.countDown();
             batch.flush(false);
             resultOrder.add("third");
         });
