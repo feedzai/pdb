@@ -420,7 +420,7 @@ public class BatchUpdateTest {
      * @throws DatabaseEngineException If the operations on the engine fail.
      * @since 2.1.6
      */
-    @Test
+    @Test(timeout = 30000)
     public void testFlushBatchSync() throws DatabaseEngineException, InterruptedException {
         final AtomicInteger transactions = new AtomicInteger();
         final CountDownLatch firstFlushLatch = new CountDownLatch(1);
@@ -454,14 +454,13 @@ public class BatchUpdateTest {
         batch = DefaultBatch.create(engine, "test", 5, 1000000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
         batch.add("TEST", entry().set("COL1", 1).build());
 
-        final ArrayList<String> resultOrder = new ArrayList<>();
-
-        ExecutorService pool = Executors.newCachedThreadPool();
+        final List<String> resultOrder = Collections.synchronizedList(new ArrayList<>());
+        final ExecutorService pool = Executors.newCachedThreadPool();
 
         // the first flush should collect the data to flush. will be the second to finish because third will not be blocking and will not have data.
         pool.submit(() -> {
             allFlushesStartedLatch.countDown();
-            batch.flush(true);
+            batch.flush();
             resultOrder.add("first");
         });
 
