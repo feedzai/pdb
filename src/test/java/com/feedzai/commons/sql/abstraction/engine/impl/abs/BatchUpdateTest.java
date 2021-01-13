@@ -460,7 +460,7 @@ public class BatchUpdateTest {
         // the first flush should collect the data to flush. will be the second to finish because third will not be blocking and will not have data.
         pool.submit(() -> {
             allFlushesStartedLatch.countDown();
-            batch.flush();
+            batch.flush(true);
             resultOrder.add("first");
         });
 
