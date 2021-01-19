@@ -1428,7 +1428,7 @@ public class EngineGeneralTest {
         try {
             engine.addEntity(entity);
         } catch (final DatabaseEngineException de) {
-            assertEquals("exception ok?", "Entity '0123456789012345678901234567891' exceeds the maximum number of characters (30)", de.getMessage());
+            assertEquals("exception ok?", "Entity name '0123456789012345678901234567891' exceeds the maximum number of characters (30)", de.getMessage());
             throw de;
         }
     }
