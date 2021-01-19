@@ -122,8 +122,8 @@ public class EngineCreateTest {
                 .addFk(
                         dbFk()
                                 .addColumn("COL2")
-                                .foreignTable("TEST1")
-                                .addForeignColumn("COL1")
+                                .referencedTable("TEST1")
+                                .addReferencedColumn("COL1")
                                 .build()
                 )
                 .build();

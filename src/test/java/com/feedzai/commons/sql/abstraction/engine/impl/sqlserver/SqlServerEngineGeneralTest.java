@@ -154,13 +154,13 @@ public class SqlServerEngineGeneralTest {
             .addFk(
                 dbFk()
                     .addColumn("COL1")
-                    .foreignTable(USER_TABLE)
-                    .addForeignColumn("COL1")
+                    .referencedTable(USER_TABLE)
+                    .addReferencedColumn("COL1")
                     .build(),
                 dbFk()
                     .addColumn("COL2")
-                    .foreignTable("ROLE")
-                    .addForeignColumn("COL1")
+                    .referencedTable("ROLE")
+                    .addReferencedColumn("COL1")
                     .build()
             )
             .pkFields("COL1", "COL2").build();

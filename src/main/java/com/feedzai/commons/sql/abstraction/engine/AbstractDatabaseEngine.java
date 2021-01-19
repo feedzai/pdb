@@ -1023,13 +1023,14 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @throws DatabaseEngineException If the validation fails.
      */
     private void validateEntity(final DbEntity entity) throws DatabaseEngineException {
-        if (entity.getName() == null || entity.getName().length() == 0) {
+        if (StringUtils.isBlank(entity.getName())) {
             throw new DatabaseEngineException("You have to define the entity name");
         }
 
         final int maxIdentSize = properties.getMaxIdentifierSize();
         if (entity.getName().length() > maxIdentSize) {
-            throw new DatabaseEngineException(String.format("Entity '%s' exceeds the maximum number of characters (%d)", entity.getName(), maxIdentSize));
+            throw new DatabaseEngineException(String.format(
+                    "Entity name '%s' exceeds the maximum number of characters (%d)", entity.getName(), maxIdentSize));
         }
 
         if (entity.getColumns().isEmpty()) {
@@ -1037,13 +1038,16 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         int numberOfAutoIncs = 0;
-        for (DbColumn c : entity.getColumns()) {
-            if (c.getName() == null || c.getName().length() == 0) {
+        for (final DbColumn c : entity.getColumns()) {
+            if (StringUtils.isBlank(c.getName())) {
                 throw new DatabaseEngineException(String.format("Column in entity '%s' must have a name", entity.getName()));
             }
 
             if (c.getName().length() > maxIdentSize) {
-                throw new DatabaseEngineException(String.format("Column '%s' in entity '%s' exceeds the maximum number of characters (%d)", c.getName(), entity.getName(), maxIdentSize));
+                throw new DatabaseEngineException(String.format(
+                        "Column name '%s' in entity '%s' exceeds the maximum number of characters (%d)",
+                        c.getName(), entity.getName(), maxIdentSize
+                ));
             }
 
             if (c.isAutoInc()) {
@@ -1057,41 +1061,47 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         // Index validation
 
-        List<DbIndex> indexes = entity.getIndexes();
-        if (!indexes.isEmpty()) {
-            for (DbIndex index : indexes) {
-                if (index.getColumns().isEmpty()) {
-                    throw new DatabaseEngineException(String.format("You have to specify at least one column to create an index in entity '%s'", entity.getName()));
-                }
+        for (final DbIndex index : entity.getIndexes()) {
+            if (index.getColumns().isEmpty()) {
+                throw new DatabaseEngineException(String.format(
+                        "You have to specify at least one column to create an index in entity '%s'", entity.getName()
+                ));
+            }
 
-                for (String column : index.getColumns()) {
-                    if (column == null || column.length() == 0) {
-                        throw new DatabaseEngineException(String.format("Column indexes must have a name in entity '%s'", entity.getName()));
-                    }
+            for (final String column : index.getColumns()) {
+                if (StringUtils.isBlank(column)) {
+                    throw new DatabaseEngineException(String.format(
+                            "Column indexes must have a name in entity '%s'", entity.getName()
+                    ));
                 }
             }
         }
 
         // FK validation
 
-        List<DbFk> fks = entity.getFks();
-        if (!fks.isEmpty()) {
-            for (DbFk fk : fks) {
-                if (fk.getForeignTable() == null || fk.getForeignTable().length() == 0) {
-                    throw new DatabaseEngineException(String.format("You have to specify the table when creating a Foreign Key in entity '%s'", entity.getName()));
-                }
+        for (final DbFk fk : entity.getFks()) {
+            if (StringUtils.isBlank(fk.getReferencedTable())) {
+                throw new DatabaseEngineException(String.format(
+                        "You have to specify a referenced table when creating a Foreign Key in '%s'", entity.getName()
+                ));
+            }
 
-                if (fk.getLocalColumns().isEmpty()) {
-                    throw new DatabaseEngineException(String.format("You must specify at least one local column when defining a Foreign Key in '%s'", entity.getName()));
-                }
+            if (fk.getLocalColumns().isEmpty()) {
+                throw new DatabaseEngineException(String.format(
+                        "You must specify at least one local column when defining a Foreign Key in '%s'", entity.getName()
+                ));
+            }
 
-                if (fk.getForeignColumns().isEmpty()) {
-                    throw new DatabaseEngineException(String.format("You must specify at least one foreign column when defining a Foreign Key in '%s'", entity.getName()));
-                }
+            if (fk.getReferencedColumns().isEmpty()) {
+                throw new DatabaseEngineException(String.format(
+                        "You must specify at least one column from the referenced table when defining a Foreign Key in '%s'",
+                        entity.getName()
+                ));
+            }
 
-                if (fk.getLocalColumns().size() != fk.getForeignColumns().size()) {
-                    throw new DatabaseEngineException(String.format("Number of local columns does not match foreign ones in entity '%s'", entity.getName()));
-                }
+            if (fk.getLocalColumns().size() != fk.getReferencedColumns().size()) {
+                throw new DatabaseEngineException(String.format(
+                        "Number of local columns does not match the number of referenced columns in '%s'", entity.getName()));
             }
         }
     }

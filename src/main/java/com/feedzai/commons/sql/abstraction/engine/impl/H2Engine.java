@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandle
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -577,7 +576,7 @@ public class H2Engine extends AbstractDatabaseEngine {
             }
 
             final List<String> quotizedForeignColumns = new ArrayList<>();
-            for (String s : fk.getForeignColumns()) {
+            for (final String s : fk.getReferencedColumns()) {
                 quotizedForeignColumns.add(quotize(s));
             }
 
@@ -591,7 +590,7 @@ public class H2Engine extends AbstractDatabaseEngine {
                             table,
                             quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
                             quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable()),
+                            quotize(fk.getReferencedTable()),
                             quotizedForeignColumnsString);
 
             Statement alterTableStmt = null;

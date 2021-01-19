@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.impl.mysql.MySqlQueryException
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -579,7 +578,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
             }
 
             final List<String> quotizedForeignColumns = new ArrayList<>();
-            for (String s : fk.getForeignColumns()) {
+            for (final String s : fk.getReferencedColumns()) {
                 quotizedForeignColumns.add(quotize(s, escapeCharacter()));
             }
 
@@ -593,7 +592,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                             table,
                             quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize()), escapeCharacter()),
                             quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable(), escapeCharacter()),
+                            quotize(fk.getReferencedTable(), escapeCharacter()),
                             quotizedForeignColumnsString);
 
             Statement alterTableStmt = null;
