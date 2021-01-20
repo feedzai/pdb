@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Represents a database foreign key hard link
@@ -32,33 +33,36 @@ import java.util.List;
  */
 public class DbFk implements Serializable {
     /**
-     * The local column's names.
+     * The local column's names (which will compose the foreign key).
      */
     private final List<String> localColumns;
+
     /**
-     * The foreign column's names.
+     * The referenced table's column names.
      */
-    private final List<String> foreignColumns;
+    private final List<String> referencedColumns;
+
     /**
-     * The reference table.
+     * The referenced table.
      */
-    private final String foreignTable;
+    private final String referencedTable;
 
     /**
      * Creates a new instance of {@link DbFk}.
      *
-     * @param localColumns   The local columns.
-     * @param foreignColumns The foreign columns.
-     * @param foreignTable   The foreign table.
+     * @param builder The builder from this class.
      */
-    private DbFk(List<String> localColumns, List<String> foreignColumns, String foreignTable) {
-        this.localColumns = localColumns;
-        this.foreignColumns = foreignColumns;
-        this.foreignTable = foreignTable;
+    private DbFk(final Builder builder) {
+        this.localColumns = ImmutableList.copyOf(builder.localColumns);
+        this.referencedColumns = ImmutableList.copyOf(builder.referencedColumns);
+        this.referencedTable = builder.referencedTable;
     }
 
     /**
      * Gets the local columns names.
+     *
+     * These columns are from the local table where the foreign key is defined (the child table); this group of columns
+     * is what composes the foreign key.
      *
      * @return The local columns names.
      */
@@ -67,21 +71,52 @@ public class DbFk implements Serializable {
     }
 
     /**
-     * Gets he list of foreign column names.
+     * Gets the referenced columns names.
      *
-     * @return The list of foreign column names.
+     * These columns are from the table that the foreign key constraint references (the parent table); the values in
+     * these columns need to match the values in the local columns that define the foreign key.
+     *
+     * @return The list of referenced columns names.
+     * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+     * child table); this name is wrong and will eventually be removed ─ use {@link #getReferencedColumns()} instead.
      */
+    @Deprecated
     public List<String> getForeignColumns() {
-        return foreignColumns;
+        return referencedColumns;
     }
 
     /**
-     * Gets the name of the foreign table name.
+     * Gets the referenced columns names.
      *
-     * @return The name of the foreign table name.
+     * These columns are from the table that the foreign key constraint references (the parent table); the values in
+     * these columns need to match the values in the local columns that define the foreign key.
+     *
+     * @return The list of referenced columns names.
      */
+    public List<String> getReferencedColumns() {
+        return referencedColumns;
+    }
+
+    /**
+     * Gets the name of the referenced table (parent table).
+     *
+     * @return The name of the referenced table.
+     * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+     * child table); this method was used to get the name of the referenced table, which is the parent table, thus the
+     * name of the method is wrong and it will eventually be removed ─ use {@link #getReferencedTable()} instead.
+     */
+    @Deprecated
     public String getForeignTable() {
-        return foreignTable;
+        return referencedTable;
+    }
+
+    /**
+     * Gets the name of the referenced table (parent table).
+     *
+     * @return The name of the referenced table.
+     */
+    public String getReferencedTable() {
+        return referencedTable;
     }
 
     /**
@@ -89,23 +124,39 @@ public class DbFk implements Serializable {
      */
     public static class Builder implements com.feedzai.commons.sql.abstraction.util.Builder<DbFk>, Serializable {
         private final List<String> localColumns = new ArrayList<>();
-        private final List<String> foreignColumns = new ArrayList<>();
-        private String foreignTable = null;
+        private final List<String> referencedColumns = new ArrayList<>();
+        private String referencedTable = null;
 
         /**
-         * Sets the foreign table name.
+         * Sets the name of the referenced table (parent table).
          *
-         * @param foreignTable The foreign table name.
+         * @param referencedTable The referenced table name.
+         * @return This builder.
+         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * child table); this name is wrong and will eventually be removed ─ use {@link #referencedTable(String)}
+         * instead.
+         */
+        @Deprecated
+        public Builder foreignTable(final String referencedTable) {
+            return referencedTable(referencedTable);
+        }
+
+        /**
+         * Sets the name of the referenced table (parent table).
+         *
+         * @param referencedTable The referenced table name.
          * @return This builder.
          */
-        public Builder foreignTable(final String foreignTable) {
-            this.foreignTable = foreignTable;
-
+        public Builder referencedTable(final String referencedTable) {
+            this.referencedTable = referencedTable;
             return this;
         }
 
         /**
-         * Adds local columns to match the foreign.
+         * Adds local columns (from the child table, where the foreign key is defined) to match the ones from the
+         * referenced table (parent table).
+         *
+         * These columns will compose the foreign key.
          *
          * @param columns The columns.
          * @return This builder.
@@ -115,42 +166,72 @@ public class DbFk implements Serializable {
         }
 
         /**
-         * Adds local columns to match the foreign.
+         * Adds local columns (from the child table, where the foreign key is defined) to match the ones from the
+         * referenced table (parent table).
+         *
+         * These columns will compose the foreign key.
          *
          * @param columns The columns.
          * @return This builder.
          */
         public Builder addColumns(final Collection<String> columns) {
             this.localColumns.addAll(columns);
-
             return this;
         }
 
         /**
-         * Adds foreign columns to match the local ones.
+         * Adds columns from the referenced table (parent table) to match the local ones.
          *
-         * @param foreignColumns The columns.
+         * @param columns The columns.
          * @return This builder.
+         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * child table); this name is wrong and will eventually be removed ─ use {@link #addReferencedColumn(String...)}
+         * instead.
          */
-        public Builder addForeignColumn(final String... foreignColumns) {
-            return addForeignColumns(Arrays.asList(foreignColumns));
+        @Deprecated
+        public Builder addForeignColumn(final String... columns) {
+            return addReferencedColumn(columns);
         }
 
         /**
-         * Adds foreign columns to match the local ones.
+         * Adds columns from the referenced table (parent table) to match the local ones.
+         *
+         * @param columns The columns.
+         * @return This builder.
+         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * child table); this name is wrong and will eventually be removed ─ use {@link #addReferencedColumns(Collection)}
+         * instead.
+         */
+        @Deprecated
+        public Builder addForeignColumns(final Collection<String> columns) {
+            return addReferencedColumns(columns);
+        }
+
+        /**
+         * Adds columns from the referenced table (parent table) to match the local ones.
          *
          * @param columns The columns.
          * @return This builder.
          */
-        public Builder addForeignColumns(final Collection<String> columns) {
-            this.foreignColumns.addAll(columns);
+        public Builder addReferencedColumn(final String... columns) {
+            return addReferencedColumns(Arrays.asList(columns));
+        }
 
+        /**
+         * Adds columns from the referenced table (parent table) to match the local ones.
+         *
+         * @param columns The columns.
+         * @return This builder.
+         */
+        public Builder addReferencedColumns(final Collection<String> columns) {
+            this.referencedColumns.addAll(columns);
             return this;
         }
 
         @Override
         public DbFk build() {
-            return new DbFk(ImmutableList.copyOf(localColumns), ImmutableList.copyOf(foreignColumns), foreignTable);
+            Objects.requireNonNull(referencedTable, "The referenced table can't be null");
+            return new DbFk(this);
         }
     }
 }

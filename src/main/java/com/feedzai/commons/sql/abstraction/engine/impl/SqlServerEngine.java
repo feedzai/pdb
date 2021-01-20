@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -599,7 +598,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             }
 
             final List<String> quotizedForeignColumns = new ArrayList<>();
-            for (String s : fk.getForeignColumns()) {
+            for (final String s : fk.getReferencedColumns()) {
                 quotizedForeignColumns.add(quotize(s));
             }
 
@@ -613,7 +612,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                             table,
                             quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
                             quotizedLocalColumnsSting,
-                            quotize(fk.getForeignTable()),
+                            quotize(fk.getReferencedTable()),
                             quotizedForeignColumnsString);
 
 

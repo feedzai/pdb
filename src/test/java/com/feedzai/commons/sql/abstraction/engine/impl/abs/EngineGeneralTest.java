@@ -1428,7 +1428,7 @@ public class EngineGeneralTest {
         try {
             engine.addEntity(entity);
         } catch (final DatabaseEngineException de) {
-            assertEquals("exception ok?", "Entity '0123456789012345678901234567891' exceeds the maximum number of characters (30)", de.getMessage());
+            assertEquals("exception ok?", "Entity name '0123456789012345678901234567891' exceeds the maximum number of characters (30)", de.getMessage());
             throw de;
         }
     }
@@ -1647,8 +1647,8 @@ public class EngineGeneralTest {
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
                                 .addColumn("COL2")
-                                .foreignTable("TEST1")
-                                .addForeignColumn("COL1")
+                                .referencedTable("TEST1")
+                                .addReferencedColumn("COL1")
                                 .build()
                 )
                 .pkFields("COL1")
@@ -1681,13 +1681,13 @@ public class EngineGeneralTest {
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
                                 .addColumn("COL1")
-                                .foreignTable("USER")
-                                .addForeignColumn("COL1")
+                                .referencedTable("USER")
+                                .addReferencedColumn("COL1")
                                 .build(),
                         dbFk()
                                 .addColumn("COL2")
-                                .foreignTable("ROLE")
-                                .addForeignColumn("COL1")
+                                .referencedTable("ROLE")
+                                .addReferencedColumn("COL1")
                                 .build()
                 )
                 .pkFields("COL1", "COL2")
@@ -3554,8 +3554,8 @@ public class EngineGeneralTest {
         DbEntity e2 = dbEntity().name("TEST2").addColumn("COL2", INT, true).addColumn("COL1", INT)
                 .addFk(dbFk()
                         .addColumn("COL1")
-                        .foreignTable("TEST1")
-                        .addForeignColumn("COL1")
+                        .referencedTable("TEST1")
+                        .addReferencedColumn("COL1")
                         .build())
                 .pkFields("COL2")
                 .build();
@@ -3582,8 +3582,8 @@ public class EngineGeneralTest {
         DbEntity e2 = dbEntity().name("TEST2").addColumn("COL2", INT, true).addColumn("COL1", INT)
                 .addFk(dbFk()
                         .addColumn("COL1")
-                        .foreignTable("TEST1")
-                        .addForeignColumn("COL1")
+                        .referencedTable("TEST1")
+                        .addReferencedColumn("COL1")
                         .build())
                 .pkFields("COL2")
                 .build();
@@ -3723,13 +3723,13 @@ public class EngineGeneralTest {
                 .addColumn("COL2", INT)
                 .addFk(dbFk()
                                 .addColumn("COL1")
-                                .foreignTable("USER")
-                                .addForeignColumn("COL1")
+                                .referencedTable("USER")
+                                .addReferencedColumn("COL1")
                                 .build(),
                         dbFk()
                                 .addColumn("COL2")
-                                .foreignTable("ROLE")
-                                .addForeignColumn("COL1")
+                                .referencedTable("ROLE")
+                                .addReferencedColumn("COL1")
                                 .build()
                 )
                 .pkFields("COL1", "COL2")
