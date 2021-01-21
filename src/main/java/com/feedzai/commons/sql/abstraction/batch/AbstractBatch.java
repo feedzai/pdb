@@ -403,16 +403,23 @@ public abstract class AbstractBatch implements Runnable {
     /**
      * Flushes the pending messages.
      * <p>
-     * If {@param sync} is {@literal true} it waits for other pending flush operations.
-     * <p>
-     * If {@param sync} is {@literal false} it can return directly if the buffer if the batch is empty.
+     * If {@code sync} is {@code true} it waits for other pending flush operations.
+     * If it is {@code false} it can return directly if the buffer in the batch is empty.
      *
-     * @param sync {@literal true} if it should wait for other {@link #flush()} operations.
-     * @implSpec It is possible that two threads might execute in competing order and sync execution acquires the flushTransactionLock before a non synchronous one leading
-     * to a non serial execution.
+     * @param sync {@code true} if it should wait for other flush operations (from here, or those started by calling
+     *             {@link #flush()}).
+     * @implNote It is possible that two threads might execute in competing order and sync execution acquires the
+     * {@link #flushTransactionLock} before a non synchronous one, leading to a non serial execution.
+     * <p>
+     * Since the flushes on the DB connection are also guarded by the same {@link #flushTransactionLock}, the result is
+     * that if the batch is not empty, the thread calling this method will wait for an ongoing flush either before or
+     * after draining the batch buffer to a local temporary buffer (respectively, when {@code sync} is {@code true} or
+     * {@code false}).
+     * If the batch is empty, then the thread calling this method will either wait for an ongoing flush or it will
+     * return from the method, depending on whether {@code sync} is {@code true} or {@code false}, respectively.
      * @since 2.1.6
      */
-    public void flush(boolean sync) {
+    public void flush(final boolean sync) {
         if (!sync) {
             flush();
         } else {
