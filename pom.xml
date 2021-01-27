@@ -709,7 +709,7 @@
                                             <port>1521:1521</port>
                                         </ports>
                                         <wait>
-                                            <time>40000</time>
+                                            <time>360000</time>
                                             <log>Disconnected from Oracle Database 11g</log>
                                         </wait>
                                     </run>
