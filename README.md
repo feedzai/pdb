@@ -5,7 +5,8 @@
 ![PDB tests with SQLServer](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20SQLServer/badge.svg?branch=master) \
 ![PDB tests with CockroachDB](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20CockroachDB/badge.svg?branch=master) \
 ![PDB tests with MySQL](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20MySQL/badge.svg?branch=master) \
-![PDB tests with Oracle](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20Oracle/badge.svg?branch=master)
+![PDB tests with Oracle](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20Oracle/badge.svg?branch=master) \
+![PDB tests with IBM DB2](https://github.com/feedzai/pdb/workflows/PDB%20tests%20with%20IBM%20DB2/badge.svg?branch=master)
 
 PulseDB is a database-mapping software library written in Java,
 it provides a transparent access and manipulation to a great variety of database implementations.
