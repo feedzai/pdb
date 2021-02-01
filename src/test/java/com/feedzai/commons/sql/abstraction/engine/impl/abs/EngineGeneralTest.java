@@ -4118,17 +4118,17 @@ public class EngineGeneralTest {
     }
 
     /**
-     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine once the block is
-     * exited from.
+     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine
+     * (and thus the underlying connection to the database) once the block is exited from.
      *
-     * @since 2.1.12
      * @throws Exception if something goes wrong while checking if the connection of the engine is closed.
+     * @since 2.1.12
      */
     @Test
     public void tryWithResourcesClosesEngine() throws Exception {
         final AtomicReference<Connection> connReference = new AtomicReference<>();
 
-        try(final DatabaseEngine tryEngine = this.engine) {
+        try (final DatabaseEngine tryEngine = this.engine) {
             connReference.set(tryEngine.getConnection());
             assertFalse("close() method should not be called within the try-with-resources block, for an existing DatabaseEngine",
                     connReference.get().isClosed());
@@ -4137,7 +4137,7 @@ public class EngineGeneralTest {
         assertTrue("close() method should be called after exiting try-with-resources block, for an existing DatabaseEngine",
                 connReference.get().isClosed());
 
-        try(final DatabaseEngine tryEngine = DatabaseFactory.getConnection(properties)) {
+        try (final DatabaseEngine tryEngine = DatabaseFactory.getConnection(properties)) {
             connReference.set(tryEngine.getConnection());
             assertFalse("close() method should not be called within the try-with-resources block, for a DatabaseEngine created in the block",
                     connReference.get().isClosed());
