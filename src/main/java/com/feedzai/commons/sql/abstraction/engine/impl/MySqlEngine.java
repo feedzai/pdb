@@ -751,7 +751,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String getSchema() throws DatabaseEngineException {
+    public String getSchema() throws DatabaseEngineException {
         try {
             return this.conn.getCatalog();
         } catch (final Exception e) {

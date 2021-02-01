@@ -76,7 +76,6 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
@@ -4114,36 +4113,6 @@ public class EngineGeneralTest {
                 .build();
 
         assertEquals("entry's hashCode() matches map's hashCode()", map.hashCode(), entry.hashCode());
-    }
-
-    /**
-     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine once the block is
-     * exited from.
-     *
-     * @since 2.1.12
-     */
-    @Test
-    public void tryWithResourcesClosesEngine() {
-        final AtomicInteger closeCallCount = new AtomicInteger(0);
-
-        try(final DatabaseEngine ignored = new MockUp<DatabaseEngine>() {
-            @Mock
-            void close() {
-                closeCallCount.incrementAndGet();
-            }
-        }.getMockInstance()) {
-            assertEquals(
-                    "DatabaseEngine#close method should not be called within the try-with-resources block",
-                    0,
-                    closeCallCount.get()
-            );
-        }
-
-        assertEquals(
-                "DatabaseEngine#close method should be called after exiting try-with-resources block",
-                1,
-                closeCallCount.get()
-        );
     }
 
     /**

@@ -618,7 +618,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String getSchema() throws DatabaseEngineException {
+    public String getSchema() throws DatabaseEngineException {
         try {
             return this.conn.getSchema();
 
