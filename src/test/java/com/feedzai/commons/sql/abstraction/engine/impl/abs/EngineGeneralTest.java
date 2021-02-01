@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
+import java.sql.Connection;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -76,6 +77,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
@@ -4116,8 +4118,39 @@ public class EngineGeneralTest {
     }
 
     /**
-     * Test that closing a database engine a 'create-drop' policywith multiple entities closes all insert statements associated with each
-     * entity, regardless of the schema policy used.
+     * Tests that creating a {@link DatabaseEngine} using try-with-resources will close the engine once the block is
+     * exited from.
+     *
+     * @since 2.1.12
+     * @throws Exception if something goes wrong while checking if the connection of the engine is closed.
+     */
+    @Test
+    public void tryWithResourcesClosesEngine() throws Exception {
+        final AtomicReference<Connection> connReference = new AtomicReference<>();
+
+        try(final DatabaseEngine tryEngine = this.engine) {
+            connReference.set(tryEngine.getConnection());
+            assertFalse("close() method should not be called within the try-with-resources block, for an existing DatabaseEngine",
+                    connReference.get().isClosed());
+        }
+
+        assertTrue("close() method should be called after exiting try-with-resources block, for an existing DatabaseEngine",
+                connReference.get().isClosed());
+
+        try(final DatabaseEngine tryEngine = DatabaseFactory.getConnection(properties)) {
+            connReference.set(tryEngine.getConnection());
+            assertFalse("close() method should not be called within the try-with-resources block, for a DatabaseEngine created in the block",
+                    connReference.get().isClosed());
+        }
+
+        assertTrue("close() method should be called after exiting try-with-resources block, for a DatabaseEngine created in the block",
+                connReference.get().isClosed());
+
+    }
+
+    /**
+     * Test that closing a database engine a 'create-drop' policy with multiple entities closes all insert statements
+     * associated with each entity, regardless of the schema policy used.
      *
      * Each entity is associated with 3 prepared statements. This test ensures that 3 PSs per entity are closed.
      *
