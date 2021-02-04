@@ -866,7 +866,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String getSchema() throws DatabaseEngineException {
+    public String getSchema() throws DatabaseEngineException {
         try (final Statement stmt = conn.createStatement();
              final ResultSet resultSet = stmt.executeQuery("VALUES(CURRENT SCHEMA)")) {
 

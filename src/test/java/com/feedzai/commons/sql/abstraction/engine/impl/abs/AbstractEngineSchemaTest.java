@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
@@ -29,7 +30,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.Sets;
-import mockit.Deencapsulation;
 import org.assertj.core.api.MapAssert;
 import org.assertj.core.data.MapEntry;
 import org.junit.Before;
@@ -683,8 +683,9 @@ public abstract class AbstractEngineSchemaTest {
                 // this second entry is needed because MySQL returns tables as SYSTEM_TABLEs (when they are created in default schema)
                 MapEntry.entry(name, DbEntityType.SYSTEM_TABLE)
         };
-        final String originalSchema = Deencapsulation.getField(originalEngine, "currentSchema");
-        final String otherSchema = Deencapsulation.getField(otherEngine, "currentSchema");
+
+        final String originalSchema = ((AbstractDatabaseEngine) originalEngine).getSchema();
+        final String otherSchema = ((AbstractDatabaseEngine) otherEngine).getSchema();
 
         // check metadata in the schema of the "original engine"
         final MapAssert<String, DbColumnType> originalMetadataAssert = assertThat(originalEngine.getMetadata(name))

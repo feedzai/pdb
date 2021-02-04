@@ -36,6 +36,12 @@
     <properties>
         <project.source>1.8</project.source>
 
+        <default.test.cmdArgs>
+            -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar
+        </default.test.cmdArgs>
+
+        <jmockit.version>1.49</jmockit.version>
+
         <maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
         <maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
@@ -84,7 +90,7 @@
             <dependency>
                 <groupId>org.jmockit</groupId>
                 <artifactId>jmockit</artifactId>
-                <version>1.35</version>
+                <version>${jmockit.version}</version>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -318,6 +324,7 @@
                     <systemProperties>
                         <instances>h2</instances>
                     </systemProperties>
+                    <argLine>${default.test.cmdArgs}</argLine>
                 </configuration>
             </plugin>
             <plugin>
@@ -687,7 +694,7 @@
                              The following line is a workaround for "ORA-01882: timezone region not found"
                              that occurs when the Oracle DB server doesn't have the system timezone
                              -->
-                            <argLine>-Doracle.jdbc.timezoneAsRegion=false</argLine>
+                            <argLine>${default.test.cmdArgs} -Doracle.jdbc.timezoneAsRegion=false</argLine>
                             <systemProperties>
                                 <instances>oracle</instances>
                             </systemProperties>

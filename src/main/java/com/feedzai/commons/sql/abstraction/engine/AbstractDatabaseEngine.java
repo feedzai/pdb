@@ -1532,7 +1532,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @return The current schema name or <code>null</code> if there is none.
      * @throws DatabaseEngineException If a database access error occurs or this method is called on a closed connection.
      */
-    protected String getSchema() throws DatabaseEngineException {
+    public String getSchema() throws DatabaseEngineException {
         try {
             return this.conn.getSchema();
         } catch (final Exception e) {
