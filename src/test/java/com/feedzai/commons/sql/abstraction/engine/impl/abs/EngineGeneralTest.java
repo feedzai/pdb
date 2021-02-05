@@ -42,6 +42,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.impl.cockroach.SkipTestCockroachDB;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -2037,78 +2038,100 @@ public class EngineGeneralTest {
     @Test
     public void testCast() throws DatabaseEngineException {
 
-        final Query query =
-                select(cast(k("22"), INT).alias("int"),
-                        cast(k(22), STRING).alias("string"),
-                        cast(k("1"), BOOLEAN).alias("bool"),
-                        cast(k("22"), DOUBLE).alias("double"),
-                        cast(k(22), LONG).alias("long"));
+        final Query query = select(
+                cast(k("22"), INT).alias("int"),
+                cast(k(22), STRING).alias("string"),
+                cast(k("1"), BOOLEAN).alias("bool"),
+                cast(k("22"), DOUBLE).alias("double"),
+                cast(k(22), LONG).alias("long")
+        );
 
-        // CAST not supported.
-        if (config.engine.contains("MySqlEngine")) {
-            exception.expect(OperationNotSupportedRuntimeException.class);
-        }
+        final Map<String, ResultColumn> result = engine.query(query).get(0);
 
-        final List<Map<String, ResultColumn>> result = engine.query(query);
-
-        assertEquals("Result must be 22", new Integer(22),
-                result.get(0).get("int").toInt());
-        assertEquals("Result must be '22'", "22",
-                result.get(0).get("string").toString());
-        assertEquals("Result must be true", true,
-                result.get(0).get("bool").toBoolean());
-        assertEquals("Result must be 22.0", new Double(22),
-                result.get(0).get("double").toDouble());
-        assertEquals("Result must be 22", new Long(22),
-                result.get(0).get("long").toLong());
+        assertEquals("Result must be 22", new Integer(22), result.get("int").toInt());
+        assertEquals("Result must be '22'", "22", result.get("string").toString());
+        assertEquals("Result must be true", true, result.get("bool").toBoolean());
+        assertEquals("Result must be 22.0", new Double(22), result.get("double").toDouble());
+        assertEquals("Result must be 22", new Long(22), result.get("long").toLong());
     }
 
     @Test
     public void testCastColumns() throws DatabaseEngineException {
 
-        test5Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "1")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "2")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "3")
-                .build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "4")
-                .build());
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL_INT", INT)
+                .addColumn("COL_STRING", STRING)
+                .addColumn("COL_CAST_INT", INT)
+                .addColumn("COL_CAST_STRING", STRING)
+                .pkFields("COL_INT")
+                .build();
 
-        final Query query =
-                select(cast(column("COL1"), STRING).alias("string"),
-                        cast(column("COL5"), INT).alias("int"))
-                .from(table("TEST"));
+        engine.addEntity(entity);
 
-        // CAST not supported.
-        if (config.engine.contains("MySqlEngine")) {
-            exception.expect(OperationNotSupportedRuntimeException.class);
-        }
+        EntityEntry entry = entry()
+                .set("COL_INT", 123)
+                .set("COL_STRING", "321")
+                .build();
 
-        final List<Map<String, ResultColumn>> result = engine.query(query);
+        engine.persist("TEST", entry);
 
-        assertEquals("Result must be 1", new Integer(1),
-                result.get(0).get("int").toInt());
-        assertEquals("Result must be 2", new Integer(2),
-                result.get(1).get("int").toInt());
-        assertEquals("Result must be 3", new Integer(3),
-                result.get(2).get("int").toInt());
-        assertEquals("Result must be 4", new Integer(4),
-                result.get(3).get("int").toInt());
-        assertEquals("Result must be '1'", "1",
-                result.get(0).get("string").toString());
-        assertEquals("Result must be '2'", "2",
-                result.get(1).get("string").toString());
-        assertEquals("Result must be '3'", "3",
-                result.get(2).get("string").toString());
-        assertEquals("Result must be '4'", "4",
-                result.get(3).get("string").toString());
+        // test CAST when writing values
+        final Update update = update(table("TEST"))
+                .set(eq(column("COL_CAST_INT"), cast(k("3211"), INT)),
+                        eq(column("COL_CAST_STRING"), cast(k(1233), STRING)))
+                .where(eq(column("COL_INT"), k(123)));
+
+        engine.executeUpdate(update);
+
+        // test CAST when reading values
+        Query query =
+                select(
+                        cast(column("COL_INT"), STRING).alias("COL_INT_string"),
+                        cast(column("COL_STRING"), INT).alias("COL_STRING_int"),
+                        column("COL_CAST_INT"),
+                        column("COL_CAST_STRING")
+                ).from(table("TEST"));
+
+        Map<String, ResultColumn> result = engine.query(query).get(0);
+
+        assertEquals("The value of COL_INT cast to string must be '123'", "123", result.get("COL_INT_string").toString());
+        assertEquals("The value of COL_STRING cast to int must be 321", new Integer(321), result.get("COL_STRING_int").toInt());
+        assertEquals("The value of COL_CAST_INT must be 3211", Integer.valueOf(3211), result.get("COL_CAST_INT").toInt());
+        assertEquals("The value of COL_CAST_STRING must be '1233'", "1233", result.get("COL_CAST_STRING").toString());
+
+        /*
+         Until now the test only really checks if the CAST doesn't cause any errors because
+          - when writing values into the DB it automatically casts into the column data type
+          - when reading values from the DB, the test reads the results from the ResultColumn as the desired type
+         Even if we used a function, it is likely the DB would try to cast the parameters to the expected type.
+         To effectively test if CAST works, we need to check if DB sorting considers the column a string or a number.
+         */
+        entry = entry()
+                .set("COL_INT", 1000)
+                .set("COL_STRING", "321000")
+                .build();
+
+        engine.persist("TEST", entry);
+
+        query = select(column("COL_INT")).from(table("TEST")).orderby(column("COL_INT"));
+        String firstResult = engine.query(query).get(0).get("COL_INT").toString();
+        assertEquals("sorting should have considered the sort column as a number (123 < 1000)", "123", firstResult);
+
+        query = select(column("COL_INT"), cast(column("COL_INT"), STRING).alias("COL_INT_string"))
+                .from(table("TEST"))
+                .orderby(column("COL_INT_string"));
+        firstResult = engine.query(query).get(0).get("COL_INT").toString();
+        assertEquals("sorting should have considered the sort column as a string (1000 < 123)", "1000", firstResult);
     }
 
+    /**
+     * Check if exception is thrown when trying to cast for an unsupported type.
+     *
+     * @throws DatabaseEngineException If something goes wrong executing the query.
+     */
     @Test(expected = OperationNotSupportedRuntimeException.class)
     public void testCastUnsupported() throws DatabaseEngineException {
-        // Check if exception is thrown when trying to cast for an unsupported type.
         engine.query(select(cast(k("22"), BLOB)));
     }
 
@@ -2133,7 +2156,7 @@ public class EngineGeneralTest {
                         .where(eq(column("COL1"), k(1))));
 
         // MySQL does not support With
-        if (config.engine.contains("MySqlEngine")) {
+        if (engine instanceof MySqlEngine) {
             exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
@@ -2165,7 +2188,7 @@ public class EngineGeneralTest {
                         .orderby(column("COL5")));
 
         // MySQL does not support With
-        if (config.engine.contains("MySqlEngine")) {
+        if (engine instanceof MySqlEngine) {
             exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
@@ -2205,7 +2228,7 @@ public class EngineGeneralTest {
                               select(all()).from(table("friendsB"))));
 
         // MySQL does not support With
-        if (config.engine.contains("MySqlEngine")) {
+        if (engine instanceof MySqlEngine) {
             exception.expect(OperationNotSupportedRuntimeException.class);
         }
 
