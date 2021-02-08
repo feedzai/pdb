@@ -282,7 +282,30 @@ public class MySqlTranslator extends AbstractTranslator {
 
     @Override
     public String translate(final Cast cast) {
-        throw new OperationNotSupportedRuntimeException("PDB does not support Cast in MySQL.");
+        final String type;
+
+        switch (cast.getType()) {
+            case BOOLEAN:
+            case INT:
+            case LONG:
+                type = "SIGNED INTEGER";
+                break;
+            case DOUBLE:
+                type = "DECIMAL(65,30)";
+                break;
+            case STRING:
+                type = "CHAR";
+                break;
+            default:
+                throw new OperationNotSupportedRuntimeException(format("Cannot cast to '%s'.", cast.getType()));
+        }
+
+        inject(cast.getExpression());
+        final String translation = format("CAST(%s AS %s)",
+                cast.getExpression().translate(),
+                type);
+
+        return cast.isEnclosed() ? "(" + translation + ")" : translation;
     }
 
     @Override
