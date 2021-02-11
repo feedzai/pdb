@@ -545,6 +545,7 @@ public abstract class AbstractTranslator {
         final String toConcat =
                 concat.getExpressions().stream()
                       .map(Expression::translate)
+                      .filter(ex -> !ex.equals("NULL"))
                       .collect(Collectors.joining(", "));
 
         return String.format("CONCAT_WS(%s, %s)",

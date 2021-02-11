@@ -340,8 +340,8 @@ public class OracleTranslator extends AbstractTranslator {
         final String concatWs = format(" || %s || ", concat.getDelimiter().translate());
 
         return concat.getExpressions().stream()
-                     .filter(Objects::nonNull)
                      .map(Expression::translate)
+                     .filter(ex -> !ex.equals("NULL"))
                      .collect(Collectors.joining(concatWs));
     }
 

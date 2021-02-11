@@ -2317,8 +2317,16 @@ public class EngineGeneralTest {
     }
 
     @Test
+    public void testConcatNull() throws DatabaseEngineException {
+        final List<Map<String, ResultColumn>> result = queryConcat(k("."));
+
+        // the 6th result has a null value.
+        assertEquals("lol", result.get(5).get("concat").toString());
+    }
+
+    @Test
     public void testConcatColumn() throws DatabaseEngineException {
-        final List<Map<String, ResultColumn>> result = queryConcat(column("COL5"));
+        final List<Map<String, ResultColumn>> result = queryConcat(column("COL2"));
 
         assertEquals("testetesteteste", result.get(0).get("concat").toString());
         assertEquals("xptoxptoxpto", result.get(1).get("concat").toString());
@@ -2335,19 +2343,31 @@ public class EngineGeneralTest {
      * @throws DatabaseEngineException if an issue when querying arises.
      */
     private List<Map<String, ResultColumn>> queryConcat(final Expression delimiter) throws DatabaseEngineException {
-        test6Columns();
-        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste").set("COL6", "teste").build());
-        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto").set("COL6", "xpto").build());
-        engine.persist("TEST", entry().set("COL1", 3).set("COL5", "xpto").set("COL6", "xpto").build());
-        engine.persist("TEST", entry().set("COL1", 4).set("COL5", "teste").set("COL6", "teste").build());
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", STRING)
+                .addColumn("COL3", STRING)
+                .build();
+
+        engine.addEntity(entity);
+
+        engine.persist("TEST", entry().set("COL1", 1).set("COL2", "teste").set("COL3", "teste").build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL2", "xpto").set("COL3", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL2", "xpto").set("COL3", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL2", "teste").set("COL3", "teste").build());
         engine.persist(
                 "TEST",
-                entry().set("COL1", 5).set("COL5", "pomme de terre").set("COL6", "pomme de terre").build()
+                entry().set("COL1", 5).set("COL2", "pomme de terre").set("COL3", "pomme de terre").build()
+        );
+        engine.persist(
+                "TEST",
+                entry().set("COL1", 6).set("COL2", "lol").set("COL3", null).build()
         );
 
         final Query query =
                 select(
-                        concat(delimiter, column("COL5"), column("COL6")).alias("concat"))
+                        concat(delimiter, column("COL2"), column("COL3")).alias("concat"))
                 .from(table("TEST"));
 
         return engine.query(query);
@@ -3744,20 +3764,6 @@ public class EngineGeneralTest {
                 .build());
         test = engine.query(select(all()).from(table("TEST")).orderby(column("COL4")));
         assertEquals("col4 ok?", 8L, (long) test.get(7).get("COL4").toLong());
-    }
-
-    protected void test6Columns() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .addColumn("COL6", STRING)
-                .build();
-
-        engine.addEntity(entity);
     }
 
     protected void test5Columns() throws DatabaseEngineException {
