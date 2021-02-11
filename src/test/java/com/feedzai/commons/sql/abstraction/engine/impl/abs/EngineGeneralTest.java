@@ -2317,10 +2317,17 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void testConcatNull() throws DatabaseEngineException {
+    public void testConcatNullExpressions() throws DatabaseEngineException {
         final Query query = select(concat(k(","), k("lol"), k(null), k("rofl")).alias("concat"));
         final List<Map<String, ResultColumn>> result = engine.query(query);
         assertEquals("lol,rofl", result.get(0).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatNullDelimiter() throws DatabaseEngineException {
+        final Query query = select(concat(k(null), k("lol"), k("nop"), k("rofl")).alias("concat"));
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+        assertEquals("lolnoprofl", result.get(0).get("concat").toString());
     }
 
     @Test

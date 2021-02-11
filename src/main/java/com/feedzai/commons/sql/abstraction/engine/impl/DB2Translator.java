@@ -391,12 +391,21 @@ public class DB2Translator extends AbstractTranslator {
         inject(concat.getDelimiter());
         inject(concat.getExpressions());
 
-        final String concatWs = format(" || %s || ", concat.getDelimiter().translate());
+        final String delimTranslation = concat.getDelimiter().translate();
+
+        final String delimiter;
+        // if delimiter is null, fallback to concatenating all together.
+        // else apply it.
+        if (delimTranslation.equals("NULL")) {
+            delimiter =  " || ";
+        } else {
+            delimiter = " || " + delimTranslation + " || ";
+        }
 
         return concat.getExpressions().stream()
-                     .map(Expression::translate)
-                     .filter(ex -> !ex.equals("NULL"))
-                     .collect(Collectors.joining(concatWs));
+                                      .map(Expression::translate)
+                                      .filter(ex -> !ex.equals("NULL"))
+                                      .collect(Collectors.joining(delimiter));
     }
 
     @Override

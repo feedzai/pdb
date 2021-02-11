@@ -548,8 +548,9 @@ public abstract class AbstractTranslator {
                       .filter(ex -> !ex.equals("NULL"))
                       .collect(Collectors.joining(", "));
 
+        final String delimiter = concat.getDelimiter().translate();
         return String.format("CONCAT_WS(%s, %s)",
-                             concat.getDelimiter().translate(),
+                             delimiter.equals("NULL") ? "''" : delimiter,
                              toConcat);
     }
 
