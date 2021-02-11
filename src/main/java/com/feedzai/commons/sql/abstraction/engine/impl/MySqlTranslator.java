@@ -230,6 +230,42 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
+    protected String translateUpdateFrom(final Update update) {
+        final Expression table = update.getTable();
+        inject(table);
+
+        final List<String> temp = new ArrayList<>();
+
+        temp.add("UPDATE");
+        temp.add(table.translate());
+        if (table.isAliased()) {
+            temp.add(quotize(table.getAlias(), translateEscape()));
+        }
+
+        // In MySQL, the UPDATE FROM can be replicated using UPDATE A INNER JOIN B ON <condition> approach.
+        if (update.hasFrom()) {
+            final Expression from = update.getFrom();
+            inject(from);
+
+            temp.add("INNER JOIN");
+            temp.add(from.translate());
+        }
+
+        if (update.hasWhere()) {
+            final Expression where = update.getWhere();
+            inject(where);
+
+            temp.add("ON");
+            temp.add(where.enclose().translate());
+        }
+
+        temp.add("SET");
+        temp.add(translateUpdateSetClause(update));
+
+        return join(temp, " ");
+    }
+
+    @Override
     public String translate(View v) {
         final Expression as = v.getAs();
         final String name = v.getName();

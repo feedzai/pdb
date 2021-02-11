@@ -403,11 +403,12 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Update u) {
-        final List<Expression> columns = u.getColumns();
-        final Expression table = u.getTable();
-        final Expression where = u.getWhere();
-        inject(table, where);
+    public String translate(final Update update) {
+        final List<Expression> columns = update.getColumns();
+        final Expression table = update.getTable();
+        final Expression from = update.hasFrom() ? update.getFrom() : update.getTable();
+        final Expression where = update.getWhere();
+        inject(table, from, where);
 
         final List<String> temp = new ArrayList<>();
 
@@ -419,7 +420,7 @@ public class SqlServerTranslator extends AbstractTranslator {
         }
 
         temp.add("SET");
-        List<String> setTranslations = new ArrayList<>();
+        final List<String> setTranslations = new ArrayList<>();
         for (Expression e : columns) {
             inject(e);
             setTranslations.add(e.translate());
@@ -427,9 +428,9 @@ public class SqlServerTranslator extends AbstractTranslator {
         temp.add(join(setTranslations, ", "));
 
         temp.add("FROM");
-        temp.add(table.translate());
-        if (table.isAliased()) {
-            temp.add(quotize(table.getAlias()));
+        temp.add(from.translate());
+        if (from.isAliased()) {
+            temp.add(quotize(from.getAlias()));
         }
 
         if (where != null) {
