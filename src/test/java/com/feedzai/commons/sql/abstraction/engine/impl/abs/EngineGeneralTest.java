@@ -2318,10 +2318,9 @@ public class EngineGeneralTest {
 
     @Test
     public void testConcatNull() throws DatabaseEngineException {
-        final List<Map<String, ResultColumn>> result = queryConcat(k("."));
-
-        // the 6th result has a null value.
-        assertEquals("lol", result.get(5).get("concat").toString());
+        final Query query = select(concat(k(","), k("lol"), k(null), k("rofl")).alias("concat"));
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+        assertEquals("lol,rofl", result.get(0).get("concat").toString());
     }
 
     @Test
