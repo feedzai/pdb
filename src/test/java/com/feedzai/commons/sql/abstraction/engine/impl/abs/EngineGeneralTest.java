@@ -2622,7 +2622,14 @@ public class EngineGeneralTest {
     @Test
     public void updateFrom1ColTest() throws DatabaseEngineException {
         test5Columns();
-        test1Column();
+        final DbEntity entity = dbEntity()
+                .name("TEST2")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", STRING)
+                .build();
+
+        engine.addEntity(entity);
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                                       .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
@@ -2650,12 +2657,16 @@ public class EngineGeneralTest {
         // check to see if TEST has changed
         final Query query = select(column("COL5"))
                 .from(table("TEST"))
-                .where(in(column("COL1"), L(k(1), k(5))));
+                .orderby(column("COL1"));
 
         final List<Map<String, ResultColumn>> result = engine.query(query);
 
+        //check if only the 1st and the 5th were changed.
         assertEquals("update1", result.get(0).get("COL5").toString());
-        assertEquals("update2", result.get(1).get("COL5").toString());
+        assertEquals("xpto", result.get(1).get("COL5").toString());
+        assertEquals("xpto", result.get(2).get("COL5").toString());
+        assertEquals("teste", result.get(3).get("COL5").toString());
+        assertEquals("update2", result.get(4).get("COL5").toString());
     }
 
     @Test
@@ -3734,16 +3745,6 @@ public class EngineGeneralTest {
                 .addColumn("COL3", DOUBLE)
                 .addColumn("COL4", LONG)
                 .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
-    }
-
-    protected void test1Column() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST2")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", STRING)
                 .build();
 
         engine.addEntity(entity);
