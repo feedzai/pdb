@@ -628,7 +628,9 @@ public class MySqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected String dropFkQuery(final String table, final String fkName) {
-        return String.format("ALTER TABLE %s DROP FOREIGN KEY %s", table, fkName);
+        return String.format("ALTER TABLE %s DROP FOREIGN KEY %s",
+                quotize(table, escapeCharacter()),
+                quotize(fkName, escapeCharacter()));
     }
 
     protected void dropReferringFks(DbEntity entity) throws DatabaseEngineException {

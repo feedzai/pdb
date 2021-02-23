@@ -982,7 +982,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
         for (final DbFk fk : fks) {
             final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
