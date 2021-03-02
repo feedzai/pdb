@@ -182,7 +182,6 @@ public class EngineGeneralTest {
     @Before
     public void init() throws DatabaseFactoryException {
         properties = new Properties() {
-
             {
                 setProperty(JDBC, config.jdbc);
                 setProperty(USERNAME, config.username);
@@ -1631,76 +1630,6 @@ public class EngineGeneralTest {
 
             assertEquals("ret 0?", 0, engine.query(select(all()).from(table("TEST"))).size());
         }
-    }
-
-    @Test
-    public void OneToNTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST1")
-                .addColumn("COL1", INT, true)
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(entity);
-
-        entity = dbEntity()
-                .name("TEST2")
-                .addColumn("COL1", INT, true)
-                .addColumn("COL2", INT)
-                .addFk(dbFk()
-                                .addColumn("COL2")
-                                .referencedTable("TEST1")
-                                .addReferencedColumn("COL1")
-                                .build()
-                )
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(entity);
-    }
-
-    @Test
-    public void NtoNTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("USER")
-                .addColumn("COL1", INT, true)
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(entity);
-
-        entity = dbEntity()
-                .name("ROLE")
-                .addColumn("COL1", INT, true)
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(entity);
-
-        entity = dbEntity()
-                .name("USER_ROLE")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", INT)
-                .addFk(dbFk()
-                                .addColumn("COL1")
-                                .referencedTable("USER")
-                                .addReferencedColumn("COL1")
-                                .build(),
-                        dbFk()
-                                .addColumn("COL2")
-                                .referencedTable("ROLE")
-                                .addReferencedColumn("COL1")
-                                .build()
-                )
-                .pkFields("COL1", "COL2")
-                .build();
-
-        engine.addEntity(entity);
-    }
-
-    @Test
-    public void NtoNOneToNTest() throws DatabaseEngineException {
-        userRolePermissionSchema();
     }
 
     @Test
@@ -3613,78 +3542,6 @@ public class EngineGeneralTest {
         query = engine.query(select(all()).from(table("TEST")).where(like(udf("lower", column("COL5")), k("%tt%"))));
         assertEquals(1, query.size());
 
-    }
-
-    @Test(expected = DatabaseEngineException.class)
-    public void fkTestRemoveRowReferencedByForeignKey() throws DatabaseEngineException {
-        DbEntity e1 = dbEntity()
-                .name("TEST1")
-                .addColumn("COL1", INT)
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(e1);
-
-        DbEntity e2 = dbEntity().name("TEST2").addColumn("COL2", INT, true).addColumn("COL1", INT)
-                .addFk(dbFk()
-                        .addColumn("COL1")
-                        .referencedTable("TEST1")
-                        .addReferencedColumn("COL1")
-                        .build())
-                .pkFields("COL2")
-                .build();
-
-        engine.addEntity(e2);
-
-        engine.persist("TEST1", entry().set("COL1", 1)
-                .build());
-        engine.persist("TEST2", entry().set("COL1", 1)
-                .build());
-        engine.executeUpdate(delete(table("TEST1")));
-    }
-
-    @Test
-    public void fkTestRemoveRowPreviouslyReferencedByForeignKey() throws DatabaseEngineException, DatabaseFactoryException {
-        DbEntity e1 = dbEntity()
-                .name("TEST1")
-                .addColumn("COL1", INT)
-                .pkFields("COL1")
-                .build();
-
-        engine.addEntity(e1);
-
-        DbEntity e2 = dbEntity().name("TEST2").addColumn("COL2", INT, true).addColumn("COL1", INT)
-                .addFk(dbFk()
-                        .addColumn("COL1")
-                        .referencedTable("TEST1")
-                        .addReferencedColumn("COL1")
-                        .build())
-                .pkFields("COL2")
-                .build();
-
-        engine.addEntity(e2);
-
-        engine.persist("TEST1", entry().set("COL1", 1)
-                .build());
-        engine.persist("TEST2", entry().set("COL1", 1)
-                .build());
-
-
-        // Clear TEST2 FK's
-        e2 = e2.newBuilder().clearFks().build();
-
-        // PDB property SCHEMA_POLICY must not be drop-create, otherwise the entity
-        // will be dropped and the update of the FK's isn't properly tested.
-        engine.close();
-        properties.setProperty(SCHEMA_POLICY, "create");
-        engine = DatabaseFactory.getConnection(properties);
-
-        engine.updateEntity(e2);
-
-        engine.executeUpdate(delete(table("TEST1")));
-
-        // Just to make sure that the table was not dropped on the previous update
-        assertEquals(1, engine.query(select(all()).from(table("TEST2"))).size());
     }
 
     @Test

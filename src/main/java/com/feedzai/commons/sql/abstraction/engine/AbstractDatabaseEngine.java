@@ -638,6 +638,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param currentEntityMetadata The existing entity metadata.
      * @param entity                The updated entity.
      * @throws DatabaseEngineException If something goes wrong while updating the entity.
+     * @since 2.8.1
      */
     private void updateColumnsAndFks(final Map<String, DbColumnType> currentEntityMetadata,
                                      final DbEntity entity) throws DatabaseEngineException {
@@ -693,6 +694,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param entityName The entity name.
      * @return Mapping between the foreign key constraint name and the {@link DbFk}.
      * @throws DatabaseEngineException If it can't get the foreign keys metadata.
+     * @since 2.8.1
      */
     private Map<String, DbFk> getCurrentFks(final String entityName) throws DatabaseEngineException {
         final Map<String, DbFk.Builder> existentFks = new HashMap<>();
@@ -1471,8 +1473,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      *
      * @param entity The entity.
      * @param fks    The foreign keys to be added.
-     *
      * @throws DatabaseEngineException If something goes wrong creating the FKs.
+     * @since 2.8.1
      */
     protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
         throw new NotImplementedException();
@@ -1524,6 +1526,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param table The table name.
      * @param fkName The foreign key name.
      * @return The query to drop the foreign key.
+     * @since 2.8.1
      */
     protected String dropFkQuery(final String table, final String fkName) {
         return String.format("ALTER TABLE %s DROP CONSTRAINT %s",
@@ -1536,8 +1539,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      *
      * @param table The table.
      * @param fks   The foreign key names to be dropped.
-     *
      * @throws DatabaseEngineException If a foreign key can't be dropped.
+     * @since 2.8.1
      */
     protected void dropFks(final String table, final Set<String> fks) throws DatabaseEngineException {
         for (final String fk : fks) {
@@ -1691,6 +1694,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      *
      * @return The metadata.
      * @throws DatabaseEngineException If it isn't possible to get current database metadata.
+     * @since 2.8.1
      */
     private DatabaseMetaData getMetadata() throws DatabaseEngineException {
         try {
