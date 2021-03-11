@@ -34,7 +34,7 @@
     </licenses>
 
     <properties>
-        <project.source>1.8</project.source>
+        <project.source>11</project.source>
 
         <default.test.cmdArgs>
             -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar
