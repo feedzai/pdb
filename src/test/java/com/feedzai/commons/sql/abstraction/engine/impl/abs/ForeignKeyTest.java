@@ -104,9 +104,15 @@ public class ForeignKeyTest {
 
         engine = DatabaseFactory.getConnection(properties);
 
+        /*
+         The tests will create foreign keys that refer to 1 or 2 columns in this reference table:
+         - the columns that define the primary key can be used as referenced columns in foreign keys that have 2 columns
+         - the column with "unique" constraint can be used as referenced column in foreign keys that have 1 column;
+           this also needs to be "not null" because DB2 doesn't support nulls in unique columns
+         */
         userEntity = dbEntity()
                 .name("USER")
-                .addColumn("USER_ID", INT, DbColumnConstraint.UNIQUE)
+                .addColumn("USER_ID", INT, DbColumnConstraint.UNIQUE, DbColumnConstraint.NOT_NULL)
                 .addColumn("AUTH_TYPE", STRING)
                 .pkFields("USER_ID", "AUTH_TYPE")
                 .build();
@@ -366,11 +372,10 @@ public class ForeignKeyTest {
      * The test verifies the changes in foreign keys that are requested, with those keys being added/dropped only when
      * necessary.
      *
-     * @param <DB> The type of database engine for which to fake add/drop FK methods, so that parameters can be captured.
      * @throws Exception If something goes wrong in the test.
      */
     @Test
-    public <DB extends AbstractDatabaseEngine> void updateForeignKeyTest() throws Exception {
+    public void updateForeignKeyTest() throws Exception {
         final DbFk fk1 = dbFk()
                 .addColumn("USER_ID")
                 .referencedTable("USER")
@@ -397,7 +402,18 @@ public class ForeignKeyTest {
         final LinkedList<String> fksToDrop = new LinkedList<>();
         final LinkedList<DbFk> fksToAdd = new LinkedList<>();
 
-        new MockUp<DB>() {
+        /*
+         The following lines implement a workaround for bugs #703 and #705 in JMockit.
+         We need to capture the calls to the methods "addFks" and "dropFks", but JMockit has problems with overridden
+          methods, which is the case in the CockroachDBEngine. Since the super method is called in the implementation,
+          as a workaround we set the super class to be mocked instead (PostgreSqlEngine).
+         */
+        Class<?> dbEngineClassToMock = engine.getClass();
+        while (dbEngineClassToMock.getSuperclass() != AbstractDatabaseEngine.class) {
+            dbEngineClassToMock = dbEngineClassToMock.getSuperclass();
+        }
+
+        new MockUp<AbstractDatabaseEngine>(dbEngineClassToMock) {
             @Mock
             protected void dropFks(final Invocation inv, final String table, final Set<String> fks) {
                 fksToDrop.addAll(fks);
@@ -434,10 +450,10 @@ public class ForeignKeyTest {
         engine.updateEntity(fkEntity);
 
         assertThat(fksToDrop)
-                .as("When updating an entity with 'create' policy, FKs shouldn't be dropped if the table already matches the entity .")
+                .as("When updating an entity with 'create' policy, FKs shouldn't be dropped if the table already matches the entity.")
                 .isEmpty();
         assertThat(fksToAdd)
-                .as("When updating an entity with 'create' policy, no FKs should be added if the table already matches the entity .")
+                .as("When updating an entity with 'create' policy, no FKs should be added if the table already matches the entity.")
                 .isEmpty();
 
         fkEntity = fkEntity.newBuilder()

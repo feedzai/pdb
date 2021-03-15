@@ -69,6 +69,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -396,7 +397,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 return conn;
             } catch (final InterruptedException ex) {
                 logger.debug("Thread interrupted.");
-                throw new InterruptedException();
+                Thread.currentThread().interrupt();
+                throw ex;
             } catch (final SQLException ex) {
                 logger.debug("Connection failed.");
 
@@ -699,9 +701,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     private Map<String, DbFk> getCurrentFks(final String entityName) throws DatabaseEngineException {
         final Map<String, DbFk.Builder> existentFks = new HashMap<>();
 
-        try {
-            getConnection();
-            final ResultSet rs = getMetadata().getImportedKeys(null, this.currentSchema, entityName);
+        try (ResultSet rs = getImportedKeys(entityName)) {
             while (rs.next()) {
                 final String fkName = rs.getString("FK_NAME");
                 final String localColumnName = rs.getString("FKCOLUMN_NAME");
@@ -715,10 +715,24 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
             return existentFks.entrySet().stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().build()));
-        } catch (final Exception exception) {
-            Thread.currentThread().interrupt();
-            throw new DatabaseEngineException("Error dropping foreign key", exception);
+        } catch (final DatabaseEngineException e) {
+            throw e;
+        } catch (final Exception e) {
+            throw new DatabaseEngineException("Error getting current foreign keys", e);
         }
+    }
+
+    /**
+     * Gets a description of the columns that are referenced by the given table's foreign key columns.
+     *
+     * @param entityName The entity name.
+     * @return A {@link ResultSet} containing information about columns referenced by a foreign key.
+     * @throws DatabaseEngineException If it isn't possible to get current database metadata.
+     * @throws SQLException If a database access error occurs when getting key information.
+     */
+    protected ResultSet getImportedKeys(final String entityName) throws DatabaseEngineException, SQLException {
+        Objects.requireNonNull(entityName, "'entityName' must not be null");
+        return getMetadata().getImportedKeys(null, this.currentSchema, entityName);
     }
 
     @Override
@@ -1186,7 +1200,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             logger.debug("Connection is down.", ex);
             return false;
         }
-    };
+    }
 
     /**
      * Checks if the connection is alive.
@@ -1509,7 +1523,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             getConnection();
             final Set<String> fks = new HashSet<>();
-            try (ResultSet rs = getMetadata().getImportedKeys(null, this.currentSchema, table)) {
+            try (ResultSet rs = getImportedKeys(table)) {
                 while (rs.next()) {
                     fks.add(rs.getString("FK_NAME"));
                 }
@@ -1562,14 +1576,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     @Override
     public synchronized Map<String, DbEntityType> getEntities(final String schemaPattern) throws DatabaseEngineException {
         final Map<String, DbEntityType> entities = new LinkedHashMap<>();
-        ResultSet rs = null;
 
-        try {
-            getConnection();
-
-            // get the entities
-            rs = getMetadata().getTables(null, schemaPattern, "%", null);
-
+        try (ResultSet rs = getMetadata().getTables(null, schemaPattern, "%", null)) {
             while (rs.next()) {
                 final String entityName = rs.getString("table_name");
                 final String entityType = rs.getString("table_type");
@@ -1593,16 +1601,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             return entities;
+        } catch (final DatabaseEngineException e) {
+            throw e;
         } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get entities", e);
-        } finally {
-            try {
-                if (rs != null) {
-                    rs.close();
-                }
-            } catch (final Exception a) {
-                logger.trace("Error closing result set.", a);
-            }
         }
     }
 
@@ -1662,12 +1664,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                                                               final String tableNamePattern) throws DatabaseEngineException {
         final Map<String, DbColumnType> metaMap = new LinkedHashMap<>();
 
-        ResultSet rsColumns = null;
-        try {
-            getConnection();
-
-            final DatabaseMetaData meta = getMetadata();
-            rsColumns = meta.getColumns(null, schemaPattern, tableNamePattern, null);
+        try (ResultSet rsColumns = getMetadata().getColumns(null, schemaPattern, tableNamePattern, null)) {
             while (rsColumns.next()) {
                 metaMap.put(
                     rsColumns.getString("COLUMN_NAME"),
@@ -1676,16 +1673,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             return metaMap;
+        } catch (final DatabaseEngineException e) {
+            throw e;
         } catch (final Exception e) {
             throw new DatabaseEngineException("Could not get metadata", e);
-        } finally {
-            try {
-                if (rsColumns != null) {
-                    rsColumns.close();
-                }
-            } catch (final Exception a) {
-                logger.trace("Error closing result set.", a);
-            }
         }
     }
 
@@ -1698,8 +1689,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      */
     private DatabaseMetaData getMetadata() throws DatabaseEngineException {
         try {
+            getConnection();
             return this.conn.getMetaData();
-        } catch (final SQLException exception) {
+        } catch (final InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new DatabaseEngineException("Interrupted while getting metadata", exception);
+        } catch (final Exception exception) {
             throw new DatabaseEngineException("Could not get metadata", exception);
         }
     }

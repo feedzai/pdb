@@ -56,6 +56,7 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -1036,6 +1037,55 @@ public class OracleEngine extends AbstractDatabaseEngine {
                 }
             }
         }
+    }
+
+    @Override
+    protected ResultSet getImportedKeys(final String entityName) throws SQLException {
+        Objects.requireNonNull(entityName, "'entityName' must not be null");
+
+        final String query = "SELECT" +
+                "  NULL AS pktable_cat,\n" +
+                "  p.owner as pktable_schem,\n" +
+                "  p.table_name as pktable_name,\n" +
+                "  pc.column_name as pkcolumn_name,\n" +
+                "  NULL as fktable_cat,\n" +
+                "  f.owner as fktable_schem,\n" +
+                "  f.table_name as fktable_name,\n" +
+                "  fc.column_name as fkcolumn_name,\n" +
+                "  fc.position as key_seq,\n" +
+                "  NULL as update_rule,\n" +
+                "  decode (f.delete_rule, 'CASCADE', 0, 'SET NULL', 2, 1) as delete_rule,\n" +
+                "  f.constraint_name as fk_name,\n" +
+                "  p.constraint_name as pk_name,\n" +
+                "  decode(f.deferrable,       'DEFERRABLE',5      ,'NOT DEFERRABLE',7      , 'DEFERRED', 6      ) deferrability \n" +
+                " FROM all_cons_columns pc, all_constraints p, all_cons_columns fc, all_constraints f\n" +
+                " WHERE f.table_name = ?\n" +
+                "  AND f.owner = ?\n" +
+                "  AND f.constraint_type = 'R'\n" +
+                "  AND p.owner = f.r_owner\n" +
+                "  AND p.constraint_name = f.r_constraint_name\n" +
+                /*
+                 In the Oracle driver, the following constraint is used:
+                        AND p.constraint_type = 'P'
+                 This limits the search to foreign keys that reference primary key columns only;
+                 we need it to also return foreign keys that reference columns that have unique key constraints.
+                 */
+                "  AND p.constraint_type IN ('P', 'U')\n" +
+                "  AND pc.owner = p.owner\n" +
+                "  AND pc.constraint_name = p.constraint_name\n" +
+                "  AND pc.table_name = p.table_name\n" +
+                "  AND fc.owner = f.owner\n" +
+                "  AND fc.constraint_name = f.constraint_name\n" +
+                "  AND fc.table_name = f.table_name\n" +
+                "  AND fc.position = pc.position\n" +
+                "  ORDER BY pktable_schem, pktable_name, key_seq";
+
+        final PreparedStatement ps = this.conn.prepareStatement(query);
+        ps.setString(1, entityName);
+        ps.setString(2, this.currentSchema);
+        ps.closeOnCompletion();
+
+        return ps.executeQuery();
     }
 
     @Override
