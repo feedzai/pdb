@@ -17,7 +17,6 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
@@ -33,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.google.common.util.concurrent.Uninterruptibles;
 import mockit.Expectations;
 import mockit.Invocation;
@@ -234,7 +234,7 @@ public class BatchUpdateTest {
     public void batchInsertFlushBySizeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
         final int numTestEntries = 5;
 
-        final List<BatchEntry> failedEntries = new ArrayList<>();
+        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
         batch = MockedBatch.create(
                 engine,
@@ -242,7 +242,7 @@ public class BatchUpdateTest {
                 numTestEntries,
                 100000,
                 1000000,
-                failedEvents -> Collections.addAll(failedEntries, failedEvents)
+                batchListener
         );
 
         // Simulate failures in beginTransaction() for flush to fail
@@ -256,7 +256,7 @@ public class BatchUpdateTest {
         }
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", failedEntries.size(), numTestEntries);
+        assertEquals("Entries were added to failed", batchListener.failed.size(), numTestEntries);
     }
 
     /**
@@ -267,7 +267,7 @@ public class BatchUpdateTest {
         final int numTestEntries = 5;
         final long batchTimeout = 1000;     // Flush after 1 sec
 
-        final List<BatchEntry> failedEntries = new ArrayList<>();
+        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
         batch = MockedBatch.create(
                 engine,
@@ -275,7 +275,7 @@ public class BatchUpdateTest {
                 numTestEntries + 1,
                 batchTimeout,
                 1000000,
-                failedEvents -> Collections.addAll(failedEntries, failedEvents)
+                batchListener
         );
 
         // Simulate failures in beginTransaction() for flush to fail
@@ -291,7 +291,7 @@ public class BatchUpdateTest {
         Thread.sleep(batchTimeout + 1000);
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", failedEntries.size(), numTestEntries);
+        assertEquals("Entries were added to failed", batchListener.failed.size(), numTestEntries);
     }
 
     /**
@@ -304,7 +304,7 @@ public class BatchUpdateTest {
         final int numTestEntries = 5;
         final int numRetries = 2;
 
-        final List<BatchEntry> failedEntries = new ArrayList<>();
+        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
         batch = DefaultBatch.create(
                 engine,
@@ -312,7 +312,7 @@ public class BatchUpdateTest {
                 numTestEntries + 1,
                 10000,
                 1000000,
-                failedEvents -> Collections.addAll(failedEntries, failedEvents),
+                batchListener,
                 numRetries,
                 200
         );
@@ -343,7 +343,10 @@ public class BatchUpdateTest {
         assertEquals("Flush was retried the correct number of times", numRetries, callCounter.get() - 1);
 
         // Check that entries were not added to onFlushFailure().
-        assertTrue("Entries should not be added to failed", failedEntries.isEmpty());
+        assertTrue("Entries should not be added to failed", batchListener.failed.isEmpty());
+
+        // Check that all entries succeeded
+        assertEquals("Entries should have all succeeded to be persisted", numTestEntries, batchListener.succeeded.size());
 
         // Check entries are in DB.
         checkTestEntriesInDB(numTestEntries);
@@ -359,7 +362,7 @@ public class BatchUpdateTest {
         final int numTestEntries = 5;
         final int numRetries = 2;
 
-        final List<BatchEntry> failedEntries = new ArrayList<>();
+        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
         batch = DefaultBatch.create(
                 engine,
@@ -367,7 +370,7 @@ public class BatchUpdateTest {
                 numTestEntries + 1,
                 10000,
                 1000000,
-                failedEvents -> Collections.addAll(failedEntries, failedEvents),
+                batchListener,
                 numRetries,
                 200
         );
@@ -398,7 +401,7 @@ public class BatchUpdateTest {
         assertEquals("Flush was retried the correct number of times", numRetries, callCounter.get() - 1);
 
         // Check that entries were added to onFlushFailure().
-        assertEquals("Entries were added to failed", numTestEntries, failedEntries.size());
+        assertEquals("Entries were added to failed", numTestEntries, batchListener.failed.size());
     }
 
     /**
@@ -613,7 +616,12 @@ public class BatchUpdateTest {
          */
         static final long PRE_DESTROY_SLEEP_DURATION = 500L;
 
-        private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown, FailureListener listener) {
+        private MockedBatch(final DatabaseEngine de,
+                            final String name,
+                            final int batchSize,
+                            final long batchTimeout,
+                            final long maxAwaitTimeShutdown,
+                            final BatchListener listener) {
             super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
         }
 
@@ -622,7 +630,7 @@ public class BatchUpdateTest {
         }
 
         public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                                         final long maxAwaitTimeShutdown, final FailureListener listener) {
+                                         final long maxAwaitTimeShutdown, final BatchListener listener) {
             final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
             b.start();
             return b;
@@ -639,6 +647,37 @@ public class BatchUpdateTest {
         public synchronized void destroy() {
             Uninterruptibles.sleepUninterruptibly(PRE_DESTROY_SLEEP_DURATION, TimeUnit.MILLISECONDS);
             super.destroy();
+        }
+    }
+
+    /**
+     * A {@link BatchListener} for the tests.
+     */
+    private class MockBatchListener implements BatchListener {
+
+        /**
+         * The entries that succeeded to be persisted.
+         */
+        final List<BatchEntry> succeeded = new ArrayList<>();
+
+        /**
+         * The entries that failed to be persisted.
+         */
+        final List<BatchEntry> failed = new ArrayList<>();
+
+        /**
+         * Default constructor.
+         */
+        public MockBatchListener() { }
+
+        @Override
+        public void onFailure(final BatchEntry[] rowsFailed) {
+            Collections.addAll(this.failed, rowsFailed);
+        }
+
+        @Override
+        public void onSuccess(final BatchEntry[] rowsSucceeded) {
+            Collections.addAll(this.succeeded, rowsSucceeded);
         }
     }
 

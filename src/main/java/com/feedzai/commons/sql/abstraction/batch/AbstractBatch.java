@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import javax.annotation.Nullable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -51,10 +53,6 @@ public abstract class AbstractBatch implements Runnable {
      */
     protected final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
 
-    /**
-     * Constant {@link FailureListener} representing the NO OP operation.
-     */
-    public final static FailureListener NO_OP = rowsFailed -> {};
     /**
      * Constant representing that no retries should be attempted on batch flush failures.
      */
@@ -127,10 +125,14 @@ public abstract class AbstractBatch implements Runnable {
      * The name of the batch.
      */
     protected String name;
+
     /**
-     * The failure listener for customized behavior when this batch fails to persist data.
+     * The listener for customized behavior when this batch succeeds or fails to persist data.
+     *
+     * @since 2.8.1
      */
-    protected Optional<FailureListener> failureListener = Optional.empty();
+    protected Optional<BatchListener> batchListener = Optional.empty();
+
     /**
      * The number of times to retry a batch flush upon failure.
      * <p>
@@ -143,6 +145,66 @@ public abstract class AbstractBatch implements Runnable {
      * Defaults to {@value DEFAULT_RETRY_INTERVAL}.
      */
     protected final long flushRetryDelay;
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with a {@link BatchListener}.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param batchListener        The listener that will be invoked whenever some batch operation fail or succeeds to persist.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
+     *                             will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
+     *
+     * @since 2.8.1
+     */
+    protected AbstractBatch(
+        final DatabaseEngine de,
+        final String name,
+        final int batchSize,
+        final long batchTimeout,
+        final long maxAwaitTimeShutdown,
+        @Nullable final BatchListener batchListener,
+        final int maxFlushRetries,
+        final long flushRetryDelay) {
+        Preconditions.checkNotNull(de, "The provided database engine is null.");
+
+        this.de = de;
+        this.batchSize = batchSize;
+        this.batch = batchSize;
+        this.batchTimeout = batchTimeout;
+        this.lastFlush = System.currentTimeMillis();
+        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
+        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
+        this.batchListener = Optional.ofNullable(batchListener);
+        this.maxFlushRetries = maxFlushRetries;
+        this.flushRetryDelay = flushRetryDelay;
+    }
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with a {@link BatchListener}.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param batchListener        The listener that will be invoked whenever some batch operation fail or succeeds to persist.
+     *
+     * @since 2.8.1
+     */
+    protected AbstractBatch(
+        final DatabaseEngine de,
+        final String name,
+        final int batchSize,
+        final long batchTimeout,
+        final long maxAwaitTimeShutdown,
+        @Nullable final BatchListener batchListener) {
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, batchListener, NO_RETRY, DEFAULT_RETRY_INTERVAL);
+    }
 
     /**
      * Creates a new instance of {@link AbstractBatch} with a {@link FailureListener}.
@@ -158,7 +220,9 @@ public abstract class AbstractBatch implements Runnable {
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
      *
      * @since 2.1.12
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, String, int, long, long, BatchListener, int, long)} instead.
      */
+    @Deprecated
     protected AbstractBatch(
             final DatabaseEngine de,
             final String name,
@@ -168,19 +232,7 @@ public abstract class AbstractBatch implements Runnable {
             final FailureListener failureListener,
             final int maxFlushRetries,
             final long flushRetryDelay) {
-        Preconditions.checkNotNull(de, "The provided database engine is null.");
-        Preconditions.checkNotNull(failureListener, "The provided failure listener is null");
-
-        this.de = de;
-        this.batchSize = batchSize;
-        this.batch = batchSize;
-        this.batchTimeout = batchTimeout;
-        this.lastFlush = System.currentTimeMillis();
-        this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
-        this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
-        this.failureListener = Optional.of(failureListener);
-        this.maxFlushRetries = maxFlushRetries;
-        this.flushRetryDelay = flushRetryDelay;
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, convertToBatchListener(failureListener), maxFlushRetries, flushRetryDelay);
     }
 
     /**
@@ -194,7 +246,9 @@ public abstract class AbstractBatch implements Runnable {
      * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
      *
      * @since 2.1.11
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, String, int, long, long, BatchListener)} instead.
      */
+    @Deprecated
     protected AbstractBatch(
             final DatabaseEngine de,
             final String name,
@@ -202,7 +256,7 @@ public abstract class AbstractBatch implements Runnable {
             final long batchTimeout,
             final long maxAwaitTimeShutdown,
             final FailureListener failureListener) {
-        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, failureListener, NO_RETRY, DEFAULT_RETRY_INTERVAL);
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, convertToBatchListener(failureListener), NO_RETRY, DEFAULT_RETRY_INTERVAL);
     }
 
     /**
@@ -215,7 +269,7 @@ public abstract class AbstractBatch implements Runnable {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      */
     protected AbstractBatch(final DatabaseEngine de, String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
-        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, NO_OP);
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, (BatchListener) null);
     }
 
     /**
@@ -384,6 +438,7 @@ public abstract class AbstractBatch implements Runnable {
                 onFlushFailure(temp.toArray(new BatchEntry[0]));
                 logger.error(dev, "[{}] Error occurred while flushing. Aborting batch flush.", name, e);
             } else {
+                onFlushSuccess(temp.toArray(new BatchEntry[0]));
                 logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name,
                         (System.currentTimeMillis() - start), retryCount, temp.size());
             }
@@ -437,12 +492,19 @@ public abstract class AbstractBatch implements Runnable {
      *
      * @param entries The entries that are pending to be persisted.
      */
-    public void onFlushFailure(BatchEntry[] entries) {
-        if (!this.failureListener.isPresent()) {
-            return;
-        }
+    public void onFlushFailure(final BatchEntry[] entries) {
+        this.batchListener.ifPresent(batchListener -> batchListener.onFailure(entries));
+    }
 
-        this.failureListener.get().onFailure(entries);
+    /**
+     * Notifies about succeeded entries on flush success.
+     *
+     * @param entries The entries that were persisted.
+     *
+     * @since 2.8.1
+     */
+    public void onFlushSuccess(final BatchEntry[] entries) {
+        this.batchListener.ifPresent(batchListener -> batchListener.onSuccess(entries));
     }
 
     @Override
@@ -475,5 +537,28 @@ public abstract class AbstractBatch implements Runnable {
 
         de.flush();
         de.commit(); // automatically ends transaction
+    }
+
+    /**
+     * Converts a {@link FailureListener} to {@link BatchListener}.
+     *
+     * @param failureListener The {@link FailureListener} to be converted.
+     * @return A {@link BatchListener} that calls a {@link FailureListener} on failure.
+     *
+     * @since 2.8.1
+     * @deprecated The {@link FailureListener} is deprecated and this method will be removed once it is removed.
+     */
+    public static BatchListener convertToBatchListener(final FailureListener failureListener) {
+        return new BatchListener() {
+            @Override
+            public void onFailure(final BatchEntry[] rowsFailed) {
+                failureListener.onFailure(rowsFailed);
+            }
+
+            @Override
+            public void onSuccess(final BatchEntry[] rowsSucceeded) {
+                // Do nothing.
+            }
+        };
     }
 }
