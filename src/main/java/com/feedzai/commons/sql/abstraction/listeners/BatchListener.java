@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Feedzai
+ * Copyright 2021 Feedzai
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.feedzai.commons.sql.abstraction;
+package com.feedzai.commons.sql.abstraction.listeners;
 
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 
 /**
- * Listener interface to add behavior when there is some failure executing batch
+ * Listener interface to add behavior after executing batch
  * operations on databases (e.g. write rows to file).
  *
- * @author Helder Martins (helder.martins@feedzai.com).
- * @since 2.1.11
- * @deprecated Use {@link com.feedzai.commons.sql.abstraction.listeners.BatchListener} instead.
+ * @author João Fernandes (joao.fernandes@feedzai.com)
+ * @since 2.8.1
  */
-@Deprecated
-@FunctionalInterface
-public interface FailureListener {
+public interface BatchListener {
 
     /**
      * Callback indicating that one or more rows have failed to be persisted.
@@ -35,4 +32,11 @@ public interface FailureListener {
      * @param rowsFailed An array of {@link BatchEntry entries} with the row or rows that failed to be persisted.
      */
     void onFailure(BatchEntry[] rowsFailed);
+
+    /**
+     * Callback indicating that one or more rows have succeeded to be persisted.
+     *
+     * @param rowsSucceeded An array of {@link BatchEntry entries} with the row or rows that succeeded to be persisted.
+     */
+    void onSuccess(BatchEntry[] rowsSucceeded);
 }

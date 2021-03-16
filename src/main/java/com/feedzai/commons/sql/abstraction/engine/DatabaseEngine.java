@@ -27,10 +27,13 @@ import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 
+import javax.annotation.Nullable;
 import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
@@ -278,8 +281,32 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      *
      * @since 2.1.11
+     * @deprecated Use {@link #createBatch(int, long, String, BatchListener)} instead.
      */
+    @Deprecated
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final FailureListener failureListener);
+
+    /**
+     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
+     * statements in the batch is reached.
+     * <p>
+     * If desired you may provide a {@link BatchListener} that will be invoked when a batch operation
+     * fails or succeeds to persist data.
+     * <p/>
+     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     *
+     * @param batchSize       The batch size.
+     * @param batchTimeout    If inserts do not occur after the specified time, a flush will be performed.
+     * @param batchName       The batch name.
+     * @param batchListener   Batch listener to execute custom behavior when the batch fails or succeeds to persist.
+     * @return The batch.
+     *
+     * @since 2.8.1
+     */
+    default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, @Nullable final BatchListener batchListener) {
+        final FailureListener failureListener = Objects.isNull(batchListener) ? failed -> { } : batchListener::onFailure;
+        return createBatch(batchSize, batchTimeout, batchName, failureListener);
+    }
 
     /**
      * Checks if the connection is alive.

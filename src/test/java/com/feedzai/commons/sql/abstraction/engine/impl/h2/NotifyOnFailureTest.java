@@ -27,6 +27,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.RetryLimitExceededException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import mockit.Mock;
 import mockit.MockUp;
 import org.junit.After;
@@ -35,7 +36,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
@@ -72,8 +76,6 @@ public class NotifyOnFailureTest {
     private DatabaseEngine engine;
     protected Properties properties;
 
-    private BatchEntry[] failureResults = null;
-
     @Before
     public void init() throws DatabaseFactoryException {
         properties = new Properties() {
@@ -108,28 +110,39 @@ public class NotifyOnFailureTest {
 
         engine.addEntity(entity);
 
-        DefaultBatch batch = DefaultBatch.create(engine, "test", 5, 10000L, engine.getProperties().getMaximumAwaitTimeBatchShutdown());
+        final List<BatchEntry> failedEntries = new ArrayList<>();
+        final List<BatchEntry> succeededEntries = new ArrayList<>();
+
+        final BatchListener batchListener = new BatchListener() {
+            @Override
+            public void onFailure(BatchEntry[] rowsFailed) {
+                Collections.addAll(failedEntries, rowsFailed);
+            }
+
+            @Override
+            public void onSuccess(BatchEntry[] rowsSucceeded) {
+                Collections.addAll(succeededEntries, rowsSucceeded);
+            }
+        };
+
+        final DefaultBatch batch = DefaultBatch.create(engine, "test", 5, 10000L,
+            engine.getProperties().getMaximumAwaitTimeBatchShutdown(), batchListener
+        );
 
         for (int i = 0; i < 5; i++) {
             batch.add("TEST", entry().set("COL1", i).build());
         }
 
-        assertEquals("", 5, failureResults.length);
+        assertEquals("", 5, failedEntries.size());
         for (int i = 0; i < 5; i++) {
-            assertEquals("table name ok?", "TEST", failureResults[i].getTableName());
-            assertEquals("COL1 value ok?", i, failureResults[i].getEntityEntry().get("COL1"));
+            assertEquals("table name ok?", "TEST", failedEntries.get(i).getTableName());
+            assertEquals("COL1 value ok?", i, failedEntries.get(i).getEntityEntry().get("COL1"));
         }
 
     }
 
     private void mockClasses() {
         new MockUp<DefaultBatch>() {
-
-            @Mock
-            public void onFlushFailure(BatchEntry[] entries) {
-                failureResults = entries;
-            }
-
             @Mock
             public void run() {
                 // Ignore batch flushing on timeout.

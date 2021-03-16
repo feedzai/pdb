@@ -35,6 +35,7 @@ import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableRuntimeException;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.feedzai.commons.sql.abstraction.util.AESHelper;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
@@ -48,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
+import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -1008,12 +1010,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName) {
-        return createBatch(batchSize, batchTimeout, batchName, AbstractBatch.NO_OP);
+        return createBatch(batchSize, batchTimeout, batchName, (BatchListener) null);
     }
 
     @Override
     public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, final FailureListener failureListener) {
-        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), failureListener);
+        return createBatch(batchSize, batchTimeout, batchName, AbstractBatch.convertToBatchListener(failureListener));
+    }
+
+    @Override
+    public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, @Nullable final BatchListener batchListener) {
+        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), batchListener);
     }
 
     /**
