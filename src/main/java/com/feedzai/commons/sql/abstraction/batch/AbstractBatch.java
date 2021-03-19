@@ -395,6 +395,7 @@ public abstract class AbstractBatch implements Runnable {
 
             processBatch(temp);
 
+            onFlushSuccess(temp.toArray(new BatchEntry[0]));
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
