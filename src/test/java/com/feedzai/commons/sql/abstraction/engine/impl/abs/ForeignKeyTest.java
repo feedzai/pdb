@@ -16,7 +16,6 @@
 
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -43,6 +42,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
+import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.UNIQUE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
@@ -112,7 +113,7 @@ public class ForeignKeyTest {
          */
         userEntity = dbEntity()
                 .name("USER")
-                .addColumn("USER_ID", INT, DbColumnConstraint.UNIQUE, DbColumnConstraint.NOT_NULL)
+                .addColumn("USER_ID", INT, UNIQUE, NOT_NULL)
                 .addColumn("AUTH_TYPE", STRING)
                 .pkFields("USER_ID", "AUTH_TYPE")
                 .build();

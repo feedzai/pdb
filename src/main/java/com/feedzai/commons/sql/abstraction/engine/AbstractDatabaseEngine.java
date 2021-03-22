@@ -611,7 +611,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         // Only mutate the schema in the DB (i.e. add schema, drop/add columns, if the schema policy allows it.
         if (!properties.isSchemaPolicyNone()) {
             final Map<String, DbColumnType> tableMetadata = getMetadata(entity.getName());
-            if (tableMetadata.isEmpty()) { // the table does not exist
+            // if the table does not exist yet, add it
+            if (tableMetadata.isEmpty()) {
                 addEntity(entity);
             } else if (this.properties.isSchemaPolicyDropCreate()) {
                 dropEntity(entity);
