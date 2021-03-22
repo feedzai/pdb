@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -172,9 +174,9 @@ public class CockroachDBEngine extends PostgreSqlEngine {
         ));
     }
 
-    protected void addFks(final DbEntity entity) throws DatabaseEngineException {
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
         try {
-            super.addFks(entity);
+            super.addFks(entity, fks);
         } catch (final DatabaseEngineException ex) {
             if (ex.getCause() instanceof SQLException) {
                 final SQLException sqlException = (SQLException) ex.getCause();

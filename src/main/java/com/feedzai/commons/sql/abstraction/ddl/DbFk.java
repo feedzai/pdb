@@ -15,12 +15,13 @@
  */
 package com.feedzai.commons.sql.abstraction.ddl;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,6 +49,11 @@ public class DbFk implements Serializable {
     private final String referencedTable;
 
     /**
+     * Cached hashcode.
+     */
+    private final int hashCode;
+
+    /**
      * Creates a new instance of {@link DbFk}.
      *
      * @param builder The builder from this class.
@@ -56,6 +62,7 @@ public class DbFk implements Serializable {
         this.localColumns = ImmutableList.copyOf(builder.localColumns);
         this.referencedColumns = ImmutableList.copyOf(builder.referencedColumns);
         this.referencedTable = builder.referencedTable;
+        this.hashCode = Objects.hash(this.localColumns, this.referencedColumns, this.referencedTable);
     }
 
     /**
@@ -119,12 +126,33 @@ public class DbFk implements Serializable {
         return referencedTable;
     }
 
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        final DbFk dbFk = (DbFk) obj;
+        return this.localColumns.equals(dbFk.localColumns)
+                && this.referencedColumns.equals(dbFk.referencedColumns)
+                && this.referencedTable.equals(dbFk.referencedTable);
+    }
+
+    @Override
+    public int hashCode() {
+        return this.hashCode;
+    }
+
     /**
      * Builder to create immutable {@link DbFk} objects.
      */
     public static class Builder implements com.feedzai.commons.sql.abstraction.util.Builder<DbFk>, Serializable {
-        private final List<String> localColumns = new ArrayList<>();
-        private final List<String> referencedColumns = new ArrayList<>();
+        private final List<String> localColumns = new LinkedList<>();
+        private final List<String> referencedColumns = new LinkedList<>();
         private String referencedTable = null;
 
         /**
@@ -230,7 +258,11 @@ public class DbFk implements Serializable {
 
         @Override
         public DbFk build() {
-            Objects.requireNonNull(referencedTable, "The referenced table can't be null");
+            Preconditions.checkNotNull(referencedTable, "The referenced table can't be null.");
+            Preconditions.checkArgument(localColumns.size() == referencedColumns.size(),
+                    "The number of local columns and referenced columns must be the same. local: %s ; referenced: %s",
+                    localColumns, referencedColumns
+            );
             return new DbFk(this);
         }
     }

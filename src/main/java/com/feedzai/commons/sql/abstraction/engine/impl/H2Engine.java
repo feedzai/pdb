@@ -42,6 +42,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -568,8 +569,8 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        for (final DbFk fk : fks) {
             final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
@@ -588,10 +589,14 @@ public class H2Engine extends AbstractDatabaseEngine {
                     format(
                             "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
                             table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
+                            quotize(md5(
+                                    "FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                                    properties.getMaxIdentifierSize()
+                            )),
                             quotizedLocalColumnsSting,
                             quotize(fk.getReferencedTable()),
-                            quotizedForeignColumnsString);
+                            quotizedForeignColumnsString
+                    );
 
             Statement alterTableStmt = null;
             try {
@@ -602,7 +607,11 @@ public class H2Engine extends AbstractDatabaseEngine {
                 if (ex.getSQLState().equals(CONSTRAINT_NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getSQLState());
                 } else {
-                    throw new DatabaseEngineException(format("Could not add Foreign Key to entity %s. Error code: %s.", entity.getName(), ex.getSQLState()), ex);
+                    throw new DatabaseEngineException(format(
+                            "Could not add Foreign Key to entity %s. Error code: %s.",
+                            entity.getName(),
+                            ex.getSQLState()
+                    ), ex);
                 }
             } finally {
                 try {
@@ -613,7 +622,6 @@ public class H2Engine extends AbstractDatabaseEngine {
                     logger.trace("Error closing statement.", e);
                 }
             }
-
         }
     }
 

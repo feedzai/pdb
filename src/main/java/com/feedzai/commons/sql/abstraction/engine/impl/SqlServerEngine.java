@@ -43,6 +43,7 @@ import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -590,8 +591,8 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        for (final DbFk fk : fks) {
             final List<String> quotizedLocalColumns = new ArrayList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
@@ -610,10 +611,14 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     format(
                             "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
                             table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
+                            quotize(md5(
+                                    "FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                                    properties.getMaxIdentifierSize()
+                            )),
                             quotizedLocalColumnsSting,
                             quotize(fk.getReferencedTable()),
-                            quotizedForeignColumnsString);
+                            quotizedForeignColumnsString
+                    );
 
 
             Statement alterTableStmt = null;
@@ -626,7 +631,11 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getErrorCode());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
                 } else {
-                    throw new DatabaseEngineException(format("Could not add Foreign Key to entity %s. Error code: %d.", entity.getName(), ex.getErrorCode()), ex);
+                    throw new DatabaseEngineException(format(
+                            "Could not add Foreign Key to entity %s. Error code: %d.",
+                            entity.getName(),
+                            ex.getErrorCode()
+                    ), ex);
                 }
             } finally {
                 try {
@@ -637,7 +646,6 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                     logger.trace("Error closing statement.", e);
                 }
             }
-
         }
     }
 

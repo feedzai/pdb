@@ -37,6 +37,7 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
+import com.ibm.db2.jcc.am.SqlSyntaxErrorException;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
@@ -47,9 +48,11 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -67,32 +70,32 @@ public class DB2Engine extends AbstractDatabaseEngine {
     /**
      * The DB2 JDBC driver.
      */
-    protected static final String DB2_DRIVER = DatabaseEngineDriver.DB2.driver();
+    private static final String DB2_DRIVER = DatabaseEngineDriver.DB2.driver();
+
     /**
      * Name is already used by an existing object.
      */
-    public static final String NAME_ALREADY_EXISTS = "DB2 SQL Error: SQLCODE=-601, SQLSTATE=42710";
+    private static final int NAME_ALREADY_EXISTS = -601;
+
     /**
      * Table can have only one primary key.
      */
-    public static final String TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY = "DB2 SQL Error: SQLCODE=-624, SQLSTATE=42889";
+    private static final int TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY = -624;
+
     /**
-     * Sequence does not exist.
+     * The name (e.g. of a sequence, table, view, ...) does not exist.
      */
-    public static final String SEQUENCE_DOES_NOT_EXIST = "DB2 SQL Error: SQLCODE=-204, SQLSTATE=42704";
-    /**
-     * Table or view does not exist.
-     */
-    public static final String TABLE_OR_VIEW_DOES_NOT_EXIST = "DB2 SQL Error: SQLCODE=-204, SQLSTATE=42704";
-    /**
-     * Foreign key already exists
-     */
-    public static final String FOREIGN_ALREADY_EXISTS = "DB2 SQL Error: SQLCODE=-601, SQLSTATE=42710";
+    private static final int NAME_DOES_NOT_EXIST = -204;
 
     /**
      * The default size of a BLOB in DB2.
      */
-    public static final String DB2_DEFAULT_BLOB_SIZE = "2G";
+    static final String DB2_DEFAULT_BLOB_SIZE = "2G";
+
+    /**
+     * The column must have a {@link DbColumnConstraint#NOT_NULL NOT NULL column constraint}.
+     */
+    private static final int COLUMN_MUST_BE_NON_NULL = -542;
 
     /**
      * Creates a new DB2 connection.
@@ -161,17 +164,17 @@ public class DB2Engine extends AbstractDatabaseEngine {
     @Override
     protected void createTable(final DbEntity entity) throws DatabaseEngineException {
 
-        List<String> createTable = new ArrayList<>();
+        final List<String> createTable = new LinkedList<>();
 
         createTable.add("CREATE TABLE");
         createTable.add(quotize(entity.getName()));
-        List<String> columns = new ArrayList<>();
-        for (DbColumn c : entity.getColumns()) {
-            List<String> column = new ArrayList<>();
+        final List<String> columns = new LinkedList<>();
+        for (final DbColumn c : entity.getColumns()) {
+            final List<String> column = new LinkedList<>();
             column.add(quotize(c.getName()));
             column.add(translateType(c));
 
-            for (DbColumnConstraint cc : c.getColumnConstraints()) {
+            for (final DbColumnConstraint cc : c.getColumnConstraints()) {
                 column.add(cc.translate());
             }
 
@@ -188,45 +191,49 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
         logger.trace(createTableStatement);
 
-        Statement s = null;
-        try {
-            s = conn.createStatement();
+        try (Statement s = conn.createStatement()) {
             s.executeUpdate(createTableStatement);
         } catch (final SQLException ex) {
-            if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
-                logger.debug(dev, "'{}' is already defined", entity.getName());
-                handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
-            } else {
-                throw new DatabaseEngineException("Something went wrong handling statement", ex);
-            }
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
+            switch (ex.getErrorCode()) {
+                case NAME_ALREADY_EXISTS:
+                    logger.debug(dev, "'{}' is already defined", entity.getName());
+                    handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
+                    break;
+
+                case COLUMN_MUST_BE_NON_NULL:
+                    String errorMessage;
+                    try {
+                        errorMessage = ((SqlSyntaxErrorException) ex).getSqlca().getMessage();
+                    } catch (final Exception sqlEx) {
+                        // if this is not SqlSyntaxErrorException, Sqlca is null or there is an error getting message,
+                        // just use the message from the SQL Exception
+                        errorMessage = ex.getMessage();
+                    }
+                    logger.error("Column must use NON_NULL constraint; error message: {}", errorMessage);
+                    // fall through to default (throw general DatabaseEngineException)
+
+                default:
+                    throw new DatabaseEngineException("Something went wrong handling statement", ex);
             }
         }
     }
 
     @Override
     protected void addPrimaryKey(final DbEntity entity) throws DatabaseEngineException {
-        if (entity.getPkFields().size() == 0) {
+        if (entity.getPkFields().isEmpty()) {
             return;
         }
 
-        List<String> pks = new ArrayList<>();
-        for (String pk : entity.getPkFields()) {
+        final List<String> pks = new LinkedList<>();
+        for (final String pk : entity.getPkFields()) {
             pks.add(quotize(pk));
         }
 
-
-        String alterColumnSetNotNull = alterColumnSetNotNull(entity.getName(), entity.getPkFields());
+        final String alterColumnSetNotNull = alterColumnSetNotNull(entity.getName(), entity.getPkFields());
 
         final String pkName = md5(format("PK_%s", entity.getName()), properties.getMaxIdentifierSize());
 
-        List<String> statement = new ArrayList<>();
+        final List<String> statement = new LinkedList<>();
         statement.add("ALTER TABLE");
         statement.add(quotize(entity.getName()));
         statement.add("ADD CONSTRAINT");
@@ -235,43 +242,26 @@ public class DB2Engine extends AbstractDatabaseEngine {
         statement.add("(" + join(pks, ", ") + ")");
 
         final String addPrimaryKey = join(statement, " ");
-        String reorg = reorg(entity.getName());
+        final String reorg = reorg(entity.getName());
 
-
-        Statement s = null;
-        try {
+        try (Statement s = conn.createStatement()) {
             logger.trace(alterColumnSetNotNull);
-            s = conn.createStatement();
             s.executeUpdate(alterColumnSetNotNull);
-            s.close();
 
             logger.trace(reorg);
-            s = conn.createStatement();
             s.executeUpdate(reorg);
-            s.close();
 
             logger.trace(addPrimaryKey);
-            s = conn.createStatement();
             s.executeUpdate(addPrimaryKey);
-            s.close();
 
             logger.trace(reorg);
-            s = conn.createStatement();
             s.executeUpdate(reorg);
         } catch (final SQLException ex) {
-            if (ex.getMessage().startsWith(TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY)) {
+            if (ex.getErrorCode() == TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
             } else {
                 throw new DatabaseEngineException("Something went wrong handling statement", ex);
-            }
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
             }
         }
     }
@@ -282,13 +272,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
      * @param tableName The table name to reorganize.
      * @return The command to perform the operation.
      */
-    private String reorg(String tableName) {
-        List<String> statement = new ArrayList<>();
-        statement.add("CALL sysproc.admin_cmd('REORG TABLE");
-        statement.add(quotize(tableName));
-        statement.add("')");
-
-        return join(statement, " ");
+    private String reorg(final String tableName) {
+        return String.format("CALL sysproc.admin_cmd('REORG TABLE %s')", quotize(tableName));
     }
 
     /**
@@ -314,21 +299,19 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
     @Override
     protected void addIndexes(final DbEntity entity) throws DatabaseEngineException {
-        List<DbIndex> indexes = entity.getIndexes();
+        final List<DbIndex> indexes = entity.getIndexes();
 
-        for (DbIndex index : indexes) {
-
-
-            List<String> createIndex = new ArrayList<>();
+        for (final DbIndex index : indexes) {
+            final List<String> createIndex = new LinkedList<>();
             createIndex.add("CREATE");
             if (index.isUnique()) {
                 createIndex.add("UNIQUE");
             }
             createIndex.add("INDEX");
 
-            List<String> columns = new ArrayList<>();
-            List<String> columnsForName = new ArrayList<>();
-            for (String column : index.getColumns()) {
+            final List<String> columns = new LinkedList<>();
+            final List<String> columnsForName = new LinkedList<>();
+            for (final String column : index.getColumns()) {
                 columns.add(quotize(column));
                 columnsForName.add(column);
             }
@@ -342,46 +325,35 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
             logger.trace(statement);
 
-            Statement s = null;
-            try {
-                s = conn.createStatement();
+            try (Statement s = conn.createStatement()) {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
-                if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
+                if (ex.getErrorCode() == NAME_ALREADY_EXISTS) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);
-                }
-            } finally {
-                try {
-                    if (s != null) {
-                        s.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
                 }
             }
         }
     }
 
     @Override
-    protected void addSequences(DbEntity entity) throws DatabaseEngineException {
-        for (DbColumn column : entity.getColumns()) {
+    protected void addSequences(final DbEntity entity) throws DatabaseEngineException {
+        for (final DbColumn column : entity.getColumns()) {
             if (!column.isAutoInc()) {
                 continue;
             }
 
             final String sequenceName = md5(format("%s_%s_SEQ", entity.getName(), column.getName()), properties.getMaxIdentifierSize());
 
-            List<String> createSequence = new ArrayList<>();
+            final List<String> createSequence = new LinkedList<>();
             createSequence.add("CREATE SEQUENCE");
             createSequence.add(quotize(sequenceName));
             createSequence.add("MINVALUE 0");
             switch (column.getDbColumnType()) {
                 case INT:
-                    createSequence.add("MAXVALUE");
-                    createSequence.add(format("%d", Integer.MAX_VALUE));
+                    createSequence.add("MAXVALUE " + Integer.MAX_VALUE);
 
                     break;
                 case LONG:
@@ -398,24 +370,14 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
             logger.trace(statement);
 
-            Statement s = null;
-            try {
-                s = conn.createStatement();
+            try (Statement s = conn.createStatement()) {
                 s.executeUpdate(statement);
             } catch (final SQLException ex) {
-                if (ex.getMessage().startsWith(NAME_ALREADY_EXISTS)) {
+                if (ex.getErrorCode() == NAME_ALREADY_EXISTS) {
                     logger.debug(dev, "'{}' is already defined", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);
-                }
-            } finally {
-                try {
-                    if (s != null) {
-                        s.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
                 }
             }
         }
@@ -495,8 +457,8 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void dropSequences(DbEntity entity) throws DatabaseEngineException {
-        for (DbColumn column : entity.getColumns()) {
+    protected void dropSequences(final DbEntity entity) throws DatabaseEngineException {
+        for (final DbColumn column : entity.getColumns()) {
             if (!column.isAutoInc()) {
                 continue;
             }
@@ -505,105 +467,67 @@ public class DB2Engine extends AbstractDatabaseEngine {
 
             final String stmt = format("DROP SEQUENCE %s", quotize(sequenceName));
 
-            Statement drop = null;
-            try {
-                drop = conn.createStatement();
-                logger.trace(stmt);
-                drop.executeUpdate(stmt);
+            logger.trace(stmt);
+
+            try (Statement s = conn.createStatement()) {
+                s.executeUpdate(stmt);
             } catch (final SQLException ex) {
-                if (ex.getMessage().startsWith(SEQUENCE_DOES_NOT_EXIST)) {
+                if (ex.getErrorCode() == NAME_DOES_NOT_EXIST) {
                     logger.debug(dev, "Sequence '{}' does not exist", sequenceName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.SEQUENCE_DOES_NOT_EXIST), ex);
                 } else {
                     throw new DatabaseEngineException("Error dropping sequence", ex);
                 }
-            } finally {
-                try {
-                    if (drop != null) {
-                        drop.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
-                }
             }
         }
     }
 
     @Override
-    protected void dropTable(DbEntity entity) throws DatabaseEngineException {
-        Statement drop = null;
-        try {
-            drop = conn.createStatement();
-            final String query = format("DROP TABLE %s", quotize(entity.getName()));
-            logger.trace(query);
-            drop.executeUpdate(query);
+    protected void dropTable(final DbEntity entity) throws DatabaseEngineException {
+        final String query = format("DROP TABLE %s", quotize(entity.getName()));
+        logger.trace(query);
+
+        try (Statement s = conn.createStatement()) {
+            s.executeUpdate(query);
         } catch (final SQLException ex) {
-            if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
+            if (ex.getErrorCode() == NAME_DOES_NOT_EXIST) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_DOES_NOT_EXIST), ex);
             } else {
                 throw new DatabaseEngineException("Error dropping table", ex);
             }
-        } finally {
-            try {
-                if (drop != null) {
-                    drop.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
         }
     }
 
-
     @Override
-    protected void dropColumn(DbEntity entity, String... columns) throws DatabaseEngineException {
-        Statement drop = null;
-        Statement reorgStatement = null;
-
-        List<String> removeColumns = new ArrayList<>();
+    protected void dropColumn(final DbEntity entity, final String... columns) throws DatabaseEngineException {
+        final List<String> removeColumns = new ArrayList<>();
         removeColumns.add("ALTER TABLE");
         removeColumns.add(quotize(entity.getName()));
 
-        for (String col : columns) {
+        for (final String col : columns) {
             removeColumns.add("DROP COLUMN");
             removeColumns.add(quotize(col));
         }
 
-        try {
-            drop = conn.createStatement();
-            final String query = join(removeColumns, " ");
-            logger.trace(query);
-            drop.executeUpdate(query);
+        final String query = join(removeColumns, " ");
+        final String reorg = reorg(entity.getName());
 
-            String reorg = reorg(entity.getName());
+        try (Statement s = conn.createStatement()) {
+            logger.trace(query);
+            s.executeUpdate(query);
+
             logger.trace(reorg);
-            reorgStatement = conn.createStatement();
-            reorgStatement.executeUpdate(reorg);
+            s.executeUpdate(reorg);
+
         } catch (final SQLException ex) {
-            if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
+            if (ex.getErrorCode() == NAME_DOES_NOT_EXIST) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.COLUMN_DOES_NOT_EXIST), ex);
             } else {
                 throw new DatabaseEngineException("Error dropping column", ex);
             }
-        } finally {
-            try {
-                if (drop != null) {
-                    drop.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
-            try {
-                if (reorgStatement != null) {
-                    reorgStatement.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
         }
-
     }
 
     /*
@@ -739,14 +663,14 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addFks(DbEntity entity) throws DatabaseEngineException {
-        for (DbFk fk : entity.getFks()) {
-            final List<String> quotizedLocalColumns = new ArrayList<>();
+    protected void addFks(final DbEntity entity, final Set<DbFk> fks) throws DatabaseEngineException {
+        for (final DbFk fk : fks) {
+            final List<String> quotizedLocalColumns = new LinkedList<>();
             for (String s : fk.getLocalColumns()) {
                 quotizedLocalColumns.add(quotize(s));
             }
 
-            final List<String> quotizedForeignColumns = new ArrayList<>();
+            final List<String> quotizedForeignColumns = new LinkedList<>();
             for (final String s : fk.getReferencedColumns()) {
                 quotizedForeignColumns.add(quotize(s));
             }
@@ -759,43 +683,34 @@ public class DB2Engine extends AbstractDatabaseEngine {
                     format(
                             "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) REFERENCES %s (%s)",
                             table,
-                            quotize(md5("FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString, properties.getMaxIdentifierSize())),
+                            quotize(md5(
+                                    "FK_" + table + quotizedLocalColumnsSting + quotizedForeignColumnsString,
+                                    properties.getMaxIdentifierSize()
+                            )),
                             quotizedLocalColumnsSting,
                             quotize(fk.getReferencedTable()),
-                            quotizedForeignColumnsString);
+                            quotizedForeignColumnsString
+                    );
 
-            Statement alterTableStmt = null;
-            Statement reorgStatement = null;
-            try {
-                alterTableStmt = conn.createStatement();
+            final String reorg = reorg(entity.getName());
+
+            try (Statement s = conn.createStatement()) {
                 logger.trace(alterTable);
-                alterTableStmt.executeUpdate(alterTable);
+                s.executeUpdate(alterTable);
 
-                String reorg = reorg(entity.getName());
                 logger.trace(reorg);
-                reorgStatement = conn.createStatement();
-                reorgStatement.executeUpdate(reorg);
+                s.executeUpdate(reorg);
+
             } catch (final SQLException ex) {
-                if (ex.getMessage().startsWith(FOREIGN_ALREADY_EXISTS)) {
+                if (ex.getErrorCode() == NAME_ALREADY_EXISTS) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getMessage());
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.FOREIGN_KEY_ALREADY_EXISTS), ex);
                 } else {
-                    throw new DatabaseEngineException(format("Could not add Foreign Key to entity %s. Error code: %s.", entity.getName(), ex.getMessage()), ex);
-                }
-            } finally {
-                try {
-                    if (alterTableStmt != null) {
-                        alterTableStmt.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
-                }
-                try {
-                    if (reorgStatement != null) {
-                        reorgStatement.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
+                    throw new DatabaseEngineException(format(
+                            "Could not add Foreign Key to entity %s. Error code: %s.",
+                            entity.getName(),
+                            ex.getMessage()
+                    ), ex);
                 }
             }
         }
