@@ -291,6 +291,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
 
         this.conn = DriverManager.getConnection(jdbc, props);
+        printDatabaseInformation();
 
         this.conn.setNetworkTimeout(socketTimeoutExecutor, (int) TimeUnit.SECONDS.toMillis(this.properties.getSocketTimeout()));
 
@@ -304,6 +305,21 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         setTransactionIsolation();
 
         logger.debug("Connection successful.");
+    }
+
+    /**
+     * Helper method that prints the version of the Database.
+     */
+    public void printDatabaseInformation() {
+        try {
+            final DatabaseMetaData metaData = this.conn.getMetaData();
+
+            logger.info("Database: {}", metaData.getDatabaseProductName());
+            logger.info("Database version: {}", metaData.getDatabaseProductVersion());
+            logger.info("JDBC version: {}", metaData.getDriverVersion());
+        } catch (final SQLException ex) {
+            this.logger.error("Couldn't retrieve the database information.");
+        }
     }
 
     /**
@@ -409,7 +425,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         }
     }
 
-    private synchronized void recover() throws DatabaseEngineException, NameAlreadyExistsException {
+    /**
+     * Clears entities and prepared statements cache.
+     *
+     * @throws DatabaseEngineException    If an error occurs.
+     * @throws NameAlreadyExistsException If an error occurs.
+     */
+    protected synchronized void recover() throws DatabaseEngineException, NameAlreadyExistsException {
         // Recover entities.
         final Map<String, MappedEntity> niw = new HashMap<>(entities);
         // clear the entities
@@ -778,17 +800,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                                            final boolean useAutoInc) throws DatabaseEngineException {
         reconnectExceptionally(String.format("Connection error while persisting entity '%s'", name));
 
-        final MappedEntity me = entities.get(name);
-        if (me == null) {
-            throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-        }
+        final MappedEntity me = getMappedEntityFromCache(name);
 
-        final PreparedStatement ps = getPreparedStatementForPersist(useAutoInc, me);
-
-        final int lastBindPosition = entityToPreparedStatement(me.getEntity(), ps, entry, useAutoInc);
+        final PreparedStatementWrapper preparedStatementWrapper = entityToPreparedStatement(me.getEntity(), entry, useAutoInc);
 
         try {
-            final long ret = doPersist(ps, me, useAutoInc, lastBindPosition);
+            final long ret = doPersist(preparedStatementWrapper, me, useAutoInc);
             return ret == 0 ? null : ret;
 
         } catch (final DatabaseEngineException | DatabaseEngineRuntimeException dbex) {
@@ -796,6 +813,42 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         } catch (final Exception ex) {
             throw getQueryExceptionHandler().handleException(ex, "Something went wrong persisting the entity");
         }
+    }
+
+    /**
+     * Helper method that retrieves the {@link MappedEntity} from PDB cache.
+     *
+     * @param name The name of the {@link MappedEntity} to retrive.
+     * @return The {@link MappedEntity} from PDB cache.
+     * @throws DatabaseEngineException If the {@link MappedEntity} is not present in the cache.
+     */
+    protected MappedEntity getMappedEntityFromCache(final String name) throws DatabaseEngineException {
+        final MappedEntity me = this.entities.get(name);
+        if (me == null) {
+            throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
+        }
+        return me;
+    }
+
+    /**
+     * Helper method that gets a {@link PreparedStatement} for a specific {@link DbEntity}.
+     *
+     * @param entity     The entity name.
+     * @param useAutoInc Use or not the autoinc.
+     * @param fromBatch   Indicates if this is being requested in the context of a batch update or not.
+     * @return The {@link PreparedStatement}.
+     * @throws DatabaseEngineException If the {@link MappedEntity} is not present in the cache.
+     */
+    protected PreparedStatement getPreparedStatement(DbEntity entity, boolean useAutoInc, boolean fromBatch) throws DatabaseEngineException {
+        // Retrieve the MappedEntity from the cache.
+        final MappedEntity me = getMappedEntityFromCache(entity.getName());
+        final PreparedStatement ps;
+        if (fromBatch) {
+            ps = me.getInsert();
+        } else {
+            ps = getPreparedStatementForPersist(useAutoInc, me);
+        }
+        return ps;
     }
 
     /**
@@ -817,15 +870,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * @param ps               The {@link PreparedStatement} to use in the persist operation
      * @param me               The mapped entity on which to persist.
      * @param useAutoInc       Whether to use autoInc.
-     * @param lastBindPosition The position (1-based) of the last bind parameter that was filled in the prepared statement.
      * @return The ID of the auto generated value ({@code 0} if there's no auto generated value).
      * @throws Exception if any problem occurs while persisting.
      * @since 2.5.1
      */
-    protected abstract long doPersist(final PreparedStatement ps,
+    protected abstract long doPersist(final PreparedStatementWrapper ps,
                                       final MappedEntity me,
-                                      final boolean useAutoInc,
-                                      int lastBindPosition) throws Exception;
+                                      final boolean useAutoInc) throws Exception;
 
     /**
      * Flushes the batches for all the registered entities.
@@ -1157,16 +1208,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
 
-            final MappedEntity me = entities.get(name);
+            final MappedEntity me = getMappedEntityFromCache(name);
 
-            if (me == null) {
-                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
-            }
+            final PreparedStatementWrapper preparedStatementWrapper =
+                entityToPreparedStatementForBatch(me.getEntity(), entry, true);
 
-            PreparedStatement ps = me.getInsert();
-            entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
-
-            ps.addBatch();
+            preparedStatementWrapper.getPreparedStatement().addBatch();
         } catch (final Exception ex) {
             throw new DatabaseEngineException("Error adding to batch", ex);
         }
@@ -1178,28 +1225,45 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * batch updates. This is to be overriden on engines where a distinct treatment is required
      * for these situations.
      *
-     * @param entity The entity.
-     * @param ps     The prepared statement.
-     * @param entry  The entry.
-     * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
+     * @param entity      The entity.
+     * @param entry       The entry.
+     * @param useAutoIncs True to use auto incrementation, false otherwise.
+     * @return The {@link PreparedStatementWrapper} which has the translated {@link PreparedStatement}
+     * and the position (1-based) of the last bind parameter that was filled in there.
      * @throws DatabaseEngineException if something occurs during the translation.
      *
      * @since 2.4.2
      */
-    protected int entityToPreparedStatementForBatch(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException {
-        return entityToPreparedStatement(entity, ps, entry, useAutoIncs);
+    protected PreparedStatementWrapper entityToPreparedStatementForBatch(final DbEntity entity, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException {
+        return entityToPreparedStatement(entity, entry, useAutoIncs, true);
     }
 
     /**
      * Translates the given entry entity to the prepared statement.
      *
-     * @param entity The entity.
-     * @param ps     The prepared statement.
-     * @param entry  The entry.
-     * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
+     * @param entity      The entity.
+     * @param entry       The entry.
+     * @param useAutoIncs True to use auto incrementation, false otherwise.
+     * @return The {@link PreparedStatementWrapper} which has the translated {@link PreparedStatement}
+     * and the position (1-based) of the last bind parameter that was filled in there.
      * @throws DatabaseEngineException if something occurs during the translation.
      */
-    protected abstract int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException;
+    protected PreparedStatementWrapper entityToPreparedStatement(final DbEntity entity, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException {
+        return entityToPreparedStatement(entity, entry, useAutoIncs, false);
+    }
+
+    /**
+     * Translates the given entry entity to the prepared statement.
+     *
+     * @param entity      The entity.
+     * @param entry       The entry.
+     * @param useAutoIncs True to use auto incrementation, false otherwise.
+     * @param fromBatch   Indicates if this is being requested in the context of a batch update or not.
+     * @return The {@link PreparedStatementWrapper} which has the translated {@link PreparedStatement}
+     * and the position (1-based) of the last bind parameter that was filled in there.
+     * @throws DatabaseEngineException if something occurs during the translation.
+     */
+    protected abstract PreparedStatementWrapper entityToPreparedStatement(final DbEntity entity, final EntityEntry entry, final boolean useAutoIncs, final boolean fromBatch) throws DatabaseEngineException;
 
     /**
      * Executes the given query.
