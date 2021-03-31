@@ -32,6 +32,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
+import com.feedzai.commons.sql.abstraction.engine.PreparedStatementWrapper;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -113,7 +114,9 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+    protected PreparedStatementWrapper entityToPreparedStatement(final DbEntity entity, final EntityEntry entry, final boolean useAutoInc, final boolean fromBatch) throws DatabaseEngineException {
+        final PreparedStatement ps = getPreparedStatement(entity, useAutoInc, fromBatch);
+
         int i = 1;
         for (DbColumn column : entity.getColumns()) {
             if (column.isAutoInc() && useAutoInc) {
@@ -158,7 +161,10 @@ public class DB2Engine extends AbstractDatabaseEngine {
             i++;
         }
 
-        return i - 1;
+        return PreparedStatementWrapper.builder()
+            .preparedStatement(ps)
+            .lastBindPosition(i - 1)
+            .build();
     }
 
     @Override
@@ -604,11 +610,10 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected synchronized long doPersist(final PreparedStatement ps,
+    protected synchronized long doPersist(final PreparedStatementWrapper ps,
                                           final MappedEntity me,
-                                          final boolean useAutoInc,
-                                          int lastBindPosition) throws Exception {
-        ps.execute();
+                                          final boolean useAutoInc) throws Exception {
+        ps.getPreparedStatement().execute();
 
         if (me.getAutoIncColumn() == null) {
             return 0;

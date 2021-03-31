@@ -16,25 +16,38 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.oracle;
 
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import oracle.jdbc.driver.OracleClob;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.CLOB;
@@ -340,6 +353,127 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
             }
         }
     }
+
+
+    /**
+     * Tests inserting a big Clob (> 32k characters) that, for some reason it disappears from Oracle database.
+     * It is expected retry to insert that giant Clob 3 times and to try to also recover
+     * (recreate the PreparedStatements in PDB cache) 3 times and then give up and throw an exception.
+     * <p>
+     * This test is to recreate the `ORA-08103: object no longer exists` failure that Oracle might give when something
+     * wrong happens to the database and a temporary Clob is wrongfully removed from the database immediately.
+     *
+     * @throws Exception If something goes wrong with the test.
+     * @since 2.8.3
+     */
+    @Test
+    public void testObjectDisappear() throws Exception {
+        final DbEntity entity = dbEntity()
+            .name("TEST")
+            .addColumn("COL1", INT)
+            .pkFields("COL1")
+            .addColumn("COL2", DbColumnType.CLOB)
+            .build();
+
+        // make sure that entity doesn't exist and then create it from scratch
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(this.properties)){
+            engine.dropEntity(new DbEntity.Builder().name("TEST").build());
+            engine.addEntity(entity);
+        }
+
+        new MockUp<OracleClob>() {
+            @Mock
+            public int  setString(long var1, String var3) throws SQLException {
+                throw new SQLException("ORA-08103: object no longer exists");
+            }
+        };
+
+        final AtomicInteger counterRecoverCalls = new AtomicInteger(0);
+
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            protected synchronized void recover(final Invocation inv) throws DatabaseEngineException, NameAlreadyExistsException {
+                counterRecoverCalls.incrementAndGet();
+                inv.proceed();
+            }
+        };
+
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(this.properties)){
+            engine.loadEntity(entity);
+            final String randomString = RandomStringUtils.randomNumeric(33000);
+
+            Assertions.assertThatCode(() -> engine.persist(entity.getName(), new EntityEntry.Builder()
+                .set("COL1", 1)
+                .set("COL2", randomString)
+                .build())
+            )
+                .as("Oracle throws the expected error when a temporary CLOB disappears from the database.")
+                .hasRootCauseInstanceOf(SQLException.class)
+                .hasMessage("ORA-08103: object no longer exists");
+
+            final List<Map<String, ResultColumn>> results = engine.query(select(all()).from(table(entity.getName())));
+
+            assertEquals("Check that no entry was inserted.", 0, results.size());
+            assertEquals("It should call the recover 3 times.", 3, counterRecoverCalls.get());
+        }
+    }
+
+    /**
+     * Tests connecting to an Oracle database with an user that doesn't have enough session privileges alter
+     * the session properties.
+     *
+     * @since 2.8.3
+     */
+    @Ignore("This test requires for someone to manually create an user `oracle` without these privileges.")
+    @Test
+    public void testConnectDBWithoutSessionPrivileges() {
+        final String tableName = "WITHOUT_SESSION_PRIVILEGES";
+        final String idColumn = "ID";
+        final String clobColumn = "CLOB_COLUMN";
+
+        final Properties props = new Properties();
+        props.putAll(this.properties);
+        //
+        // Note: make sure to create the `oracle` user before PROCEEDING.
+        // Go to Oracle docker container.
+        // > su oracle
+        // > sqlplus
+        // user and password should be here: src/test/resources/connections.properties
+        // Grant permissions:
+        // > CREATE USER oracle IDENTIFIED BY oracle;
+        // > GRANT CONNECT, RESOURCE TO oracle;
+        // > GRANT CREATE SESSION TO oracle;
+        // > GRANT CREATE table to oracle;
+        // > GRANT SELECT oracle.WITHOUT_SESSION_PRIVILEGES TO oracle;
+        //
+        props.put("pdb.username", "oracle");
+        Assertions.assertThatCode(() -> {
+            try (DatabaseEngine engine = DatabaseFactory.getConnection(props)) {
+                final DbEntity entity = dbEntity()
+                    .name(tableName)
+                    .addColumn(idColumn, INT)
+                    .addColumn(clobColumn, CLOB)
+                    .pkFields(idColumn)
+                    .build();
+
+                engine.addEntity(entity);
+
+                engine.persist(tableName, new EntityEntry.Builder()
+                    .set(idColumn, 1)
+                    .set(clobColumn, "testClob")
+                    .build());
+
+                final Expression query = select(all()).from(table(tableName));
+                final List<Map<String, ResultColumn>> result = engine.query(query);
+                assertEquals(1, result.size());
+                assertEquals(1L, (long) result.get(0).get(idColumn).toLong());
+                assertEquals("testClob", result.get(0).get(clobColumn).toString());
+            }
+        })
+        .as("Verified that establish connection to the database and perform some inserts.")
+        .doesNotThrowAnyException();
+    }
+
 
     /**
      * Helper method that creates and sets a new tablespace for a user.

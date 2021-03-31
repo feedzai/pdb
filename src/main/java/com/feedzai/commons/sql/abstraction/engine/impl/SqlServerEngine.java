@@ -30,6 +30,7 @@ import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
+import com.feedzai.commons.sql.abstraction.engine.PreparedStatementWrapper;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -115,7 +116,8 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, boolean useAutoInc) throws DatabaseEngineException {
+    protected PreparedStatementWrapper entityToPreparedStatement(final DbEntity entity, final EntityEntry entry, boolean useAutoInc, boolean fromBatch) throws DatabaseEngineException {
+        final PreparedStatement ps = getPreparedStatement(entity, useAutoInc, fromBatch);
 
         int i = 1;
         for (DbColumn column : entity.getColumns()) {
@@ -171,7 +173,10 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             i++;
         }
 
-        return i - 1;
+        return PreparedStatementWrapper.builder()
+            .preparedStatement(ps)
+            .lastBindPosition(i - 1)
+            .build();
     }
 
     @Override
@@ -562,19 +567,18 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected synchronized long doPersist(final PreparedStatement ps,
+    protected synchronized long doPersist(final PreparedStatementWrapper ps,
                                           final MappedEntity me,
-                                          final boolean useAutoInc,
-                                          int lastBindPosition) throws Exception {
+                                          final boolean useAutoInc) throws Exception {
         try {
             if (!useAutoInc && hasIdentityColumn(me.getEntity())) {
                 // Only SET IDENTITY_INSERT for tables that have an identity column
                 executeUpdateSilently("SET IDENTITY_INSERT " + quotize(me.getEntity().getName()) + " ON");
             }
-            ps.execute();
+            ps.getPreparedStatement().execute();
 
             if (useAutoInc) {
-                try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                try (final ResultSet generatedKeys = ps.getPreparedStatement().getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         return generatedKeys.getLong(1);
                     }
