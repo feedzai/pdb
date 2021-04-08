@@ -23,6 +23,7 @@ import com.feedzai.commons.sql.abstraction.dml.Between;
 import com.feedzai.commons.sql.abstraction.dml.Case;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Coalesce;
+import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Delete;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
@@ -590,6 +591,28 @@ public abstract class AbstractTranslator {
         }
 
         return union(rowsWithSelect).all();
+    }
+
+    /**
+     * Transform the concat keyword.
+     *
+     * @param concat the concat.
+     * @return the translated concat.
+     */
+    public String translate(final Concat concat) {
+        inject(concat.getDelimiter());
+        inject(concat.getExpressions());
+
+        final String toConcat =
+                concat.getExpressions().stream()
+                      .map(Expression::translate)
+                      .filter(ex -> !ex.equals("NULL"))
+                      .collect(Collectors.joining(", "));
+
+        final String delimiter = concat.getDelimiter().translate();
+        return String.format("CONCAT_WS(%s, %s)",
+                             delimiter.equals("NULL") ? "''" : delimiter,
+                             toConcat);
     }
 
     /**

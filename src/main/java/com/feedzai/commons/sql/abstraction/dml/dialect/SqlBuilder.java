@@ -19,6 +19,7 @@ import com.feedzai.commons.sql.abstraction.ddl.*;
 import com.feedzai.commons.sql.abstraction.dml.*;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 import static com.feedzai.commons.sql.abstraction.dml.Function.*;
@@ -770,6 +771,27 @@ public final class SqlBuilder {
         return new Truncate(table);
     }
 
+    /**
+     * The CONCAT keyword.
+     *
+     * @param delimiter The concatenation delimiter.
+     * @param expressions The expressions to concatenate.
+     * @return The CONCAT object.
+     */
+    public static Concat concat(final Expression delimiter, final Collection<Expression> expressions) {
+        return new Concat(delimiter, expressions);
+    }
+
+    /**
+     * The CONCAT keyword.
+     *
+     * @param delimiter The concatenation delimiter.
+     * @param expressions The expressions to concatenate.
+     * @return The CONCAT object.
+     */
+    public static Concat concat(final Expression delimiter, final Expression... expressions) {
+        return new Concat(delimiter, Arrays.asList(expressions));
+    }
 
     /**
      * Rename table operator.

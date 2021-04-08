@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
@@ -390,6 +391,28 @@ public class DB2Translator extends AbstractTranslator {
                 type);
 
         return cast.isEnclosed() ? "(" + translation + ")" : translation;
+    }
+
+    @Override
+    public String translate(final Concat concat) {
+        inject(concat.getDelimiter());
+        inject(concat.getExpressions());
+
+        final String delimTranslation = concat.getDelimiter().translate();
+
+        final String delimiter;
+        // if delimiter is null, fallback to concatenating all together.
+        // else apply it.
+        if (delimTranslation.equals("NULL")) {
+            delimiter =  " || ";
+        } else {
+            delimiter = " || " + delimTranslation + " || ";
+        }
+
+        return concat.getExpressions().stream()
+                                      .map(Expression::translate)
+                                      .filter(ex -> !ex.equals("NULL"))
+                                      .collect(Collectors.joining(delimiter));
     }
 
     @Override

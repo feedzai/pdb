@@ -98,6 +98,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.cast;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ceiling;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.coalesce;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.concat;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.count;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.createView;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.dbColumn;
@@ -2246,6 +2247,91 @@ public class EngineGeneralTest {
         assertEquals("COL5 must be KEK", "KEK", result.get(4).get("case").toString());
     }
 
+    @Test
+    public void testConcat() throws DatabaseEngineException {
+        final List<Map<String, ResultColumn>> result = queryConcat(k("."));
+
+        assertEquals("teste.teste", result.get(0).get("concat").toString());
+        assertEquals("xpto.xpto", result.get(1).get("concat").toString());
+        assertEquals("xpto.xpto", result.get(2).get("concat").toString());
+        assertEquals("teste.teste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terre.pomme de terre", result.get(4).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatEmpty() throws DatabaseEngineException {
+        final List<Map<String, ResultColumn>> result = queryConcat(k(""));
+
+        assertEquals("testeteste", result.get(0).get("concat").toString());
+        assertEquals("xptoxpto", result.get(1).get("concat").toString());
+        assertEquals("xptoxpto", result.get(2).get("concat").toString());
+        assertEquals("testeteste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terrepomme de terre", result.get(4).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatNullExpressions() throws DatabaseEngineException {
+        final Query query = select(concat(k(","), k("lol"), k(null), k("rofl")).alias("concat"));
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+        assertEquals("lol,rofl", result.get(0).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatNullDelimiter() throws DatabaseEngineException {
+        final Query query = select(concat(k(null), k("lol"), k("nop"), k("rofl")).alias("concat"));
+        final List<Map<String, ResultColumn>> result = engine.query(query);
+        assertEquals("lolnoprofl", result.get(0).get("concat").toString());
+    }
+
+    @Test
+    public void testConcatColumn() throws DatabaseEngineException {
+        final List<Map<String, ResultColumn>> result = queryConcat(column("COL2"));
+
+        assertEquals("testetesteteste", result.get(0).get("concat").toString());
+        assertEquals("xptoxptoxpto", result.get(1).get("concat").toString());
+        assertEquals("xptoxptoxpto", result.get(2).get("concat").toString());
+        assertEquals("testetesteteste", result.get(3).get("concat").toString());
+        assertEquals("pomme de terrepomme de terrepomme de terre", result.get(4).get("concat").toString());
+    }
+
+    /**
+     * Runs a concat query on the test dataset, given a delimiter.
+     *
+     * @param delimiter the delimiter used in concat.
+     * @return the result set.
+     * @throws DatabaseEngineException if an issue when querying arises.
+     */
+    private List<Map<String, ResultColumn>> queryConcat(final Expression delimiter) throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", STRING)
+                .addColumn("COL3", STRING)
+                .build();
+
+        engine.addEntity(entity);
+
+        engine.persist("TEST", entry().set("COL1", 1).set("COL2", "teste").set("COL3", "teste").build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL2", "xpto").set("COL3", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 3).set("COL2", "xpto").set("COL3", "xpto").build());
+        engine.persist("TEST", entry().set("COL1", 4).set("COL2", "teste").set("COL3", "teste").build());
+        engine.persist(
+                "TEST",
+                entry().set("COL1", 5).set("COL2", "pomme de terre").set("COL3", "pomme de terre").build()
+        );
+        engine.persist(
+                "TEST",
+                entry().set("COL1", 6).set("COL2", "lol").set("COL3", null).build()
+        );
+
+        final Query query =
+                select(
+                        concat(delimiter, column("COL2"), column("COL3")).alias("concat"))
+                .from(table("TEST"));
+
+        return engine.query(query);
+    }
+
     /**
      * Reproduces an issue when using CASE ... WHEN expressions in SqlServer and MySql.
      * <p>
@@ -3616,7 +3702,6 @@ public class EngineGeneralTest {
         test = engine.query(select(all()).from(table("TEST")).orderby(column("COL4")));
         assertEquals("col4 ok?", 8L, (long) test.get(7).get("COL4").toLong());
     }
-
 
     protected void test5Columns() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
