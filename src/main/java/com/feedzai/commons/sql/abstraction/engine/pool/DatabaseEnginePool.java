@@ -225,7 +225,7 @@ public class DatabaseEnginePool implements AutoCloseable {
      * @return a new DatabaseEnginePool.
      */
     public static DatabaseEnginePool getConnectionPool(final Map<String, String> properties,
-                                                final Consumer<DatabaseEngine> engineModifier) {
+                                                       final Consumer<DatabaseEngine> engineModifier) {
         return new DatabaseEnginePool(properties, engineModifier);
     }
 
@@ -247,7 +247,7 @@ public class DatabaseEnginePool implements AutoCloseable {
      * @return a new DatabaseEnginePool.
      */
     public static DatabaseEnginePool getConnectionPool(final Properties properties,
-                                                final Consumer<DatabaseEngine> engineModifier) {
+                                                       final Consumer<DatabaseEngine> engineModifier) {
         return new DatabaseEnginePool(Maps.fromProperties(properties), engineModifier);
     }
 
