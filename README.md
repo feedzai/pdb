@@ -186,9 +186,8 @@ and `pool.generic.maxWaitMillis` are the most common ones.
 | `pool.abandoned.removeAbandonedTimeout` | Timeout in seconds before an abandoned `DatabaseEngine` instance can be removed. | 300 |
 | `pool.abandoned.logAbandoned` | Flag to log stack traces for application code which abandoned a `DatabaseEngine` instance. | false |
 
-{% hint style='info' %}
-If no `pool.abandoned` property is defined in the configuration file, then no policy to remove abandoned `DatabaseEngine` instances is applied.
-{% endhint %}
+> If no `pool.abandoned` property is defined in the configuration file, then no policy to remove abandoned `DatabaseEngine` instances is applied.
+
 ### Create Table
 
 We start by creating the table to store the different data Types:
