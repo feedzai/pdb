@@ -24,7 +24,6 @@ import java.util.Properties;
 import java.util.function.Consumer;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.impl.AbandonedConfig;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -32,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.groupingBy;
@@ -53,7 +53,7 @@ public class DatabaseEnginePool implements AutoCloseable {
     /**
      * The actual pool.
      */
-    private final ObjectPool<PooledDatabaseEngine> pool;
+    private final GenericObjectPool<PooledDatabaseEngine> pool;
 
     /**
      * Pool name for logging purposes.
@@ -191,6 +191,15 @@ public class DatabaseEnginePool implements AutoCloseable {
     }
 
     /**
+     * Returns whether the pool is closed or not.
+     *
+     * @return true if the pool is closed, false otherwise.
+     */
+    public boolean isClosed() {
+        return pool.isClosed();
+    }
+
+    /**
      * Gets the Pool JDBC string.
      *
      * @return the Pool JDBC string.
@@ -267,6 +276,28 @@ public class DatabaseEnginePool implements AutoCloseable {
      * @return a new DatabaseEnginePool.
      */
     public static DatabaseEnginePool getConnectionPool(final Properties properties) {
+        return new DatabaseEnginePool(Maps.fromProperties(properties), db -> {});
+    }
+
+    /**
+     * Creates a new {@link DatabaseEnginePool}.
+     *
+     * @param properties the configured database and pool properties.
+     * @param engineModifier the database engine modifier to fit the application needs.
+     * @return a new DatabaseEnginePool.
+     */
+    public static DatabaseEnginePool getConnectionPool(final PdbProperties properties,
+                                                       final Consumer<DatabaseEngine> engineModifier) {
+        return new DatabaseEnginePool(Maps.fromProperties(properties), engineModifier);
+    }
+
+    /**
+     * Creates a new {@link DatabaseEnginePool}.
+     *
+     * @param properties the configured database and pool properties.
+     * @return a new DatabaseEnginePool.
+     */
+    public static DatabaseEnginePool getConnectionPool(final PdbProperties properties) {
         return new DatabaseEnginePool(Maps.fromProperties(properties), db -> {});
     }
 }

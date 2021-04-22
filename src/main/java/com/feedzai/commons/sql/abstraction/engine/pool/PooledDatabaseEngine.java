@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import javax.annotation.Nullable;
-import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +64,7 @@ class PooledDatabaseEngine implements DatabaseEngine {
     /**
      * The pool which owns this pooled database engine.
      */
-    private final ObjectPool<PooledDatabaseEngine> pool;
+    private final GenericObjectPool<PooledDatabaseEngine> pool;
 
     /**
      * The wrapped database engine.
@@ -77,7 +77,7 @@ class PooledDatabaseEngine implements DatabaseEngine {
      * @param pool the pool owning the pooled database engine.
      * @param engine the database engine to be wrapped.
      */
-    PooledDatabaseEngine(final ObjectPool<PooledDatabaseEngine> pool, final DatabaseEngine engine) {
+    PooledDatabaseEngine(final GenericObjectPool<PooledDatabaseEngine> pool, final DatabaseEngine engine) {
         this.pool = pool;
         this.engine = engine;
     }

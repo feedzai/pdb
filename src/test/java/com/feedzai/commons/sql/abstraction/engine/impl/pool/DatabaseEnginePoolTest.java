@@ -30,6 +30,7 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.pool.DatabaseEnginePool;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
@@ -204,6 +205,35 @@ public final class DatabaseEnginePoolTest {
             assertNotEquals("DatabaseEngine connections must be different.", one, two);
             assertTrue("DatabaseEngine connection must be alive.", one.checkConnection());
             assertTrue("DatabaseEngine connection must be alive.", two.checkConnection());
+        }
+    }
+
+    /**
+     * Check that we support {@link PdbProperties}.
+     */
+    @Test
+    public void testPdbProperties() throws DatabaseEngineException {
+        final PdbProperties pdbProperties = new PdbProperties(properties, true);
+
+        final DatabaseEnginePool connectionPool = DatabaseEnginePool.getConnectionPool(pdbProperties, db -> {
+            try {
+                db.loadEntity(TEST_TABLE);
+            } catch (DatabaseEngineException e) {
+                // suppress for testing purposes.
+            }
+        });
+
+        try (DatabaseEngine db = connectionPool.borrow()) {
+            final List<Map<String, ResultColumn>> rows =
+                    db.query(select(all()).from(table(TEST_TABLE_NAME)));
+
+            final Map<String, ResultColumn> row = rows.get(0);
+            assertEquals(1, row.get("COL1").toInt().intValue());
+            assertEquals("lol", row.get("COL2").toString());
+        } finally {
+            if (!connectionPool.isClosed()) {
+                connectionPool.close();
+            }
         }
     }
 }

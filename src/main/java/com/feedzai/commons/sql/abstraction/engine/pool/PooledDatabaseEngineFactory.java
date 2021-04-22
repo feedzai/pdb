@@ -19,9 +19,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.function.Consumer;
 import org.apache.commons.pool2.BasePooledObjectFactory;
-import org.apache.commons.pool2.ObjectPool;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
@@ -38,7 +38,7 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
     /**
      * The pool in which to pool {@link PooledDatabaseEngine}.
      */
-    private ObjectPool<PooledDatabaseEngine> pool;
+    private GenericObjectPool<PooledDatabaseEngine> pool;
 
     /**
      * The properties needed to fabricate {@link DatabaseEngine} instances.
@@ -95,7 +95,7 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
      *
      * @return the pool.
      */
-    ObjectPool<PooledDatabaseEngine> getPool() {
+    GenericObjectPool<PooledDatabaseEngine> getPool() {
         return pool;
     }
 
@@ -104,7 +104,7 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
      *
      * @param pool the pool.
      */
-    void setPool(final ObjectPool<PooledDatabaseEngine> pool) {
+    void setPool(final GenericObjectPool<PooledDatabaseEngine> pool) {
         this.pool = pool;
     }
 }
