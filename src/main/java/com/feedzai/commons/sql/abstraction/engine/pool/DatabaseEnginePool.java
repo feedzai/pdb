@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.stream.Collectors.groupingBy;
 
 /**
@@ -145,7 +146,15 @@ public class DatabaseEnginePool implements AutoCloseable {
         // Log pool statistics every time we try to borrow a connection.
         logStats();
         try {
-            return pool.borrowObject();
+            final long startTime = System.nanoTime();
+            final PooledDatabaseEngine pooledDb = pool.borrowObject();
+            // if trace is enabled measure the time taken to get an object from the pool.
+            if (LOGGER.isTraceEnabled()) {
+                LOGGER.trace("'{}' - Took {}ms to get a database engine.",
+                             poolName,
+                             NANOSECONDS.toMillis(System.nanoTime() - startTime));
+            }
+            return pooledDb;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -155,22 +164,22 @@ public class DatabaseEnginePool implements AutoCloseable {
      * Logs the number of active and idle pool connections.
      */
     private void logStats() {
+        final int numActive = pool.getNumActive();
+        // warn the user if the number of active connections is equal to max pool size.
+        // this means that the application will be blocked waiting for DB.
+        if (numActive == maxTotal) {
+            LOGGER.warn("'{}' - WARNING: There isn't more connections on the pool. "
+                                 + "The application will be blocked and it may perform poorly. "
+                                 + "You may consider to increase the pool size, if this is a common occurrence.",
+                         poolName);
+            LOGGER.warn("'{}' - Check the documentation to learn how to do it.", poolName);
+        }
+
         // Avoid processing the logging strings if trace is disabled.
         if (LOGGER.isTraceEnabled()) {
-            final int numActive = pool.getNumActive();
             LOGGER.trace("{} Active Connections: {}", poolName, numActive);
             LOGGER.trace("{} Idle Connections: {}", poolName, pool.getNumIdle());
             LOGGER.trace("{} Total Connections: {}", poolName, maxTotal);
-
-            // warn the user if the number of active connections is equal to max pool size.
-            // this means that the application will be blocked waiting for DB.
-            if (numActive == maxTotal) {
-                LOGGER.trace("'{}' - WARNING: There isn't more connections on the pool. "
-                        + "The application will be blocked and it may perform poorly. "
-                        + "You may consider to increase the pool size, if this is a common occurrence.",
-                        poolName);
-                LOGGER.trace("'{}' - Check the documentation to learn how to do it.", poolName);
-            }
         }
     }
 
