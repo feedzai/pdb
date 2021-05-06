@@ -90,6 +90,22 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
         return new DefaultPooledObject<>(engine);
     }
 
+    @Override
+    public void destroyObject(final PooledObject<PooledDatabaseEngine> p) {
+        // before destroying the object, let's close the underlying connection.
+        final PooledDatabaseEngine engine = p.getObject();
+        // to avoid calling a method in a GCed reference.
+        if (engine != null) {
+            engine.closeConnection();
+        }
+    }
+
+    @Override
+    public void activateObject(final PooledObject<PooledDatabaseEngine> p) {
+        // we need to for reconnection if not connected, to activate the object.
+        p.getObject().checkConnection(true);
+    }
+
     /**
      * Gets the pool.
      *

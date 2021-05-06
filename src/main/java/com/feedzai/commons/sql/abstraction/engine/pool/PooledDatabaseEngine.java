@@ -82,6 +82,13 @@ class PooledDatabaseEngine implements DatabaseEngine {
         this.engine = engine;
     }
 
+    /**
+     * Closes the underlying engine connection.
+     */
+    public void closeConnection() {
+        engine.close();
+    }
+
     @Override
     public void close() {
         try {
@@ -209,7 +216,7 @@ class PooledDatabaseEngine implements DatabaseEngine {
 
     @Override
     public boolean checkConnection(final boolean forceReconnect) {
-        return engine.checkConnection();
+        return engine.checkConnection(forceReconnect);
     }
 
     @Override
