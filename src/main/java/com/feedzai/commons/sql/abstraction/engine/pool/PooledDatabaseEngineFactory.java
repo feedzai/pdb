@@ -22,6 +22,8 @@ import org.apache.commons.pool2.BasePooledObjectFactory;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
@@ -34,6 +36,11 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
  * @since 2.8.3
  */
 class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabaseEngine> {
+
+    /**
+     * The logger.
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(PooledDatabaseEngineFactory.class);
 
     /**
      * The pool in which to pool {@link PooledDatabaseEngine}.
@@ -82,16 +89,27 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
 
     @Override
     public boolean validateObject(final PooledObject<PooledDatabaseEngine> pooled) {
-        return pooled.getObject().checkConnection();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Validating PooledDatabaseEngine " + pooled);
+        }
+        return pooled.getObject().checkConnection(true);
     }
 
     @Override
     public PooledObject<PooledDatabaseEngine> wrap(final PooledDatabaseEngine engine) {
-        return new DefaultPooledObject<>(engine);
+        final PooledObject<PooledDatabaseEngine> pooledEngine = new DefaultPooledObject<>(engine);
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Creating and Wrapping PooledDatabaseEngine  " + pooledEngine);
+        }
+        return pooledEngine;
     }
 
     @Override
     public void destroyObject(final PooledObject<PooledDatabaseEngine> p) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Destroying PooledDatabaseEngine " + p);
+        }
+
         // before destroying the object, let's close the underlying connection.
         final PooledDatabaseEngine engine = p.getObject();
         // to avoid calling a method in a GCed reference.
@@ -102,6 +120,9 @@ class PooledDatabaseEngineFactory extends BasePooledObjectFactory<PooledDatabase
 
     @Override
     public void activateObject(final PooledObject<PooledDatabaseEngine> p) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Activating PooledDatabaseEngine " + p);
+        }
         // we need to for reconnection if not connected, to activate the object.
         p.getObject().checkConnection(true);
     }
