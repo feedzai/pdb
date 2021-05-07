@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.feedzai.commons.sql.abstraction.engine.impl.pool;
+package com.feedzai.commons.sql.abstraction.engine.pool;
 
+import java.sql.Connection;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,6 @@ import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
-import com.feedzai.commons.sql.abstraction.engine.pool.DatabaseEnginePool;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
@@ -235,5 +235,20 @@ public final class DatabaseEnginePoolTest {
                 connectionPool.close();
             }
         }
+    }
+
+    /**
+     * Check that the connection is closed after the pool destroys the engine.
+     */
+    @Test
+    public void testConnectionDestruction() throws Exception {
+        // get a db engine and force invalidation, to simulate pool evicting the engine.
+        final DatabaseEngine engine = pool.borrow();
+        final Connection connection = engine.getConnection();
+        engine.close();
+        pool.invalidate((PooledDatabaseEngine) engine);
+
+        // check if the underlying connection is closed.
+        assertTrue(connection.isClosed());
     }
 }

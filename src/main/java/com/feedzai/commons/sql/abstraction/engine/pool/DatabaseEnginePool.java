@@ -236,6 +236,18 @@ public class DatabaseEnginePool implements AutoCloseable {
     }
 
     /**
+     * Forces invalidation of a pool's {@link DatabaseEngine}.
+     *
+     * @apiNote method used for testing.
+     * @param engine the pooled database engine to invalidate.
+     * @throws Exception if an exception occurs destroying the object.
+     * @throws IllegalStateException if obj does not belong to this pool.
+     */
+    void invalidate(PooledDatabaseEngine engine) throws Exception {
+        pool.invalidateObject(engine);
+    }
+
+    /**
      * Creates a new {@link DatabaseEnginePool}.
      *
      * @param properties the configured database and pool properties.
