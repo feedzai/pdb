@@ -143,11 +143,27 @@ public class DatabaseEnginePool implements AutoCloseable {
      * @return a database engine.
      */
     public DatabaseEngine borrow() {
+        // borrow the engine with the max waiting time.
+        return borrow(pool.getMaxWaitMillis());
+    }
+
+    /**
+     * Borrows a database engine from the pool. Call {@link DatabaseEngine#close()} to return the borrowed database
+     * engine to pool.
+     *
+     * @param borrowMaxWaitMillis the time to wait in milliseconds for an object to become available.
+     * @return a database engine.
+     */
+    public DatabaseEngine borrow(final long borrowMaxWaitMillis) {
         // Log pool statistics every time we try to borrow a connection.
         logStats();
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("'{}' - Waiting {}ms for borrowing a connection.", poolName, borrowMaxWaitMillis);
+        }
+
         try {
             final long startTime = System.nanoTime();
-            final PooledDatabaseEngine pooledDb = pool.borrowObject();
+            final PooledDatabaseEngine pooledDb = pool.borrowObject(borrowMaxWaitMillis);
             // if trace is enabled measure the time taken to get an object from the pool.
             if (LOGGER.isTraceEnabled()) {
                 LOGGER.trace("'{}' - Took {}ms to get a database engine.",
