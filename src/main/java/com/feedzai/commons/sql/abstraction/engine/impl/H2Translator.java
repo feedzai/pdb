@@ -222,6 +222,10 @@ public class H2Translator extends AbstractTranslator {
             query.add(join(queryOrderByColumns, ", "));
         }
 
+        if (q.isForUpdate()) {
+            query.add("FOR UPDATE");
+        }
+
         // LIMIT AND OFFSET
         if (q.getLimit() > 0) {
             if (q.getOffset() > 0) {

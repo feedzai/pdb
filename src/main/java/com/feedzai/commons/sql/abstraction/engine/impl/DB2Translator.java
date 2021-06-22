@@ -285,6 +285,10 @@ public class DB2Translator extends AbstractTranslator {
             query.add(join(queryOrderByColumns, ", "));
         }
 
+        if (q.isForUpdate()) {
+            query.add("FOR UPDATE WITH RS USE AND KEEP EXCLUSIVE LOCKS");
+        }
+
         String finalQuery = join(query, " ");
 
         // LIMIT AND OFFSET

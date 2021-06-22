@@ -245,6 +245,10 @@ public class SqlServerTranslator extends AbstractTranslator {
                 queryFromColumns.add(join(insideFrom, " "));
             }
             query.add(join(queryFromColumns, ", "));
+
+            if (q.isForUpdate()) {
+                query.add("WITH (UPDLOCK)");
+            }
         }
 
         // WHERE CLAUSE

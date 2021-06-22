@@ -69,6 +69,14 @@ public class Query extends Expression {
     private boolean distinct = false;
 
     /**
+     * Signals if query should include FOR UPDATE. If it is set as {@literal true} the database will block reads from another
+     * transactions also using SELECT FOR UPDATE.
+     *
+     * @since 2.8.4
+     */
+    private boolean forUpdate = false;
+
+    /**
      * Creates a new instance of {@link Query}.
      */
     public Query() {
@@ -158,6 +166,17 @@ public class Query extends Expression {
      */
     public boolean isDistinct() {
         return distinct;
+    }
+
+    /**
+     * Checks if query is a FOR UPDATE. If it is set as {@literal true} the database will block reads from another
+     * transactions also using SELECT FOR UPDATE.
+     *
+     * @return {@literal true} if it is for update; {@literal false} otherwise.
+     * @since 2.8.4
+     */
+    public boolean isForUpdate() {
+        return this.forUpdate;
     }
 
     /**
@@ -368,6 +387,20 @@ public class Query extends Expression {
             limit = Integer.MAX_VALUE - offset;
         }
 
+        return this;
+    }
+
+    /**
+     * Sets whether query is FOR UPDATE or not. If it is set as {@literal true} the database will block reads from another
+     * transactions also using SELECT FOR UPDATE.
+     *
+     * @param forUpdate If it is FOR UPDATE or not.
+     * @return This expression.
+     * @implNote When using Cockroach DB, this method has no meaning.
+     * @since 2.8.4
+     */
+    public Query forUpdate(final boolean forUpdate) {
+        this.forUpdate = forUpdate;
         return this;
     }
 }
