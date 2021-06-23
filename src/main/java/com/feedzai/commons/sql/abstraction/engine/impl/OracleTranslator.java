@@ -232,6 +232,10 @@ public class OracleTranslator extends AbstractTranslator {
             query.add(join(queryOrderByColumns, ", "));
         }
 
+        if (q.isForUpdate()) {
+            query.add("FOR UPDATE");
+        }
+
         String finalQuery = join(query, " ");
 
         // LIMIT AND OFFSET
