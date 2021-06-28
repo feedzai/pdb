@@ -38,6 +38,7 @@
 
         <default.test.cmdArgs>
             -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar
+            -Djdk.attach.allowAttachSelf
         </default.test.cmdArgs>
 
         <jmockit.version>1.49</jmockit.version>
@@ -776,6 +777,50 @@
                                     </run>
                                 </image>
                             </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Profile to compile and run tests with JDK 11 -->
+        <profile>
+            <id>java-11</id>
+            <activation>
+                <jdk>11</jdk>
+            </activation>
+            <properties>
+                <project.source>11</project.source>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <release>${project.source}</release>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Profile to compile and run tests with JDK 17 -->
+        <profile>
+            <id>java-17</id>
+            <activation>
+                <jdk>17</jdk>
+            </activation>
+            <properties>
+                <project.source>17</project.source>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <release>${project.source}</release>
                         </configuration>
                     </plugin>
                 </plugins>
