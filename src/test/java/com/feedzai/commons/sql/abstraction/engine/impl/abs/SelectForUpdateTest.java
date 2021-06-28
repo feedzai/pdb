@@ -25,7 +25,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.cockroach.SkipTestCockroachDB;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
