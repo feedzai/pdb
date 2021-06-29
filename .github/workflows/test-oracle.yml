@@ -21,7 +21,7 @@ jobs:
         java-version: 1.8
 
     - name: Cache Maven packages
-      uses: actions/cache@v2.1.4
+      uses: actions/cache@v2.1.6
       with:
         path: ~/.m2/repository
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
@@ -41,7 +41,7 @@ jobs:
           java-version: 11
 
       - name: Cache Maven packages
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2.1.6
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}-jdk11
@@ -67,7 +67,7 @@ jobs:
           architecture: x64
 
       - name: Cache Maven packages
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2.1.6
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}-jdk17
