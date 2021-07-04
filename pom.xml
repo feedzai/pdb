@@ -121,7 +121,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.7.30</version>
+                <version>1.7.31</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -275,7 +275,7 @@
                 <plugin>
                     <groupId>io.fabric8</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
-                    <version>0.35.0</version>
+                    <version>0.36.1</version>
                     <executions>
                         <execution>
                             <id>start</id>
