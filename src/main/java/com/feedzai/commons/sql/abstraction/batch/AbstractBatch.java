@@ -20,7 +20,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
@@ -31,6 +30,7 @@ import org.slf4j.MarkerFactory;
 import javax.annotation.Nullable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -170,7 +170,7 @@ public abstract class AbstractBatch implements Runnable {
         @Nullable final BatchListener batchListener,
         final int maxFlushRetries,
         final long flushRetryDelay) {
-        Preconditions.checkNotNull(de, "The provided database engine is null.");
+        Objects.requireNonNull(de, "The provided database engine is null.");
 
         this.de = de;
         this.batchSize = batchSize;
