@@ -786,9 +786,6 @@
         <!-- Profile to compile and run tests with JDK 11 -->
         <profile>
             <id>java-11</id>
-            <activation>
-                <jdk>11</jdk>
-            </activation>
             <properties>
                 <project.source>11</project.source>
             </properties>
@@ -808,9 +805,6 @@
         <!-- Profile to compile and run tests with JDK 17 -->
         <profile>
             <id>java-17</id>
-            <activation>
-                <jdk>17</jdk>
-            </activation>
             <properties>
                 <project.source>17</project.source>
             </properties>
