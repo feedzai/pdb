@@ -15,7 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.ddl;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 
 import java.io.Serializable;
@@ -258,11 +257,17 @@ public class DbFk implements Serializable {
 
         @Override
         public DbFk build() {
-            Preconditions.checkNotNull(referencedTable, "The referenced table can't be null.");
-            Preconditions.checkArgument(localColumns.size() == referencedColumns.size(),
-                    "The number of local columns and referenced columns must be the same. local: %s ; referenced: %s",
-                    localColumns, referencedColumns
-            );
+            Objects.requireNonNull(this.referencedTable, "The referenced table can't be null");
+
+            if (this.localColumns.size() != this.referencedColumns.size()) {
+                throw new IllegalArgumentException (
+                    String.format("The number of local columns and referenced columns must be the same. local: %s ; referenced: %s",
+                        this.localColumns,
+                        this.referencedColumns
+                    )
+                );
+            }
+
             return new DbFk(this);
         }
     }

@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.oracle.OracleQueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import oracle.jdbc.OracleConnection;
 import oracle.jdbc.OraclePreparedStatement;
@@ -1151,7 +1150,7 @@ public class OracleEngine extends AbstractDatabaseEngine {
 
     private DbColumnType toPdbType(String type) {
         // We want to override the default mappings depending on number precision.
-        Preconditions.checkNotNull(type, "Type cannot be null.");
+        Objects.requireNonNull(type, "Type cannot be null.");
 
         switch (type) {
             case "NUMBER":
