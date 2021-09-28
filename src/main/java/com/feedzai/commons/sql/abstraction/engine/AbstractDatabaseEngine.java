@@ -80,6 +80,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.feedzai.commons.sql.abstraction.batch.AbstractBatch.DEFAULT_RETRY_INTERVAL;
+import static com.feedzai.commons.sql.abstraction.batch.AbstractBatch.NO_RETRY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENCRYPTED_USERNAME;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -1102,7 +1104,12 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, @Nullable final BatchListener batchListener) {
-        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), batchListener);
+        return createBatch(batchSize, batchTimeout, batchName, batchListener, null);
+    }
+
+    @Override
+    public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, @Nullable BatchListener batchListener, @Nullable Logger logger) {
+        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), batchListener, NO_RETRY, DEFAULT_RETRY_INTERVAL, logger);
     }
 
     /**
