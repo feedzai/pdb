@@ -18,12 +18,13 @@ package com.feedzai.commons.sql.abstraction.batch;
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import org.slf4j.Logger;
 
 /**
  * The default batch implementation.
  * <p/>
  * Behind the scenes, it will periodically flush pending statements. It has auto recovery
- * and will never thrown any exception.
+ * and will never throw any exception.
  *
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @see AbstractBatch
@@ -55,10 +56,18 @@ public class DefaultBatch extends AbstractBatch {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      * @param listener             The listener that will be invoked when batch fails or succeeds to persist at least
      *                             one data row.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. Defaults to
+     *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
+     *                             {@value DEFAULT_RETRY_INTERVAL}.
+     * @param logger               The logger.
+     *
+     * @since 2.8.8
      */
     protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                           final long maxAwaitTimeShutdown, final BatchListener listener) {
-        super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
+                           final long maxAwaitTimeShutdown, final BatchListener listener, final int maxFlushRetries,
+                           final long flushRetryDelay, final Logger logger) {
+        super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, maxFlushRetries, flushRetryDelay, logger);
     }
 
     /**
@@ -97,10 +106,7 @@ public class DefaultBatch extends AbstractBatch {
      */
     public static DefaultBatch create(final DatabaseEngine de, final String name, final int batchSize,
                                       final long batchTimeout, final long maxAwaitTimeShutdown) {
-        final DefaultBatch b = new DefaultBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
-        b.start();
-
-        return b;
+        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, (BatchListener) null);
     }
 
     /**
@@ -171,10 +177,7 @@ public class DefaultBatch extends AbstractBatch {
                                       final long batchTimeout,
                                       final long maxAwaitTimeShutdown,
                                       final BatchListener listener) {
-        final DefaultBatch b = new DefaultBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
-        b.start();
-
-        return b;
+        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, NO_RETRY, DEFAULT_RETRY_INTERVAL);
     }
 
     /**
@@ -203,6 +206,62 @@ public class DefaultBatch extends AbstractBatch {
                                       final BatchListener listener,
                                       final int maxFlushRetries,
                                       final long flushRetryDelay) {
+        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, maxFlushRetries, flushRetryDelay, null);
+    }
+
+    /**
+     * <p>Creates a new instance of {@link DefaultBatch} with a {@link BatchListener} and a {@link Logger}.</p>
+     * <p>Starts the timertask.</p>
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name.
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
+     *                             {@value DEFAULT_RETRY_INTERVAL}.
+     * @param logger               The logger.
+     * @return The Batch.
+     *
+     * @since 2.8.8
+     */
+    public static DefaultBatch create(final DatabaseEngine de,
+                                      final String name,
+                                      final int batchSize,
+                                      final long batchTimeout,
+                                      final long maxAwaitTimeShutdown,
+                                      final BatchListener listener,
+                                      final Logger logger) {
+        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, NO_RETRY, DEFAULT_RETRY_INTERVAL, logger);
+    }
+
+    /**
+     * <p>Creates a new instance of {@link DefaultBatch} with a {@link BatchListener}.</p>
+     * <p>Starts the timertask.</p>
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name.
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. Defaults to
+     *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
+     *                             {@value DEFAULT_RETRY_INTERVAL}.
+     * @return The Batch.
+     *
+     * @since 2.8.1
+     */
+    public static DefaultBatch create(final DatabaseEngine de,
+                                     final String name,
+                                     final int batchSize,
+                                     final long batchTimeout,
+                                     final long maxAwaitTimeShutdown,
+                                     final BatchListener listener,
+                                     final int maxFlushRetries,
+                                     final long flushRetryDelay,
+                                     final Logger logger) {
         final DefaultBatch b = new DefaultBatch(
             de,
             name,
@@ -211,10 +270,10 @@ public class DefaultBatch extends AbstractBatch {
             maxAwaitTimeShutdown,
             listener,
             maxFlushRetries,
-            flushRetryDelay
+            flushRetryDelay,
+            logger
         );
         b.start();
-
         return b;
     }
 }
