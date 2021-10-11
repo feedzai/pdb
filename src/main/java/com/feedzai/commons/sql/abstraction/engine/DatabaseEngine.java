@@ -279,7 +279,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param logger        The logger.
      * @return The batch.
      */
-    AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger logger);
+    default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger logger) {
+        return createBatch(batchSize, batchTimeout, batchName, batchListener);
+    }
 
     /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
