@@ -271,6 +271,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * statements in the batch is reached.
      * <p/>
      * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     * <p/>
+     * The default implementation of this method throws an {@link UnsupportedOperationException}
+     * for backward-compatibility reasons. If this method is supposed to be called, it must be explicitly overridden.
      *
      * @param batchSize     The batch size.
      * @param batchTimeout  If inserts do not occur after the specified time, a flush will be performed.
@@ -278,9 +281,11 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param batchListener Batch listener to execute custom behavior when the batch fails or succeeds to persist.
      * @param logger        The logger.
      * @return The batch.
+     *
+     * @since 2.8.8
      */
     default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger logger) {
-        return createBatch(batchSize, batchTimeout, batchName, batchListener);
+        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
     }
 
     /**
