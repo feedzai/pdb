@@ -60,14 +60,14 @@ public class DefaultBatch extends AbstractBatch {
      *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
      *                             {@value DEFAULT_RETRY_INTERVAL}.
-     * @param logger               The logger.
+     * @param confidentialLogger   The confidential logger.
      *
      * @since 2.8.8
      */
     protected DefaultBatch(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
                            final long maxAwaitTimeShutdown, final BatchListener listener, final int maxFlushRetries,
-                           final long flushRetryDelay, final Logger logger) {
-        super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, maxFlushRetries, flushRetryDelay, logger);
+                           final long flushRetryDelay, final Logger confidentialLogger) {
+        super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, maxFlushRetries, flushRetryDelay, confidentialLogger);
     }
 
     /**
@@ -220,7 +220,7 @@ public class DefaultBatch extends AbstractBatch {
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
      * @param listener             The listener that will be invoked when batch fails to persist at least one data row.
      *                             {@value DEFAULT_RETRY_INTERVAL}.
-     * @param logger               The logger.
+     * @param confidentialLogger   The confidential logger.
      * @return The Batch.
      *
      * @since 2.8.8
@@ -231,8 +231,8 @@ public class DefaultBatch extends AbstractBatch {
                                       final long batchTimeout,
                                       final long maxAwaitTimeShutdown,
                                       final BatchListener listener,
-                                      final Logger logger) {
-        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, NO_RETRY, DEFAULT_RETRY_INTERVAL, logger);
+                                      final Logger confidentialLogger) {
+        return create(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener, NO_RETRY, DEFAULT_RETRY_INTERVAL, confidentialLogger);
     }
 
     /**
@@ -249,6 +249,7 @@ public class DefaultBatch extends AbstractBatch {
      *                             {@value NO_RETRY}. When set to 0, no retries will be attempted.
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries. Defaults to
      *                             {@value DEFAULT_RETRY_INTERVAL}.
+     * @param confidentialLogger   The confidential logger.
      * @return The Batch.
      *
      * @since 2.8.1
@@ -261,7 +262,7 @@ public class DefaultBatch extends AbstractBatch {
                                      final BatchListener listener,
                                      final int maxFlushRetries,
                                      final long flushRetryDelay,
-                                     final Logger logger) {
+                                     final Logger confidentialLogger) {
         final DefaultBatch b = new DefaultBatch(
             de,
             name,
@@ -271,7 +272,7 @@ public class DefaultBatch extends AbstractBatch {
             listener,
             maxFlushRetries,
             flushRetryDelay,
-            logger
+            confidentialLogger
         );
         b.start();
         return b;

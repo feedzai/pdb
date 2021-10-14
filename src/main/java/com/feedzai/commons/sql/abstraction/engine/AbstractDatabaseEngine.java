@@ -1108,8 +1108,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, @Nullable BatchListener batchListener, @Nullable Logger logger) {
-        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), batchListener, NO_RETRY, DEFAULT_RETRY_INTERVAL, logger);
+    public AbstractBatch createBatch(int batchSize, long batchTimeout, String batchName, @Nullable BatchListener batchListener, @Nullable Logger confidentialLogger) {
+        return DefaultBatch.create(this, batchName, batchSize, batchTimeout, properties.getMaximumAwaitTimeBatchShutdown(), batchListener, NO_RETRY, DEFAULT_RETRY_INTERVAL, confidentialLogger);
     }
 
     /**

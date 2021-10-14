@@ -275,16 +275,16 @@ public interface DatabaseEngine extends AutoCloseable {
      * The default implementation of this method throws an {@link UnsupportedOperationException}
      * for backward-compatibility reasons. If this method is supposed to be called, it must be explicitly overridden.
      *
-     * @param batchSize     The batch size.
-     * @param batchTimeout  If inserts do not occur after the specified time, a flush will be performed.
-     * @param batchName     The batch name.
-     * @param batchListener Batch listener to execute custom behavior when the batch fails or succeeds to persist.
-     * @param logger        The logger.
+     * @param batchSize          The batch size.
+     * @param batchTimeout       If inserts do not occur after the specified time, a flush will be performed.
+     * @param batchName          The batch name.
+     * @param batchListener      Batch listener to execute custom behavior when the batch fails or succeeds to persist.
+     * @param confidentialLogger The confidential logger.
      * @return The batch.
      *
      * @since 2.8.8
      */
-    default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger logger) {
+    default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger confidentialLogger) {
         throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
     }
 
