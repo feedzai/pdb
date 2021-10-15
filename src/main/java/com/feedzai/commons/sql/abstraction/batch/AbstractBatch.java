@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static java.util.Objects.isNull;
+
 /**
  * A Batch that periodically flushes pending insertions to the database.
  * <p/>
@@ -52,6 +54,11 @@ public abstract class AbstractBatch implements Runnable {
      * The logger.
      */
     protected final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
+
+    /**
+     * The confidential logger.
+     */
+    protected final Logger confidentialLogger;
 
     /**
      * Constant representing that no retries should be attempted on batch flush failures.
@@ -158,8 +165,9 @@ public abstract class AbstractBatch implements Runnable {
      * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
      *                             will be attempted.
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
+     * @param confidentialLogger   The confidential logger.
      *
-     * @since 2.8.1
+     * @since 2.8.8
      */
     protected AbstractBatch(
         final DatabaseEngine de,
@@ -169,7 +177,8 @@ public abstract class AbstractBatch implements Runnable {
         final long maxAwaitTimeShutdown,
         @Nullable final BatchListener batchListener,
         final int maxFlushRetries,
-        final long flushRetryDelay) {
+        final long flushRetryDelay,
+        @Nullable final Logger confidentialLogger) {
         Objects.requireNonNull(de, "The provided database engine is null.");
 
         this.de = de;
@@ -182,6 +191,34 @@ public abstract class AbstractBatch implements Runnable {
         this.batchListener = Optional.ofNullable(batchListener);
         this.maxFlushRetries = maxFlushRetries;
         this.flushRetryDelay = flushRetryDelay;
+        this.confidentialLogger = isNull(confidentialLogger) ? logger : confidentialLogger;
+    }
+
+    /**
+     * Creates a new instance of {@link AbstractBatch} with a {@link BatchListener}.
+     *
+     * @param de                   The database engine.
+     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
+     * @param batchSize            The batch size.
+     * @param batchTimeout         The batch timeout.
+     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @param batchListener        The listener that will be invoked whenever some batch operation fail or succeeds to persist.
+     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
+     *                             will be attempted.
+     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
+     *
+     * @since 2.8.1
+     */
+    protected AbstractBatch(
+            final DatabaseEngine de,
+            final String name,
+            final int batchSize,
+            final long batchTimeout,
+            final long maxAwaitTimeShutdown,
+            @Nullable final BatchListener batchListener,
+            final int maxFlushRetries,
+            final long flushRetryDelay) {
+        this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, batchListener, maxFlushRetries, flushRetryDelay, null);
     }
 
     /**
@@ -399,7 +436,11 @@ public abstract class AbstractBatch implements Runnable {
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
-                logger.warn(dev, "[{}] Error occurred while flushing. Retrying.", name, e);
+                final String msg = "[{}] Error occurred while flushing. Retrying.";
+                confidentialLogger.warn(dev, msg, name, e);
+                if (confidentialLogger != logger) {
+                    logger.warn(dev, msg, name);
+                }
             }
 
             boolean success = false;
@@ -422,7 +463,11 @@ public abstract class AbstractBatch implements Runnable {
                     Thread.currentThread().interrupt();
                     break;
                 } catch (final Exception ex) {
-                    logger.warn(dev, "[{}] Error occurred while flushing (retry attempt {}).", name, retryCount + 1, ex);
+                    final String msg = "[{}] Error occurred while flushing (retry attempt {}).";
+                    confidentialLogger.warn(dev, msg, name, retryCount + 1, ex);
+                    if (confidentialLogger != logger) {
+                        logger.warn(dev, msg, name, retryCount + 1);
+                    }
                 }
             }
 
@@ -433,11 +478,19 @@ public abstract class AbstractBatch implements Runnable {
                     }
                 } catch (final Exception ee) {
                     ee.addSuppressed(e);
-                    logger.trace("[{}] Batch failed to check the flush transaction state", name, ee);
+                    final String msg = "[{}] Batch failed to check the flush transaction state";
+                    confidentialLogger.trace(msg, name, ee);
+                    if (confidentialLogger != logger) {
+                        logger.trace(msg, name);
+                    }
                 }
 
                 onFlushFailure(temp.toArray(new BatchEntry[0]));
-                logger.error(dev, "[{}] Error occurred while flushing. Aborting batch flush.", name, e);
+                final String msg = "[{}] Error occurred while flushing. Aborting batch flush.";
+                confidentialLogger.error(dev, msg, name, e);
+                if (confidentialLogger != logger) {
+                    logger.error(dev, msg, name);
+                }
             } else {
                 onFlushSuccess(temp.toArray(new BatchEntry[0]));
                 logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name,
@@ -449,7 +502,11 @@ public abstract class AbstractBatch implements Runnable {
                     de.rollback();
                 }
             } catch (final Exception e) {
-                logger.trace("[{}] Batch failed to check the flush transaction state", name, e);
+                final String msg = "[{}] Batch failed to check the flush transaction state";
+                confidentialLogger.trace(msg, name, e);
+                if (confidentialLogger != logger) {
+                    logger.trace(msg, name);
+                }
             } finally {
                 flushTransactionLock.unlock();
             }

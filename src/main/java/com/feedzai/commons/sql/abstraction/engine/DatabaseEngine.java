@@ -28,6 +28,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 import java.sql.Connection;
@@ -264,6 +265,28 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      */
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName);
+
+    /**
+     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
+     * statements in the batch is reached.
+     * <p/>
+     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     * <p/>
+     * The default implementation of this method throws an {@link UnsupportedOperationException}
+     * for backward-compatibility reasons. If this method is supposed to be called, it must be explicitly overridden.
+     *
+     * @param batchSize          The batch size.
+     * @param batchTimeout       If inserts do not occur after the specified time, a flush will be performed.
+     * @param batchName          The batch name.
+     * @param batchListener      Batch listener to execute custom behavior when the batch fails or succeeds to persist.
+     * @param confidentialLogger The confidential logger.
+     * @return The batch.
+     *
+     * @since 2.8.8
+     */
+    default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger confidentialLogger) {
+        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+    }
 
     /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
