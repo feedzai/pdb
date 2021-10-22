@@ -1,0 +1,4 @@
+[submodule ".ci-scripts"]
+    path = .ci-scripts
+    url = ../../release-management/ci-scripts.git
+    branch = master

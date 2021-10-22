@@ -1,0 +1,24 @@
+include:
+  - project: 'release-management/ci-scripts'
+    ref: master
+    file: '/gitlab-pipelines/gitlab-ci.yml'
+
+build:
+  # Build is guaranteed by Github Actions. No need to run again besides in special branches / tags for dependencies.
+  only:
+    - master
+    - tags
+
+test:
+  # Test are guaranteed by Github Actions. No need to run again besides in special branches / tags for dependencies.
+  only:
+    - master
+    - tags
+
+push_internal_docs:
+  only:
+    - never
+
+push_client_docs:
+  only:
+    - never

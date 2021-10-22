@@ -157,6 +157,10 @@ import static org.junit.Assert.fail;
 @RunWith(Parameterized.class)
 public class EngineGeneralTest {
 
+    /**
+     * Logger for this class.
+     */
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(EngineGeneralTest.class);
 
     private static final double DELTA = 1e-7;
 
@@ -3096,7 +3100,7 @@ public class EngineGeneralTest {
         engine2.updateEntity(entity.build());
 
         // as the fields were removed the entity mapping ignores the fields.
-        System.out.println("> " + engine2.getMetadata("TEST"));
+        logger.info("> {}", engine2.getMetadata("TEST"));
         entry = entry().set("COL1", 2).set("COL2", true).set("COL3", 2d).set("COL4", 1L).set("COL5", "c")
                 .build();
         engine2.persist("TEST", entry);
@@ -3333,7 +3337,7 @@ public class EngineGeneralTest {
 
         List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")));
         assertEquals("CENINHAS", result.get(0).get("COL1").toString());
-        System.out.println(result.get(0).get("COL2"));
+        logger.info("{}", result.get(0).get("COL2"));
         assertNull(result.get(0).get("COL2").toString());
     }
 
@@ -3502,7 +3506,7 @@ public class EngineGeneralTest {
 
         final List<Map<String, ResultColumn>> query = engine.query(select(all()).from(table(STM_TABLE)));
         for (Map<String, ResultColumn> stringResultColumnMap : query) {
-            System.out.println(stringResultColumnMap);
+            logger.info("{}", stringResultColumnMap);
             assertTrue("Assert Stream Name with id", stringResultColumnMap.get(STM_NAME).toString().endsWith(stringResultColumnMap.get(STM_ID).toString()));
         }
 
@@ -3538,7 +3542,7 @@ public class EngineGeneralTest {
 
         final List<Map<String, ResultColumn>> query = engine.query("SELECT * FROM " + quotize("MYTEST", engine.escapeCharacter()));
         for (Map<String, ResultColumn> stringResultColumnMap : query) {
-            System.out.println(stringResultColumnMap);
+            logger.info("{}", stringResultColumnMap);
             assertTrue(stringResultColumnMap.get("COL2").toString().endsWith(stringResultColumnMap.get("COL1").toString()));
         }
         engine.close();

@@ -83,7 +83,7 @@ public class DbFk implements Serializable {
      * these columns need to match the values in the local columns that define the foreign key.
      *
      * @return The list of referenced columns names.
-     * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+     * @deprecated A "foreign key" is actually composed from the local columns of the table where it is defined (the
      * child table); this name is wrong and will eventually be removed ─ use {@link #getReferencedColumns()} instead.
      */
     @Deprecated
@@ -107,7 +107,7 @@ public class DbFk implements Serializable {
      * Gets the name of the referenced table (parent table).
      *
      * @return The name of the referenced table.
-     * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+     * @deprecated A "foreign key" is actually composed from the local columns of the table where it is defined (the
      * child table); this method was used to get the name of the referenced table, which is the parent table, thus the
      * name of the method is wrong and it will eventually be removed ─ use {@link #getReferencedTable()} instead.
      */
@@ -159,7 +159,7 @@ public class DbFk implements Serializable {
          *
          * @param referencedTable The referenced table name.
          * @return This builder.
-         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * @deprecated A "foreign key" is actually composed from the local columns of the table where it is defined (the
          * child table); this name is wrong and will eventually be removed ─ use {@link #referencedTable(String)}
          * instead.
          */
@@ -211,7 +211,7 @@ public class DbFk implements Serializable {
          *
          * @param columns The columns.
          * @return This builder.
-         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * @deprecated A "foreign key" is actually composed from the local columns of the table where it is defined (the
          * child table); this name is wrong and will eventually be removed ─ use {@link #addReferencedColumn(String...)}
          * instead.
          */
@@ -225,7 +225,7 @@ public class DbFk implements Serializable {
          *
          * @param columns The columns.
          * @return This builder.
-         * @deprecated a "foreign key" is actually composed from the local columns of the table where it is defined (the
+         * @deprecated A "foreign key" is actually composed from the local columns of the table where it is defined (the
          * child table); this name is wrong and will eventually be removed ─ use {@link #addReferencedColumns(Collection)}
          * instead.
          */
