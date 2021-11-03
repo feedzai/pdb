@@ -145,6 +145,49 @@ It is also important to select a schema policy. There are four possible schema p
 - drop-create - New entities are dropped before creation if they already exist.
 - none - The program is not allowed to create new entities.
 
+### PDB Pool Usage
+PDB natively supports connection pools. You can create one using either a `Properties` or a `Map<String, String>`
+instance when defining the properties.
+```java
+final DatabaseEnginePool dbPool = DatabaseEnginePool.getConnectionPool(properties);
+```
+
+Additionally, you can specify a modifier for the `DatabaseEngine`.
+This can be useful when you need to load entities to be able to insert entries on them.
+
+```java
+final DatabaseEnginePool dbPool = DatabaseEnginePool.getConnectionPool(properties, engine -> engine.loadEntity(entity));
+```
+
+`DatabaseEnginePool` implements `AutoClosable` so you can close the pool when you need, 
+for instance, before exiting the application.
+
+Apart from the already described PDB configurations,
+you can configure your pool using the parameters in the following table. 
+
+The `pool.generic.maxTotal`, `pool.generic.maxIdle`, `pool.generic.minIdle`, 
+and `pool.generic.maxWaitMillis` are the most common ones.
+
+| Property | Description | Default value |
+| - | - | - |
+| `pool.generic.maxTotal` | The maximum number of active `DatabaseEngine` instances that can be allocated from the pool at the same time, or negative for no limit. | 8 |
+| `pool.generic.maxIdle` | The maximum number of `DatabaseEngine` instances that can remain idle in the pool, without extra ones being released, or negative for no limit. | 8 |
+| `pool.generic.minIdle` | The minimum number of `DatabaseEngine` instances that can remain idle in the pool, without extra ones being created, or zero to create none. | 0 |
+| `pool.generic.maxWaitMillis` | The maximum number of milliseconds that the pool will wait (when there are no available `DatabaseEngine` instances) for a `DatabaseEngine` instance to be returned before throwing an error, or -1 to wait indefinitely. | -1 |
+| `pool.generic.testOnCreate` | The indication of whether `DatabaseEngine` instances will be validated after creation. If the instance is invalid, the borrow attempt that triggered the `DatabaseEngine` instance creation will fail. | false |
+| `pool.generic.testOnBorrow` | The indication of whether `DatabaseEngine` instances will be validated before being borrowed from the pool. If the instance is invalid, it is dropped from the pool and another one is tried to be borrowed. | true |
+| `pool.generic.testOnReturn` | The indication of whether `DatabaseEngine` instances will be validated before being returned to the pool. | false |
+| `pool.generic.testWhileIdle` | The indication of whether `DatabaseEngine` instances will be validated by the idle evictor (if any). If an instance is invalid, it will be dropped from the pool. | false |
+| `pool.generic.timeBetweenEvictionRunsMillis` | The number of milliseconds to sleep between runs of the idle evictor thread. When non-positive, no idle evictor thread will be run. | -1 |
+| `pool.generic.numTestsPerEvictionRun` | The number of `DatabaseEngine` instances to examine during each run of the idle evictor thread (if any). | 3 |
+| `pool.generic.minEvictableIdleTimeMillis` | The minimum amount of time a `DatabaseEngine` instance may sit idle in the pool before it is eligible for eviction by the idle evictor (if any). | 1000 \* 60 \* 30 |
+| `pool.generic.lifo` | True means that the pool returns the most recently used ("last in") `DatabaseEngine` instance in the pool (if there are idle instances available). False means that the pool behaves as a FIFO queue - instances are taken from the idle instance pool in the order that they are returned to the pool. | true |
+| `pool.abandoned.removeAbandonedOnMaintenance`<br/>`pool.abandoned.removeAbandonedOnBorrow` | Flags to remove abandoned `DatabaseEngine` instances if they exceed `pool.abandoned.removeAbandonedTimout`.<br/>A `DatabaseEngine` instance is considered abandoned and eligible for removal if it has not been used for longer than `pool.abandoned.removeAbandonedTimeout`.<br/>Setting `pool.abandoned.removeAbandonedOnMaintenance` to true removes abandoned `DatabaseEngine` instances on the maintenance cycle (when eviction ends). This property has no effect unless maintenance is enabled by setting `pool.generic.timeBetweenEvictionRunsMillis` to a positive value. <br/>If `pool.abandoned.removeAbandonedOnBorrow` is true, abandoned `DatabaseEngine` instances are removed each time a instance is borrowed from the pool, with the additional requirements that `[number of active instances]` > `pool.generic.maxTotal` - 3  and `[number of idle instances]` < 2 | false |
+| `pool.abandoned.removeAbandonedTimeout` | Timeout in seconds before an abandoned `DatabaseEngine` instance can be removed. | 300 |
+| `pool.abandoned.logAbandoned` | Flag to log stack traces for application code which abandoned a `DatabaseEngine` instance. | false |
+
+> If no `pool.abandoned` property is defined in the configuration file, then no policy to remove abandoned `DatabaseEngine` instances is applied.
+
 ### Create Table
 
 We start by creating the table to store the different data Types:
