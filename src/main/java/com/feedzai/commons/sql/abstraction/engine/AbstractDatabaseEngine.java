@@ -371,14 +371,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             try {
-
                 if (maximumNumberOfTries > 0) {
-                    if (retries == (maximumNumberOfTries / 2) || retries == (maximumNumberOfTries - 1)) {
-                        logger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
-                        notificationLogger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
-                    } else {
-                        logger.debug("Retrying ({}/{}) in {} seconds...", retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
-                    }
+                    logger.debug("Retrying ({}/{}) in {} seconds...", retries, maximumNumberOfTries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
                 } else {
                     logger.debug("Retry number {} in {} seconds...", retries, TimeUnit.MILLISECONDS.toSeconds(retryInterval));
                     if (retries % 10 == 0) {
@@ -388,9 +382,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 Thread.sleep(retryInterval);
                 connect(); // this sets the new object.
 
-
                 // recover state.
-
                 try {
                     recover();
                 } catch (final Exception e) {
@@ -406,7 +398,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             } catch (final SQLException ex) {
                 logger.debug("Connection failed.");
 
-                if (maximumNumberOfTries > 0 && retries > maximumNumberOfTries) {
+                if (retries == (maximumNumberOfTries / 2) || retries == (maximumNumberOfTries - 1)) {
+                    logger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
+                    notificationLogger.error("The connection to the database was lost. Remaining retries: {}", (maximumNumberOfTries - retries));
+                }
+                else if (maximumNumberOfTries > 0 && retries >= maximumNumberOfTries) {
                     throw new RetryLimitExceededException("Maximum number of retries for a connection exceeded.", ex);
                 }
 
