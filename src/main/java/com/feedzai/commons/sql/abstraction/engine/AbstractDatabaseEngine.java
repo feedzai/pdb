@@ -1600,7 +1600,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 final DbEntityType type;
 
                 // tag the entities
-                if ("TABLE".equals(entityType)) {
+                if ("TABLE".equals(entityType) || "BASE TABLE".equals(entityType)) {
                     type = DbEntityType.TABLE;
                 } else if ("VIEW".equals(entityType)) {
                     type = DbEntityType.VIEW;

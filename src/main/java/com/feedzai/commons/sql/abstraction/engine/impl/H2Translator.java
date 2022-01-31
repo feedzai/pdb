@@ -355,4 +355,20 @@ public class H2Translator extends AbstractTranslator {
     public String translateFalse() {
         return "FALSE";
     }
+
+    /**
+     * In H2 2.x, checking a boolean field against a boolean represented as a string causes an error.
+     * This code checks if the string is a boolean and process it as a boolean, not as a string.
+     */
+    @Override
+    public String translate(final K k) {
+       if (k.getConstant() instanceof String) {
+            String s = (String) k.getConstant();
+            if (s.equalsIgnoreCase("TRUE") || s.equalsIgnoreCase("FALSE")) {
+                return Boolean.parseBoolean(s) ? translateTrue() : translateFalse();
+            }
+        }
+
+       return super.translate(k);
+    }
 }

@@ -34,6 +34,8 @@ import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
+import java.io.ByteArrayInputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -56,6 +58,10 @@ import static org.apache.commons.lang3.StringUtils.join;
  * @since 2.0.0
  */
 public class H2Engine extends AbstractDatabaseEngine {
+    /**
+     * Tha max length of a VARCHAR type.
+     */
+    private static final int MAX_VARCHAR_LENGTH = 1048576;
 
     /**
      * The PostgreSQL JDBC driver.
@@ -147,7 +153,16 @@ public class H2Engine extends AbstractDatabaseEngine {
 
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
+                        if (val == null) {
+                            ps.setNull(i, Types.BLOB);
+                            break;
+                        }
+
+                        if (val instanceof Serializable) {
+                            ps.setBinaryStream(i, new ByteArrayInputStream(objectToArray(val)));
+                        } else {
+                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to byte[]. BLOB columns only accept byte arrays.");
+                        }
 
                         break;
                     case JSON:
@@ -685,5 +700,21 @@ public class H2Engine extends AbstractDatabaseEngine {
     @Override
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return H2_QUERY_EXCEPTION_HANDLER;
+    }
+
+    @Override
+    protected void setParameterValues(PreparedStatement ps, int index, Object param) throws SQLException {
+        if (param instanceof String) {
+            String paramStr = (String) param;
+            if (paramStr.length() > MAX_VARCHAR_LENGTH) {
+                ps.setCharacterStream(index, new StringReader(paramStr));
+            } else {
+                super.setParameterValues(ps, index, param);
+            }
+        } else if (param instanceof byte[]) {
+            ps.setBinaryStream(index, new ByteArrayInputStream((byte[]) param));
+        } else {
+            super.setParameterValues(ps, index, param);
+        }
     }
 }
