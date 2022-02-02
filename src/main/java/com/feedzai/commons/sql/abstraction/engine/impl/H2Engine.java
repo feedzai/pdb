@@ -60,6 +60,7 @@ import static org.apache.commons.lang3.StringUtils.join;
 public class H2Engine extends AbstractDatabaseEngine {
     /**
      * The max length of a VARCHAR type.
+     * For more information, see: http://www.h2database.com/html/datatypes.html.
      */
     private static final int MAX_VARCHAR_LENGTH = 1048576;
 
