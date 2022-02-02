@@ -358,7 +358,7 @@ public class H2Translator extends AbstractTranslator {
 
     /**
      * In H2 2.x, checking a boolean field against a boolean represented as a string causes an error.
-     * This code checks if the string is a boolean and process it as a boolean, not as a string.
+     * This code checks if the string is a boolean and processes it as a boolean, not as a string.
      */
     @Override
     public String translate(final K k) {
