@@ -37,11 +37,6 @@ DatabaseEngine methods `#getPSResultSet(final String name)`, `#getPSIterator(fin
 (final String name, final int fetchSize)`, since 2.7.0, throw an extra `ConnectionResetException` when the database
 connection is lost and recovered.
 
-H2 2.x is not backward compatible with H2 1.x. Two changes worth some comments:
-
-* Values stored in `BOOLEAN` columns now can only be compared to boolean values (`TRUE` or `FALSE`). Comparisons using values like `"TRUE"`, `"FALSE"`, `1` or `0` will not work.
-* When a user-defined ID is forced into a column that has auto-increment enabled, the increment sequence is not affected by the user-defined ID. That could lead to errors regarding ID duplication, for instance. Be careful when overriding IDs in auto-increment columns or, even better, do not do that.
-
 ## Changes from 2.0.0
 * It is now possible to call built-in database vendor functions [e.g. f("lower", column("COL1"))]
 * Added lower and upper functions
@@ -50,6 +45,14 @@ H2 2.x is not backward compatible with H2 1.x. Two changes worth some comments:
 
 ## Changes from 2.8.0
 * It now uses Guava 25.1-jre version, which might require the client to also upgrade it to match the same version
+
+## Changes from 2.9.0
+* H2 upgraded to 2.1.210 version
+
+H2 2.x is not backward compatible with H2 1.x. Two changes worth some comments:
+
+* Values stored in `BOOLEAN` columns now can only be compared to boolean values (`TRUE` or `FALSE`). Comparisons using values like `"TRUE"`, `"FALSE"`, `1` or `0` will not work.
+* When a user-defined ID is forced into a column that has auto-increment enabled, the increment sequence is not affected by the user-defined ID. That could lead to errors regarding ID duplication, for instance. Be careful when overriding IDs in auto-increment columns or, even better, do not do that.
 
 ## Compiling PDB
 
