@@ -363,7 +363,7 @@ public class H2Translator extends AbstractTranslator {
     @Override
     public String translate(final K k) {
        if (k.getConstant() instanceof String) {
-            String s = (String) k.getConstant();
+            final String s = (String) k.getConstant();
             if (s.equalsIgnoreCase("TRUE") || s.equalsIgnoreCase("FALSE")) {
                 return Boolean.parseBoolean(s) ? translateTrue() : translateFalse();
             }

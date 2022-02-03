@@ -147,7 +147,7 @@ public class H2Engine extends AbstractDatabaseEngine {
             try {
                 final Object val;
                 if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                   val = column.getDefaultValue().getConstant();
+                    val = column.getDefaultValue().getConstant();
                 } else {
                     val = entry.get(column.getName());
                 }
@@ -156,24 +156,17 @@ public class H2Engine extends AbstractDatabaseEngine {
                     case BLOB:
                         if (val == null) {
                             ps.setNull(i, Types.BLOB);
-                            break;
-                        }
-
-                        if (val instanceof Serializable) {
+                        } else if (val instanceof Serializable) {
                             ps.setBinaryStream(i, new ByteArrayInputStream(objectToArray(val)));
                         } else {
                             throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to byte[]. BLOB columns only accept byte arrays.");
                         }
-
                         break;
                     case JSON:
                     case CLOB:
                         if (val == null) {
                             ps.setNull(i, Types.CLOB);
-                            break;
-                        }
-
-                        if (val instanceof String) {
+                        } else if (val instanceof String) {
                             StringReader sr = new StringReader((String) val);
                             ps.setCharacterStream(i, sr);
                         } else {
@@ -704,9 +697,9 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void setParameterValues(PreparedStatement ps, int index, Object param) throws SQLException {
+    protected void setParameterValues(final PreparedStatement ps, final int index, final Object param) throws SQLException {
         if (param instanceof String) {
-            String paramStr = (String) param;
+            final String paramStr = (String) param;
             if (paramStr.length() > MAX_VARCHAR_LENGTH) {
                 ps.setCharacterStream(index, new StringReader(paramStr));
             } else {
