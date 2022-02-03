@@ -71,7 +71,7 @@ public class BatchConnectionRetryTest {
      */
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("h2");
+        return DatabaseTestUtil.loadConfigurations("h2Legacy", "h2remoteLegacy");
     }
 
     @Parameterized.Parameter

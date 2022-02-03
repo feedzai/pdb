@@ -67,7 +67,7 @@ public class NotifyOnFailureTest {
      */
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("h2");
+        return DatabaseTestUtil.loadConfigurations("h2", "h2Remote");
     }
 
     @Parameterized.Parameter

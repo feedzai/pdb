@@ -168,7 +168,9 @@ public class EngineGeneralTest {
 
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations();
+        return DatabaseTestUtil.loadConfigurations(
+                "h2Legacy", "h2RemoteLegacy", "mysql", "sqlserver", "postgresql", "cockroach", "oracle", "db2"
+        );
     }
 
     @Parameterized.Parameter

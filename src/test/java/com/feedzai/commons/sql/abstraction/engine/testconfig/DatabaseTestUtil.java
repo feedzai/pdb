@@ -77,7 +77,7 @@ public class DatabaseTestUtil {
         return loadConfigurations().stream()
             .filter(dbConfig -> {
                 for (String vendor : vendors) {
-                    if (dbConfig.vendor.contains(vendor)) {
+                    if (dbConfig.vendor.equalsIgnoreCase(vendor)) {
                         return true;
                     }
                 }
