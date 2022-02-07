@@ -18,11 +18,7 @@ package com.feedzai.commons.sql.abstraction.engine.impl.h2;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.*;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import mockit.Invocation;
@@ -71,7 +67,7 @@ public class BatchConnectionRetryTest {
      */
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("h2Legacy", "h2remoteLegacy");
+        return DatabaseTestUtil.loadConfigurations("h2");
     }
 
     @Parameterized.Parameter

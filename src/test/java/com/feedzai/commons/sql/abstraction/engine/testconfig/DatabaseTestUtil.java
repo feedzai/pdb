@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Utility to read and filter database instances to test.
@@ -77,7 +78,7 @@ public class DatabaseTestUtil {
         return loadConfigurations().stream()
             .filter(dbConfig -> {
                 for (String vendor : vendors) {
-                    if (dbConfig.vendor.equalsIgnoreCase(vendor)) {
+                    if (dbConfig.vendor.contains(vendor)) {
                         return true;
                     }
                 }

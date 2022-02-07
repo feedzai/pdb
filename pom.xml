@@ -501,7 +501,7 @@
         </profile>
 
         <profile>
-            <id>h2remote-legacy</id>
+            <id>h2v2remote</id>
             <dependencies>
                 <dependency>
                     <groupId>com.h2database</groupId>
@@ -516,7 +516,7 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <systemProperties>
-                                <instances>h2remoteLegacy</instances>
+                                <instances>h2v2remote</instances>
                             </systemProperties>
                         </configuration>
                     </plugin>
@@ -545,7 +545,7 @@
                                 <argument>-tcp</argument>
                                 <!-- set local file inside test output directory -->
                                 <argument>-baseDir</argument>
-                                <argument>${project.build.testOutputDirectory}/pdb-h2-remote-legacy</argument>
+                                <argument>${project.build.testOutputDirectory}/pdb-h2v2-remote</argument>
                                 <!-- allows databases to be created when accessed -->
                                 <argument>-ifNotExists</argument>
                             </arguments>

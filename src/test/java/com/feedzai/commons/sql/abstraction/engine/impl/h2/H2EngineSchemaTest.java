@@ -38,7 +38,7 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
 
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations("h2Legacy", "h2remoteLegacy");
+        return DatabaseTestUtil.loadConfigurations("h2");
     }
 
     @Override

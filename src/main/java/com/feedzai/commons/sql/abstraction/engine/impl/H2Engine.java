@@ -22,6 +22,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.H2ResultIterator;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
@@ -44,8 +45,11 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.*;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
@@ -57,6 +61,7 @@ import static org.apache.commons.lang3.StringUtils.join;
  * @author Joao Silva (joao.silva@feedzai.com)
  * @since 2.0.0
  */
+@Deprecated
 public class H2Engine extends AbstractDatabaseEngine {
     /**
      * The max length of a VARCHAR type.
@@ -65,7 +70,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     private static final int MAX_VARCHAR_LENGTH = 1048576;
 
     /**
-     * The PostgreSQL JDBC driver.
+     * The H2 JDBC driver.
      */
     protected static final String H2_DRIVER = DatabaseEngineDriver.H2.driver();
 
@@ -108,7 +113,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     public static final QueryExceptionHandler H2_QUERY_EXCEPTION_HANDLER = new H2QueryExceptionHandler();
 
     /**
-     * Creates a new PostgreSql connection.
+     * Creates a new H2 connection.
      *
      * @param properties The properties for the database connection.
      * @throws DatabaseEngineException When the connection fails.
@@ -125,6 +130,10 @@ public class H2Engine extends AbstractDatabaseEngine {
 
         if (!jdbc.contains("DB_CLOSE_ON_EXIT")) {
             jdbc = jdbc.concat(";DB_CLOSE_ON_EXIT=FALSE");
+        }
+
+        if (!jdbc.contains("MODE")) {
+            jdbc = jdbc.concat(";MODE=LEGACY");
         }
 
         return jdbc;
@@ -556,20 +565,48 @@ public class H2Engine extends AbstractDatabaseEngine {
                                           final boolean useAutoInc,
                                           final int lastBindPosition) throws Exception {
         ps.execute();
-
+        long generatedKey = 0;
         final String autoIncColumnName = me.getAutoIncColumn();
-        if (useAutoInc && autoIncColumnName != null) {
-            try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    // These generated keys belong to the primary key and might not have auto incremented values nor
-                    // even have integer values.
-                    // That's why its necessary to only retrieve the value from a column that is auto incremented.
-                    return generatedKeys.getLong(autoIncColumnName);
+
+        if (autoIncColumnName != null) {
+            if (useAutoInc) {
+                try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        // These generated keys belong to the primary key and might not have auto incremented values nor
+                        // even have integer values.
+                        // That's why it's necessary to only retrieve the value from a column that is auto incremented.
+                        generatedKey = generatedKeys.getLong(autoIncColumnName);
+                    }
                 }
+            } else {
+                final List<Map<String, ResultColumn>> q = query(
+                    select(max(column(me.getAutoIncColumn()))).from(table(me.getEntity().getName()))
+                );
+                if (!q.isEmpty()) {
+                    generatedKey = q.get(0).values().iterator().next().toLong();
+                }
+
+                updatePersistAutoIncSequence(me, generatedKey);
             }
         }
 
-        return 0;
+        return generatedKey;
+    }
+
+    /**
+     * Updates the autoInc sequence value after a persist operation.
+     *
+     * @param mappedEntity      The mapped entity to for which to update the autoInc sequence.
+     * @param currentAutoIncVal The current value for the autoInc column.
+     * @since 2.9.0
+     */
+    private void updatePersistAutoIncSequence(final MappedEntity mappedEntity, final long currentAutoIncVal) {
+        executeUpdateSilently(format(
+                "ALTER TABLE %s ALTER COLUMN %s RESTART WITH %d",
+                quotize(mappedEntity.getEntity().getName()),
+                quotize(mappedEntity.getAutoIncColumn()),
+                currentAutoIncVal + 1
+        ));
     }
 
     @Override
