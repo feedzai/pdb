@@ -12,7 +12,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    name: Test H22 PDB Java ${{ matrix.java-version }}
+    name: Test H2V2 PDB Java ${{ matrix.java-version }}
 
     strategy:
       matrix:
