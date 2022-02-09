@@ -37,10 +37,7 @@ public class H2EngineV2 extends H2Engine {
     }
 
     @Override
-    protected String getFinalJdbcConnection(final String jdbc) {
-        String modifiedUrl = super.getFinalJdbcConnection(jdbc);
-
-        // Disables the legacy mode, if already defined
-        return modifiedUrl.replace(";MODE=LEGACY", "");
+    protected void onConnectionCreated() throws DatabaseEngineException {
+        // This method is overridden to prevent the usage of H2 legacy mode
     }
 }

@@ -134,11 +134,32 @@ public class H2Engine extends AbstractDatabaseEngine {
             jdbc = jdbc.concat(";DB_CLOSE_ON_EXIT=FALSE");
         }
 
-        if (!jdbc.contains("MODE")) {
-            jdbc = jdbc.concat(";MODE=LEGACY");
-        }
-
         return jdbc;
+    }
+
+    @Override
+    protected void onConnectionCreated() throws DatabaseEngineException {
+        if (supportsLegacyMode()) {
+            try (PreparedStatement stmt = conn.prepareStatement("SET MODE LEGACY")) {
+                stmt.execute();
+            } catch (final SQLException ex) {
+                throw new DatabaseEngineException("Error defining the legacy mode in H2", ex);
+            }
+        }
+    }
+
+    /**
+     * Checks if the legacy mode is supported.
+     * Legacy mode is currently supported only by version 2.x of H2.
+     * @return true if legacy mode is supported; false otherwise.
+     * @since 2.8.10
+     */
+    private boolean supportsLegacyMode() throws DatabaseEngineException {
+        try {
+            return conn.getMetaData().getDatabaseMajorVersion() == 2;
+        } catch (final SQLException ex) {
+            throw new DatabaseEngineException("Error accessing the database metadata", ex);
+        }
     }
 
     @Override

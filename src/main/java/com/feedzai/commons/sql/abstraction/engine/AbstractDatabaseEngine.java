@@ -309,8 +309,15 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             .orElseThrow(() -> new DatabaseEngineException("Could not get current schema"));
 
         setTransactionIsolation();
-
+        onConnectionCreated();
         logger.debug("Connection successful.");
+    }
+
+    /**
+     * To be called when the connection to the database is successfully created.
+     * @throws DatabaseEngineException If something wrong occurs while interacting with the database.
+     */
+    protected void onConnectionCreated() throws DatabaseEngineException {
     }
 
     /**
