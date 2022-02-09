@@ -48,7 +48,7 @@ connection is lost and recovered.
 
 ## Changes from 2.8.10
 * H2 version upgraded to 2.1.210
-* `H2Engine` is now deprecated and uses the H2 legacy mode (for more information see: http://www.h2database.com/html/features.html)
+* `H2Engine` is now deprecated and uses the H2v2 legacy mode if this engine is used with the H2v2 driver (for more information regarding the legacy mode see: http://www.h2database.com/html/features.html)
 * The `H2V2Engine` was created and it is the engine that should be used from now on (it works on regular mode, not legacy)
 
 ## Compiling PDB
