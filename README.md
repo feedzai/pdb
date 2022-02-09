@@ -46,6 +46,11 @@ connection is lost and recovered.
 ## Changes from 2.8.0
 * It now uses Guava 25.1-jre version, which might require the client to also upgrade it to match the same version
 
+## Changes from 2.8.10
+* H2 version upgraded to 2.1.210
+* `H2Engine` is now deprecated and uses the H2 legacy mode (for more information see: http://www.h2database.com/html/features.html)
+* The `H2V2Engine` was created and it is the engine that should be used from now on (it works on regular mode, not legacy)
+
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.  

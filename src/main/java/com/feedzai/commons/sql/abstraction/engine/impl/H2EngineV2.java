@@ -22,7 +22,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
  * H2 specific database implementation.
  *
  * @author Carlos Tosin (carlos.tosin@feedzai.com)
- * @since 2.9.0
+ * @since 2.8.10
  */
 public class H2EngineV2 extends H2Engine {
 

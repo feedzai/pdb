@@ -600,7 +600,7 @@ public class H2Engine extends AbstractDatabaseEngine {
      *
      * @param mappedEntity      The mapped entity to for which to update the autoInc sequence.
      * @param currentAutoIncVal The current value for the autoInc column.
-     * @since 2.9.0
+     * @since 2.8.10
      */
     private void updatePersistAutoIncSequence(final MappedEntity mappedEntity, final long currentAutoIncVal) {
         executeUpdateSilently(format(
