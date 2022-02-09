@@ -316,6 +316,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * To be called when the connection to the database is successfully created.
      * @throws DatabaseEngineException If something wrong occurs while interacting with the database.
+     * @since 2.8.10
      */
     protected void onConnectionCreated() throws DatabaseEngineException {
     }
