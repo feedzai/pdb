@@ -22,6 +22,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbFk;
 import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.H2ResultIterator;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
@@ -34,6 +35,8 @@ import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
+import java.io.ByteArrayInputStream;
+import java.io.Serializable;
 import java.io.StringReader;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -42,8 +45,13 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
@@ -55,10 +63,16 @@ import static org.apache.commons.lang3.StringUtils.join;
  * @author Joao Silva (joao.silva@feedzai.com)
  * @since 2.0.0
  */
+@Deprecated
 public class H2Engine extends AbstractDatabaseEngine {
+    /**
+     * The max length of a VARCHAR type.
+     * For more information, see: http://www.h2database.com/html/datatypes.html.
+     */
+    private static final int MAX_VARCHAR_LENGTH = 1048576;
 
     /**
-     * The PostgreSQL JDBC driver.
+     * The H2 JDBC driver.
      */
     protected static final String H2_DRIVER = DatabaseEngineDriver.H2.driver();
 
@@ -101,7 +115,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     public static final QueryExceptionHandler H2_QUERY_EXCEPTION_HANDLER = new H2QueryExceptionHandler();
 
     /**
-     * Creates a new PostgreSql connection.
+     * Creates a new H2 connection.
      *
      * @param properties The properties for the database connection.
      * @throws DatabaseEngineException When the connection fails.
@@ -124,6 +138,31 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
+    protected void onConnectionCreated() throws DatabaseEngineException {
+        if (supportsLegacyMode()) {
+            try (PreparedStatement stmt = conn.prepareStatement("SET MODE LEGACY")) {
+                stmt.execute();
+            } catch (final SQLException ex) {
+                throw new DatabaseEngineException("Error defining the legacy mode in H2", ex);
+            }
+        }
+    }
+
+    /**
+     * Checks if the legacy mode is supported.
+     * Legacy mode is currently supported only by version 2.x of H2.
+     * @return true if legacy mode is supported; false otherwise.
+     * @since 2.8.10
+     */
+    private boolean supportsLegacyMode() throws DatabaseEngineException {
+        try {
+            return conn.getMetaData().getDatabaseMajorVersion() == 2;
+        } catch (final SQLException ex) {
+            throw new DatabaseEngineException("Error accessing the database metadata", ex);
+        }
+    }
+
+    @Override
     public Class<? extends AbstractTranslator> getTranslatorClass() {
         return H2Translator.class;
     }
@@ -140,24 +179,26 @@ public class H2Engine extends AbstractDatabaseEngine {
             try {
                 final Object val;
                 if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                   val = column.getDefaultValue().getConstant();
+                    val = column.getDefaultValue().getConstant();
                 } else {
                     val = entry.get(column.getName());
                 }
 
                 switch (column.getDbColumnType()) {
                     case BLOB:
-                        ps.setBytes(i, objectToArray(val));
-
+                        if (val == null) {
+                            ps.setNull(i, Types.BLOB);
+                        } else if (val instanceof Serializable) {
+                            ps.setBinaryStream(i, new ByteArrayInputStream(objectToArray(val)));
+                        } else {
+                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to byte[]. BLOB columns only accept byte arrays.");
+                        }
                         break;
                     case JSON:
                     case CLOB:
                         if (val == null) {
                             ps.setNull(i, Types.CLOB);
-                            break;
-                        }
-
-                        if (val instanceof String) {
+                        } else if (val instanceof String) {
                             StringReader sr = new StringReader((String) val);
                             ps.setCharacterStream(i, sr);
                         } else {
@@ -547,20 +588,48 @@ public class H2Engine extends AbstractDatabaseEngine {
                                           final boolean useAutoInc,
                                           final int lastBindPosition) throws Exception {
         ps.execute();
-
+        long generatedKey = 0;
         final String autoIncColumnName = me.getAutoIncColumn();
-        if (useAutoInc && autoIncColumnName != null) {
-            try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
-                if (generatedKeys.next()) {
-                    // These generated keys belong to the primary key and might not have auto incremented values nor
-                    // even have integer values.
-                    // That's why its necessary to only retrieve the value from a column that is auto incremented.
-                    return generatedKeys.getLong(autoIncColumnName);
+
+        if (autoIncColumnName != null) {
+            if (useAutoInc) {
+                try (final ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        // These generated keys belong to the primary key and might not have auto incremented values nor
+                        // even have integer values.
+                        // That's why it's necessary to only retrieve the value from a column that is auto incremented.
+                        generatedKey = generatedKeys.getLong(autoIncColumnName);
+                    }
                 }
+            } else {
+                final List<Map<String, ResultColumn>> q = query(
+                    select(max(column(me.getAutoIncColumn()))).from(table(me.getEntity().getName()))
+                );
+                if (!q.isEmpty()) {
+                    generatedKey = q.get(0).values().iterator().next().toLong();
+                }
+
+                updatePersistAutoIncSequence(me, generatedKey);
             }
         }
 
-        return 0;
+        return generatedKey;
+    }
+
+    /**
+     * Updates the autoInc sequence value after a persist operation.
+     *
+     * @param mappedEntity      The mapped entity to for which to update the autoInc sequence.
+     * @param currentAutoIncVal The current value for the autoInc column.
+     * @since 2.8.10
+     */
+    private void updatePersistAutoIncSequence(final MappedEntity mappedEntity, final long currentAutoIncVal) {
+        executeUpdateSilently(format(
+                "ALTER TABLE %s ALTER COLUMN %s RESTART WITH %d",
+                quotize(mappedEntity.getEntity().getName()),
+                quotize(mappedEntity.getAutoIncColumn()),
+                currentAutoIncVal + 1
+        ));
     }
 
     @Override
@@ -685,5 +754,21 @@ public class H2Engine extends AbstractDatabaseEngine {
     @Override
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return H2_QUERY_EXCEPTION_HANDLER;
+    }
+
+    @Override
+    protected void setParameterValues(final PreparedStatement ps, final int index, final Object param) throws SQLException {
+        if (param instanceof String) {
+            final String paramStr = (String) param;
+            if (paramStr.length() > MAX_VARCHAR_LENGTH) {
+                ps.setCharacterStream(index, new StringReader(paramStr));
+            } else {
+                super.setParameterValues(ps, index, param);
+            }
+        } else if (param instanceof byte[]) {
+            ps.setBinaryStream(index, new ByteArrayInputStream((byte[]) param));
+        } else {
+            super.setParameterValues(ps, index, param);
+        }
     }
 }

@@ -309,8 +309,16 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             .orElseThrow(() -> new DatabaseEngineException("Could not get current schema"));
 
         setTransactionIsolation();
-
+        onConnectionCreated();
         logger.debug("Connection successful.");
+    }
+
+    /**
+     * To be called when the connection to the database is successfully created.
+     * @throws DatabaseEngineException If something wrong occurs while interacting with the database.
+     * @since 2.8.10
+     */
+    protected void onConnectionCreated() throws DatabaseEngineException {
     }
 
     /**
@@ -1600,7 +1608,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 final DbEntityType type;
 
                 // tag the entities
-                if ("TABLE".equals(entityType)) {
+                if ("TABLE".equals(entityType) || "BASE TABLE".equals(entityType)) {
                     type = DbEntityType.TABLE;
                 } else if ("VIEW".equals(entityType)) {
                     type = DbEntityType.VIEW;

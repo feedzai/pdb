@@ -21,7 +21,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import java.sql.Connection;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import org.junit.After;
@@ -149,7 +148,10 @@ public class TimeoutsTest {
 
         // For H2 there is a socket timeout property but it must be defined as a system property, before the driver
         // is loaded: see org.h2.engine.SysProperties
-        assumeTrue("H2 engine doesn't support setting timeouts, tests will be skipped", engine != DatabaseEngineDriver.H2);
+        assumeTrue(
+            "H2 engine doesn't support setting timeouts, tests will be skipped",
+            engine != DatabaseEngineDriver.H2 && engine != DatabaseEngineDriver.H2V2
+        );
 
         testRouter = new TestRouter(executor, engine.defaultPort());
     }

@@ -39,6 +39,20 @@ public enum DatabaseEngineDriver {
         }
     },
     /**
+     * The H2v2 Database vendor.
+     */
+    H2V2("H2V2", "com.feedzai.commons.sql.abstraction.engine.impl.H2EngineV2", "org.h2.Driver", 0) {
+        @Override
+        public String connectionStringFor(String hostname, String database) {
+            return String.format("jdbc:h2:%s/%s", hostname, database);
+        }
+
+        @Override
+        public String connectionStringFor(String hostname, String database, int port) {
+            return connectionStringFor(hostname, database);
+        }
+    },
+    /**
      * The PostgreSQL vendor.
      */
     POSTGRES("Postgres", "com.feedzai.commons.sql.abstraction.engine.impl.PostgreSqlEngine", "org.postgresql.Driver", 5432) {
