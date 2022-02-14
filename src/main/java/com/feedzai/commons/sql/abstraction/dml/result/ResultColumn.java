@@ -111,6 +111,10 @@ public abstract class ResultColumn implements Serializable {
             return null;
         }
 
+        if (val instanceof Number) {
+            return ((Number) val).doubleValue();
+        }
+
         return Double.parseDouble(val.toString());
     }
 

@@ -27,7 +27,6 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Joao Silva (joao.silva@feedzai.com)
