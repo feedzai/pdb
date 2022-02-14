@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -56,20 +57,31 @@ public abstract class ResultIterator implements AutoCloseable {
     /**
      * The list of columns names for the given query.
      */
-    private final List<String> columnNames;
+    private final List<String> columnNames = new ArrayList<>();
+
     /**
-     * Signals if the result set is already close.
+     * Signals if the result set is already closed.
      */
     private boolean closed = false;
     /**
-     * Signals if statement in place is closeable. E.g. Prepared statements must no be closed.
+     * Signals if statement in place is closeable. E.g. Prepared statements must not be closed.
      */
-    private boolean statementCloseable;
+    private final boolean statementCloseable;
 
     /**
      * The number of rows processed by the iterator so far.
      */
-    private int currentRowCount;
+    private int currentRowCount = 0;
+
+    /**
+     * Signals whether the iterator query was wrapped in a transaction before being sent to the database.
+     */
+    private final boolean isWrappedInTransaction;
+
+    /**
+     * Flag to keep the previous state of the {@link Connection#getAutoCommit() conection autocommit}.
+     */
+    private final boolean previousAutocommit;
 
     /**
      * Creates a new instance of {@link ResultIterator} for regular statements (on-demand query).
@@ -82,14 +94,23 @@ public abstract class ResultIterator implements AutoCloseable {
      * @param isPreparedStatement True if the given statement is a {@link PreparedStatement}.
      * @throws DatabaseEngineException If a database access error occurs.
      */
-    private ResultIterator(Statement statement, String sql, boolean isPreparedStatement) throws DatabaseEngineException {
+    private ResultIterator(final Statement statement, final String sql, final boolean isPreparedStatement) throws DatabaseEngineException {
         this.statement = statement;
-        this.columnNames = new ArrayList<>();
-        this.currentRowCount = 0;
 
         // Process column names.
         try {
             long start = System.currentTimeMillis();
+
+            this.isWrappedInTransaction = needsWrapInTransaction(statement.getFetchSize());
+
+            if (isWrappedInTransaction) {
+                final Connection connection = statement.getConnection();
+                this.previousAutocommit = connection.getAutoCommit();
+                connection.setAutoCommit(false);
+            } else {
+                this.previousAutocommit = false;
+            }
+
             if (isPreparedStatement) {
                 this.resultSet = ((PreparedStatement) statement).executeQuery();
                 this.statementCloseable = false;
@@ -136,8 +157,7 @@ public abstract class ResultIterator implements AutoCloseable {
      * Retrieves the number of rows processed by the iterator so far. If the iteration
      * hasn't started, this method returns 0.
      *
-     * @return The number of rows processed by the iterator so far or 0 if the
-     *         iteration hasn't started.
+     * @return The number of rows processed by the iterator so far or 0 if the iteration hasn't started.
      */
     public int getCurrentRowCount() {
         return this.currentRowCount;
@@ -147,13 +167,10 @@ public abstract class ResultIterator implements AutoCloseable {
      * Retrieves the next row in the result set.
      * <p>
      * This method also closes the result set upon the last call on the result set.
-     * </p>
      * <p>
      * If the statement in place is not a {@link PreparedStatement} it also closes the statement.
-     * </p>
      * <p>
      * If an exception is thrown the calling thread is responsible for repeating the action in place.
-     * </p>
      *
      * @return The result row.
      * @throws DatabaseEngineException If a database access error occurs.
@@ -250,11 +267,11 @@ public abstract class ResultIterator implements AutoCloseable {
     /**
      * Attempts to cancel the current query. This relies on the JDBC driver supporting
      * {@link Statement#cancel()}, which is not guaranteed on all drivers.
-     *
+     * <p>
      * A possible use case for this method is to implement a timeout; If that's the case, see also
      * {@link com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine#iterator(String, int, int)} for
      * an alternative way to accomplish this.
-     *
+     * <p>
      * This method is expected to be invoked from a thread distinct of the one that is reading
      * from the result set.
      *
@@ -278,22 +295,34 @@ public abstract class ResultIterator implements AutoCloseable {
     @Override
     public void close() {
         // Check for previous closed.
-        if (!closed) {
+        if (closed) {
+            return;
+        }
+
+        if (statement != null && isWrappedInTransaction) {
             try {
-                if (resultSet != null) {
-                    resultSet.close();
-                }
+                statement.getConnection().setAutoCommit(previousAutocommit);
+            } catch (final Exception e) {
+                logger.warn("Could not reset autocommit.", e);
+            }
+        }
+
+        if (resultSet != null) {
+            try {
+                resultSet.close();
             } catch (final Exception e) {
                 logger.warn("Could not close result set.", e);
             }
-            if (statementCloseable && statement != null) {
-                try {
-                    statement.close();
-                } catch (final Exception e) {
-                    logger.warn("Could not close statement.", e);
-                }
+        }
+
+        if (statementCloseable && statement != null) {
+            try {
+                statement.close();
+            } catch (final Exception e) {
+                logger.warn("Could not close statement.", e);
             }
         }
+
         // Assume closed even if it fails.
         closed = true;
     }
@@ -332,5 +361,18 @@ public abstract class ResultIterator implements AutoCloseable {
      */
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return DEFAULT_QUERY_EXCEPTION_HANDLER;
+    }
+
+    /**
+     * Indicates whether this iterator needs to run inside a transaction.
+     *
+     * PostgreSQL (and also CockroachDB) need this in order to keep a cursor on the server, otherwise the fetchsize
+     * setting is ignored and all results ar fetched from the database into memory at once.
+     *
+     * @param fetchSize The fetch size for result sets obtained in this iterator.
+     * @return Whether this iterator needs to run inside a transaction.
+     */
+    protected boolean needsWrapInTransaction(final int fetchSize) {
+        return false;
     }
 }

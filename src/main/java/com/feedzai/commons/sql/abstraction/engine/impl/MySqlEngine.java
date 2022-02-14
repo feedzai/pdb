@@ -48,6 +48,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -102,6 +103,20 @@ public class MySqlEngine extends AbstractDatabaseEngine {
      */
     public MySqlEngine(PdbProperties properties) throws DatabaseEngineException {
         super(MYSQL_DRIVER, properties, Dialect.MYSQL);
+    }
+
+    @Override
+    protected Properties getDBProperties() {
+        final Properties props = super.getDBProperties();
+
+        /*
+        To respect the fetchsize setting, MySQL needs a cursor on the server side. See
+         https://dev.mysql.com/doc/connectors/en/connector-j-reference-implementation-notes.html
+         https://dev.mysql.com/doc/connectors/en/connector-j-connp-props-performance-extensions.html#cj-conn-prop_useCursorFetch
+         */
+        props.setProperty("useCursorFetch", Boolean.TRUE.toString());
+
+        return props;
     }
 
     /**

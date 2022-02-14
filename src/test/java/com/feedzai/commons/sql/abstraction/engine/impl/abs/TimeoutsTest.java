@@ -21,25 +21,18 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import java.time.Duration;
-import java.util.concurrent.Callable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.sql.DriverManager;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -69,11 +62,6 @@ import static org.junit.Assume.assumeTrue;
  */
 @RunWith(Parameterized.class)
 public class TimeoutsTest {
-
-    /**
-     * The logger for this class.
-     */
-    private static final Logger logger = LoggerFactory.getLogger(TimeoutsTest.class);
 
     /**
      * An executor to run actions asynchronously.
@@ -210,7 +198,7 @@ public class TimeoutsTest {
      */
     @Test
     public void testLoginTimeout() {
-        final Properties testProps = getPatchedDbProperties(dbProps, testRouter.getDbPort(), testRouter.getLocalPort());
+        final Properties testProps = TestRouter.getPatchedDbProperties(dbProps, testRouter.getDbPort(), testRouter.getLocalPort());
         final Future<DatabaseEngine> dbEngineFuture = executor.submit(() -> DatabaseFactory.getConnection(testProps));
 
         assertThatCode(() -> dbEngineFuture.get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS))
@@ -235,7 +223,7 @@ public class TimeoutsTest {
         props.put(CHECK_CONNECTION_TIMEOUT_SECONDS, 0);
         testRouter.init();
 
-        final Properties testProps = getPatchedDbProperties(props, testRouter.getDbPort(), testRouter.getLocalPort());
+        final Properties testProps = TestRouter.getPatchedDbProperties(props, testRouter.getDbPort(), testRouter.getLocalPort());
 
         final DatabaseEngine dbEngine = executor.submit(() -> DatabaseFactory.getConnection(testProps))
                 .get(LOGIN_TIMEOUT_SECONDS + TIMEOUT_TOLERANCE_SECONDS, TimeUnit.SECONDS);
@@ -271,7 +259,7 @@ public class TimeoutsTest {
     @Test
     public void testConnectionVerificationTimeout() throws Exception {
         testRouter.init();
-        final Properties testProps = getPatchedDbProperties(dbProps,
+        final Properties testProps = TestRouter.getPatchedDbProperties(dbProps,
                 testRouter.getDbPort(),
                 testRouter.getLocalPort());
 
@@ -300,116 +288,5 @@ public class TimeoutsTest {
 
         assertFalse("PDB should detect that it is not connected to the server before the socket timeout",
                 connCheckFuture.get(CHECK_CONNECTION_TIMEOUT_SECONDS - LOGIN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
-    }
-
-    /**
-     * Gets new DB properties with the JDBC URL patched to replace the default DB port with a new one.
-     *
-     * @param dbProperties The original DB properties.
-     * @param defaultPort  The default DB port.
-     * @param newPort      The port to use as replacement in the JDBC URL for the default DB port.
-     * @return The patched DB properties.
-     */
-    private Properties getPatchedDbProperties(final Properties dbProperties, final int defaultPort, final int newPort) {
-        final Properties testProps = new Properties();
-        testProps.putAll(dbProperties);
-
-        final String patchedJdbc = dbProperties.getProperty(JDBC)
-                .replace("localhost:" + defaultPort, "localhost:" + newPort);
-        testProps.setProperty(JDBC, patchedJdbc);
-
-        return testProps;
-    }
-
-    /**
-     * A class that acts as a router, to forwards data sent between a {@link DatabaseEngine} in this test and the DB.
-     * This offers the possibility of interrupting the connections without closing them.
-     */
-    private static class TestRouter implements Closeable {
-
-        private final ServerSocket serverSocket = new ServerSocket(0);
-        private final Socket socketRouterToDb = new Socket();
-        private final ExecutorService executor;
-        private final int dbPort;
-        private volatile boolean isRunning = true;
-
-        /**
-         * Constructor for this class.
-         *
-         * @param executor An {@link ExecutorService} to run tasks asynchronously.
-         * @param dbPort   The real DB server port.
-         * @throws IOException if some problem occurs creating a new {@link ServerSocket}.
-         */
-        private TestRouter(final ExecutorService executor, final int dbPort) throws IOException {
-            this.executor = executor;
-            this.dbPort = dbPort;
-        }
-
-        /**
-         * Gets the local port (that will act as the DB server port for the DB engine).
-         *
-         * @return the local port.
-         */
-        public int getLocalPort() {
-            return serverSocket.getLocalPort();
-        }
-
-        /**
-         * Gets the database port (the port where the DB server being tested is listening).
-         *
-         * @return the database port.
-         */
-        public int getDbPort() {
-            return dbPort;
-        }
-
-        /**
-         * Initializes connections to/from the DB server.
-         *
-         * @throws IOException if there is a problem establishing connections.
-         */
-        public void init() throws IOException {
-            socketRouterToDb.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), dbPort));
-
-            final Future<Socket> socketFuture = executor.submit(serverSocket::accept);
-
-            executor.submit(() -> {
-                        final Socket socketTestToRouter = socketFuture.get();
-                        logger.info("Test-to-DB established");
-                        while (isRunning) {
-                            int read = socketTestToRouter.getInputStream().read();
-                            socketRouterToDb.getOutputStream().write(read);
-                        }
-                        return null;
-                    }
-            );
-
-            executor.submit(() -> {
-                        final Socket socketTestToDb = socketFuture.get();
-                        logger.info("DB-to-Test established");
-                        while (isRunning) {
-                            int read = socketRouterToDb.getInputStream().read();
-                            socketTestToDb.getOutputStream().write(read);
-                        }
-                        return null;
-                    }
-            );
-        }
-
-        /**
-         * Terminates the forwarding of data to/from the DB server, thus breaking the connections (without closing them).
-         */
-        public void breakConnections() {
-            isRunning = false;
-        }
-
-        @Override
-        public void close() throws IOException {
-            try {
-                socketRouterToDb.close();
-            } finally {
-                serverSocket.close();
-            }
-        }
     }
 }

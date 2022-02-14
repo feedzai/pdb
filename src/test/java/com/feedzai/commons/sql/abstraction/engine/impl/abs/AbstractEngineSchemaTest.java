@@ -19,9 +19,11 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineDriver;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
@@ -40,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
@@ -61,6 +65,8 @@ import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngine
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.UNSUPPORTED;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
 import static org.junit.Assert.assertEquals;
@@ -185,6 +191,59 @@ public abstract class AbstractEngineSchemaTest {
 
             final List<Map<String, ResultColumn>> query = engine.query(select(udf("TimesTwo", k(10)).alias("TIMESTWO")));
             assertEquals("result ok?", 20, (int) query.get(0).get("TIMESTWO").toInt());
+        }
+    }
+
+    /**
+     * Tests that the different DB engines respect the fetch size set in a query.
+     *
+     * @throws Exception If any error occurs, thus failing the test.
+     */
+    @Test
+    public void testFetchSize() throws Exception {
+        final DatabaseEngineDriver engineDriver = DatabaseEngineDriver.fromEngine(properties.getProperty(ENGINE));
+        final ExecutorService executor = Executors.newCachedThreadPool();
+
+        final TestRouter testRouter = new TestRouter(executor, engineDriver.defaultPort());
+        testRouter.init();
+
+        final Properties testProps = TestRouter.getPatchedDbProperties(properties, testRouter.getDbPort(), testRouter.getLocalPort());
+        testProps.setProperty(PdbProperties.SOCKET_TIMEOUT, "2");
+        testProps.setProperty(PdbProperties.CHECK_CONNECTION_TIMEOUT, "2");
+
+        try (final DatabaseEngine engine = DatabaseFactory.getConnection(testProps)) {
+            final DbEntity entity = createSpecialValuesEntity();
+            engine.addEntity(entity);
+            final String entityName = entity.getName();
+
+            for (int i = 0; i < 10; i++) {
+                engine.persist(entityName, entry().set(ID_COL, i).build());
+            }
+
+            // besides the connection timeouts, also set 2 seconds timeout for the query; fetch size = 3
+            try (ResultIterator iterator = engine.iterator(select(all()).from(table(entityName)), 3, 2)) {
+                // if the first 3 rows aren't fetched immediately on the query, they will be fetched next
+                iterator.next();
+
+                // break the connection to the DB
+                testRouter.breakConnections();
+
+                // get next result, which should already have been fetched; connection shouldn't be needed and this shouldn't fail
+                assertThatCode(iterator::next)
+                        .doesNotThrowAnyException();
+
+                // same as previous; ensures that the 3rd result is already fetched, and retries don't prevent from getting it
+                assertThatCode(iterator::next)
+                        .doesNotThrowAnyException();
+
+                // 4th row should be fetched now, but since the connection is broken it should fail
+                // (unless the driver already fetched all results, which should fail the test)
+                assertThatThrownBy(iterator::next)
+                        .isInstanceOf(Exception.class);
+            }
+        } finally {
+            testRouter.close();
+            executor.shutdownNow();
         }
     }
 
