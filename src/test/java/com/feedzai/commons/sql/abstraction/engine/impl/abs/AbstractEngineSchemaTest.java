@@ -140,7 +140,7 @@ public abstract class AbstractEngineSchemaTest {
 
 
     /**
-     * Gets the test schema to be used in tests that need a schema other then the default/configured.
+     * Gets the test schema to be used in tests that need a schema other than the default/configured.
      *
      * @return The test schema.
      * @since 2.1.13
@@ -811,8 +811,7 @@ public abstract class AbstractEngineSchemaTest {
      * @param engine The database engine.
      * @throws DatabaseEngineException If anything goes wrong creating the UDF.
      */
-    protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
-    }
+    protected abstract void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException;
 
     /**
      * Defines the UDF "TimesTwo" in the database engine.
@@ -822,8 +821,7 @@ public abstract class AbstractEngineSchemaTest {
      * @param engine The database engine.
      * @throws DatabaseEngineException If anything goes wrong creating the UDF.
      */
-    protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
-    }
+    protected abstract void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException;
 
     /**
      * Creates the {@link #getTestSchema() test schema} in the database, dropping it first if necessary.
