@@ -1758,27 +1758,6 @@ public class EngineGeneralTest {
     }
 
     /**
-     * Tests that the {@link SqlBuilder#in(Expression, Expression) IN} clause with values filters a row correctly,
-     * when many values are provided, and multiple columns are used.
-     * <p>
-     * This is a regression test for Oracle, which only supports up to 1000 values in IN clauses; the test uses
-     * 20000 values.
-     * <p>
-     * The WHERE clause used in this test takes the form
-     * {@code ("COL1", "COL5") IN ((1, 's1'), (2, 's2'), ...)}
-     *
-     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
-     */
-    @Test
-    public void inManyValuesMultiColumnTest() throws DatabaseEngineException {
-        final List<Expression> numExprs = IntStream.rangeClosed(-19998, 1)
-                .mapToObj(idx -> L(k(idx), k("s" + idx)))
-                .collect(Collectors.toList());
-
-        runInClauseTest(in(L(column("COL1"), column("COL5")), L(numExprs)));
-    }
-
-    /**
      * Tests that the {@link SqlBuilder#notIn(Expression, Expression) (Expression, Expression) negated IN} clause
      * with a value filters a row correctly.
      *
