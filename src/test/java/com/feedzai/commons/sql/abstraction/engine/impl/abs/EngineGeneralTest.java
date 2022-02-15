@@ -30,6 +30,7 @@ import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -42,7 +43,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
-import com.feedzai.commons.sql.abstraction.engine.impl.MySqlEngine;
 import com.feedzai.commons.sql.abstraction.engine.impl.cockroach.SkipTestCockroachDB;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
@@ -57,10 +57,8 @@ import mockit.Verifications;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
@@ -149,6 +147,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Rui Vilao (rui.vilao@feedzai.com)
@@ -163,9 +163,6 @@ public class EngineGeneralTest {
     protected DatabaseEngine engine;
     protected Properties properties;
 
-    @Rule
-    public final ExpectedException exception = ExpectedException.none();
-
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations();
@@ -177,7 +174,6 @@ public class EngineGeneralTest {
     @BeforeClass
     public static void initStatic() {
         ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
-
     }
 
     @Before
@@ -366,16 +362,7 @@ public class EngineGeneralTest {
 
     @Test
     public void insertWithControlledTransactionTest() throws Exception {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS").build();
 
@@ -411,16 +398,7 @@ public class EngineGeneralTest {
 
     @Test
     public void insertWithAutoCommitTest() throws Exception {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
                 .build();
@@ -492,7 +470,7 @@ public class EngineGeneralTest {
 
     @Test
     public void queryWithIteratorWithDataTest() throws Exception {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry entry = entry().set("COL1", 1).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
                 .build();
@@ -529,7 +507,7 @@ public class EngineGeneralTest {
 
     @Test
     public void queryWithIteratorWithNoDataTest() throws Exception {
-        test5Columns();
+        create5ColumnsEntity();
 
         ResultIterator it = engine.iterator(select(all()).from(table("TEST")));
 
@@ -554,7 +532,7 @@ public class EngineGeneralTest {
      */
     @Test
     public void queryWithIteratorInTryWithResources() throws Exception {
-        test5Columns();
+        create5ColumnsEntity();
 
         final EntityEntry entry = entry()
                 .set("COL1", 1)
@@ -584,16 +562,7 @@ public class EngineGeneralTest {
 
     @Test
     public void batchInsertTest() throws Exception {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         engine.beginTransaction();
 
@@ -655,16 +624,7 @@ public class EngineGeneralTest {
 
     @Test
     public void batchInsertAutocommitTest() throws Exception {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
                 .build();
@@ -813,16 +773,7 @@ public class EngineGeneralTest {
 
     @Test
     public void limitNumberOfRowsTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -843,16 +794,7 @@ public class EngineGeneralTest {
 
     @Test
     public void limitAndOffsetNumberOfRowsTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1086,7 +1028,6 @@ public class EngineGeneralTest {
         assertEquals("number of rows ok?", 19, query.size());
 
         limit = -1;
-        offset = 1;
         query = engine.query(select(all()).from(table("TEST")).limit(limit).offset(offset));
         assertEquals("number of rows ok?", 19, query.size());
     }
@@ -1136,16 +1077,7 @@ public class EngineGeneralTest {
 
     @Test
     public void stddevTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1166,16 +1098,7 @@ public class EngineGeneralTest {
 
     @Test
     public void sumTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1196,16 +1119,7 @@ public class EngineGeneralTest {
 
     @Test
     public void countTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1226,16 +1140,7 @@ public class EngineGeneralTest {
 
     @Test
     public void avgTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1256,16 +1161,7 @@ public class EngineGeneralTest {
 
     @Test
     public void maxTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1286,16 +1182,7 @@ public class EngineGeneralTest {
 
     @Test
     public void minTest() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1316,7 +1203,7 @@ public class EngineGeneralTest {
 
     @Test
     public void floorTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1338,7 +1225,7 @@ public class EngineGeneralTest {
 
     @Test
     public void ceilingTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
@@ -1621,7 +1508,7 @@ public class EngineGeneralTest {
 
             throw new Exception();
         } catch (final Exception e) {
-
+            // ignore
         } finally {
             assertTrue("tx active?", engine.isTransactionActive());
 
@@ -1772,7 +1659,7 @@ public class EngineGeneralTest {
     // unimplemented in CockroachDB: views do not currently support * expressions
     // https://github.com/cockroachdb/cockroach/issues/10028
     public void createAndDropViewTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST")))
@@ -1786,7 +1673,7 @@ public class EngineGeneralTest {
     // unimplemented in CockroachDB: views do not currently support * expressions
     // https://github.com/cockroachdb/cockroach/issues/10028
     public void createOrReplaceViewTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.executeUpdate(
                 createView("VN").as(select(all()).from(table("TEST"))).replace()
@@ -1797,7 +1684,7 @@ public class EngineGeneralTest {
 
     @Test
     public void distinctTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all()).distinct()
@@ -1807,7 +1694,7 @@ public class EngineGeneralTest {
 
     @Test
     public void distinctAndLimitTogetherTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all()).distinct()
@@ -1817,7 +1704,7 @@ public class EngineGeneralTest {
 
     @Test
     public void notEqualTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -1828,7 +1715,7 @@ public class EngineGeneralTest {
 
     @Test
     public void inTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -1844,7 +1731,7 @@ public class EngineGeneralTest {
 
     @Test
     public void inSelectTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -1860,7 +1747,7 @@ public class EngineGeneralTest {
 
     @Test
     public void booleanTrueComparisonTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry entry1 = entry()
                 .set("COL1", 1)
@@ -1893,7 +1780,7 @@ public class EngineGeneralTest {
 
     @Test
     public void booleanFalseComparisonTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry entry1 = entry()
                 .set("COL1", 1)
@@ -1926,7 +1813,7 @@ public class EngineGeneralTest {
 
     @Test
     public void coalesceTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -1939,7 +1826,7 @@ public class EngineGeneralTest {
 
     @Test
     public void multipleCoalesceTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -1952,7 +1839,7 @@ public class EngineGeneralTest {
 
     @Test
     public void betweenTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -2067,8 +1954,10 @@ public class EngineGeneralTest {
 
     @Test
     public void testWith() throws DatabaseEngineException {
+        assumeFalse("MySQL doesn't support WITH", engine.getDialect() == Dialect.MYSQL);
 
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
@@ -2085,11 +1974,6 @@ public class EngineGeneralTest {
                         .from(table("friends"))
                         .where(eq(column("COL1"), k(1))));
 
-        // MySQL does not support With
-        if (engine instanceof MySqlEngine) {
-            exception.expect(OperationNotSupportedRuntimeException.class);
-        }
-
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
         assertEquals("Name must be 'manuel'", "manuel", result.get(0).get("name").toString());
@@ -2097,8 +1981,10 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithAll() throws DatabaseEngineException {
+        assumeFalse("MySQL doesn't support WITH", engine.getDialect() == Dialect.MYSQL);
 
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
@@ -2117,11 +2003,6 @@ public class EngineGeneralTest {
                         .from(table("friends"))
                         .orderby(column("COL5")));
 
-        // MySQL does not support With
-        if (engine instanceof MySqlEngine) {
-            exception.expect(OperationNotSupportedRuntimeException.class);
-        }
-
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
         assertEquals("Name must be 'ana'", "ana", result.get(0).get("name").toString());
@@ -2132,8 +2013,10 @@ public class EngineGeneralTest {
 
     @Test
     public void testWithMultiple() throws DatabaseEngineException {
+        assumeFalse("MySQL doesn't support WITH", engine.getDialect() == Dialect.MYSQL);
 
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "manuel")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "ana")
@@ -2157,11 +2040,6 @@ public class EngineGeneralTest {
                         union(select(all()).from(table("friendsA")),
                               select(all()).from(table("friendsB"))));
 
-        // MySQL does not support With
-        if (engine instanceof MySqlEngine) {
-            exception.expect(OperationNotSupportedRuntimeException.class);
-        }
-
         final List<Map<String, ResultColumn>> result = engine.query(with);
 
         final List<String> resultSorted = result.stream()
@@ -2177,7 +2055,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testCaseWhen() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
@@ -2197,7 +2076,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testCaseWhenElse() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
@@ -2221,7 +2100,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testCaseMultipleWhenElse() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "xpto")
@@ -2350,7 +2229,7 @@ public class EngineGeneralTest {
      */
     @Test
     public void testCaseToBoolean() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 1).set("COL2", false).build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL2", true).set("COL5", "xpto").build());
 
@@ -2373,7 +2252,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testUnion() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
@@ -2411,7 +2290,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testUnionAll() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "a")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "b")
@@ -2511,7 +2390,7 @@ public class EngineGeneralTest {
 
     @Test
     public void betweenWithSelectTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -2524,7 +2403,7 @@ public class EngineGeneralTest {
 
     @Test
     public void betweenEnclosedTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -2537,7 +2416,7 @@ public class EngineGeneralTest {
 
     @Test
     public void notBetweenTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.query(
                 select(all())
@@ -2601,7 +2480,7 @@ public class EngineGeneralTest {
 
     @Test
     public void update1ColTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2614,7 +2493,7 @@ public class EngineGeneralTest {
 
     @Test
     public void update2ColTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2629,7 +2508,7 @@ public class EngineGeneralTest {
 
     @Test
     public void updateWithAliasTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2644,7 +2523,7 @@ public class EngineGeneralTest {
 
     @Test
     public void updateWithWhereTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2660,7 +2539,7 @@ public class EngineGeneralTest {
 
     @Test
     public void updateFrom1ColTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         final DbEntity entity = dbEntity()
                 .name("TEST2")
                 .addColumn("COL1", INT)
@@ -2710,7 +2589,7 @@ public class EngineGeneralTest {
 
     @Test
     public void deleteTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2722,7 +2601,7 @@ public class EngineGeneralTest {
 
     @Test
     public void deleteWithWhereTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2735,7 +2614,7 @@ public class EngineGeneralTest {
 
     @Test
     public void deleteCheckReturnTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -2751,7 +2630,7 @@ public class EngineGeneralTest {
 
     @Test
     public void executePreparedStatementTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry ee = entry()
                 .set("COL1", 1)
@@ -2772,7 +2651,7 @@ public class EngineGeneralTest {
 
     @Test
     public void executePreparedStatementUpdateTest() throws DatabaseEngineException, NameAlreadyExistsException, ConnectionResetException {
-        test5Columns();
+        create5ColumnsEntity();
 
         EntityEntry ee = entry()
                 .set("COL1", 1)
@@ -2824,16 +2703,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testSqlInjection1() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
-
-        engine.addEntity(entity);
+        create5ColumnsEntity();
 
         EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
                 .build();
@@ -3546,7 +3416,7 @@ public class EngineGeneralTest {
 
     @Test
     public void testTruncateTable() throws Exception {
-        test5Columns();
+        create5ColumnsEntity();
 
         engine.persist("TEST", entry().set("COL1", 5)
                 .build());
@@ -3605,13 +3475,14 @@ public class EngineGeneralTest {
             try {
                 engine.dropEntity(dbEntity().name(table).build());
             } catch (final Throwable e) {
+                // ignore
             }
         }
     }
 
     @Test
     public void testLikeWithTransformation() throws Exception {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL1", 5).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 5).set("COL5", "TESTE")
@@ -3703,8 +3574,13 @@ public class EngineGeneralTest {
         assertEquals("col4 ok?", 8L, (long) test.get(7).get("COL4").toLong());
     }
 
-    protected void test5Columns() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
+    /**
+     * Creates a {@link DbEntity} with 5 columns to be used in the tests.
+     *
+     * @throws DatabaseEngineException If something goes wrong creating the entity.
+     */
+    private void create5ColumnsEntity() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
                 .name("TEST")
                 .addColumn("COL1", INT)
                 .addColumn("COL2", BOOLEAN)
@@ -3756,7 +3632,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testAndWhere() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TESTE")
@@ -3775,7 +3652,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testAndWhereMultiple() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TESTE")
@@ -3809,7 +3687,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testAndWhereMultipleCheckAndEnclosed() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 2).set("COL5", "TESTE")
@@ -3845,7 +3724,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testStringAgg() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
                 .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -3871,7 +3751,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testStringAggDelimiter() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
                 .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -3897,10 +3778,11 @@ public class EngineGeneralTest {
 
     @Test
     public void testStringAggDistinct() throws DatabaseEngineException {
-        if (!this.engine.isStringAggDistinctCapable()) {
-            return;
-        }
-        test5Columns();
+        assumeTrue("This test is only valid for engines that support StringAggDistinct",
+                this.engine.isStringAggDistinctCapable());
+
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
                 .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -3926,7 +3808,8 @@ public class EngineGeneralTest {
 
     @Test
     public void testStringAggNotStrings() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
+
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "TESTE")
                 .build());
         engine.persist("TEST", entry().set("COL1", 1).set("COL5", "teste")
@@ -4097,21 +3980,21 @@ public class EngineGeneralTest {
 
     @Test
     public void upperTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL5", "ola").build());
         assertEquals("text is uppercase", "OLA", engine.query(select(upper(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
     }
 
     @Test
     public void lowerTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL5", "OLA").build());
         assertEquals("text is lowercase", "ola", engine.query(select(lower(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
     }
 
     @Test
     public void internalFunctionTest() throws DatabaseEngineException {
-        test5Columns();
+        create5ColumnsEntity();
         engine.persist("TEST", entry().set("COL5", "OLA").build());
         assertEquals("text is uppercase", "ola", engine.query(select(f("LOWER", column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES")
                 .toString());
@@ -4202,23 +4085,22 @@ public class EngineGeneralTest {
      * @throws DatabaseEngineException If a database access error happens.
      */
     @Test
-    public void doesRowCountIncrementTest()
-            throws DatabaseEngineException {
+    public void doesRowCountIncrementTest() throws DatabaseEngineException {
+        create5ColumnsEntity();
+
+        // Create 4 entries
+        for (int i = 0; i < 4; i++) {
+            engine.persist("TEST", entry().set("COL1", i).build());
+        }
 
         final ResultIterator resultIterator = engine.iterator(select(all()).from(table("TEST")));
 
+        assertEquals("The current row count should be 0 if the iteration hasn't started", 0, resultIterator.getCurrentRowCount());
 
-        assertEquals("The current row count should be 0 if the iteration hasn't started",
-                0,
-                resultIterator.getCurrentRowCount());
-
-        // If the .next() method is called once then the current row count
-        // should be updated to 1
+        // If the .next() method is called once then the current row count should be updated to 1
         resultIterator.next();
 
-        assertEquals("The current row count is equal to 1",
-                1,
-                resultIterator.getCurrentRowCount());
+        assertEquals("The current row count is equal to 1", 1,resultIterator.getCurrentRowCount());
 
         // If for the same iterator the .nextResult() method is called 3 additional
         // times then the current row count should be updated to 4
@@ -4226,8 +4108,6 @@ public class EngineGeneralTest {
             resultIterator.nextResult();
         }
 
-        assertEquals("The current row count is equal to 4",
-                4,
-                resultIterator.getCurrentRowCount());
+        assertEquals("The current row count is equal to 4", 4, resultIterator.getCurrentRowCount());
     }
 }
