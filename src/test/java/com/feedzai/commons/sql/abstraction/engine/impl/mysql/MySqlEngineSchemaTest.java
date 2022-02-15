@@ -20,6 +20,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -35,6 +37,15 @@ public class MySqlEngineSchemaTest extends AbstractEngineSchemaTest {
     @Parameterized.Parameters
     public static Collection<DatabaseConfiguration> data() throws Exception {
         return DatabaseTestUtil.loadConfigurations("mysql");
+    }
+
+    @Override
+    @Test
+    @Ignore("MySQL doesn't respect fetch size unless we use a server cursor, which can be enabled by setting the property" +
+            " 'useCursorFetch' to true in the JDBC URL. However, when server cursor is enabled, the query timeouts are" +
+            " not respected." +
+            "See https://bugs.mysql.com/bug.php?id=106465")
+    public void testFetchSize() {
     }
 
     @Override
