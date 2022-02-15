@@ -27,7 +27,6 @@ import org.junit.runners.Parameterized;
 import java.util.Collection;
 
 import static com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest.Ieee754Support.SUPPORTED_STRINGS;
-import static org.junit.Assume.assumeTrue;
 
 /**
  * @author Joao Silva (joao.silva@feedzai.com)
@@ -46,53 +45,17 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
         return SUPPORTED_STRINGS;
     }
 
-    /**
-     * This test overrides the superclass in order to check if the H2 engine is local or remote; if it is remote
-     * the test is skipped.
-     *
-     * This was done because the UDF is defined by static methods in this class, which needs to be available (compiled)
-     * to the H2 engine. This is already assumed when H2 is embedded, but making the class available in remote H2
-     * would require copying this to the location of the remote server.
-     * Since this is already being tested with H2 embedded, we just skip the test when the server is remote.
-     *
-     * @throws Exception If something goes wrong with the test.
-     * @see AbstractEngineSchemaTest#udfGetOneTest()
-     */
-    @Override
-    public void udfGetOneTest() throws Exception {
-        assumeTrue("Test not supported when using H2 remote - skipped", checkIsLocalH2());
-        super.udfGetOneTest();
-    }
-
-    /**
-     * This test overrides the superclass in order to check if the H2 engine is local or remote; if it is remote
-     * the test is skipped.
-     *
-     * This was done because the UDF is defined by static methods in this class, which needs to be available (compiled)
-     * to the H2 engine. This is already assumed when H2 is embedded, but making the class available in remote H2
-     * would require copying this to the location of the remote server.
-     * Since this is already being tested with H2 embedded, we just skip the test when the server is remote.
-     *
-     * @throws Exception If something goes wrong with the test.
-     * @see AbstractEngineSchemaTest#udfTimesTwoTest()
-     */
-    @Override
-    public void udfTimesTwoTest() throws Exception {
-        assumeTrue("Test not supported when using H2 remote - skipped", checkIsLocalH2());
-        super.udfTimesTwoTest();
-    }
-
     @Override
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
-        engine.executeUpdate(
-            "CREATE ALIAS IF NOT EXISTS GetOne FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.GetOne\";"
-        );
+        engine.executeUpdate("DROP ALIAS IF EXISTS GetOne");
+        engine.executeUpdate("CREATE ALIAS IF NOT EXISTS GetOne FOR \"" + this.getClass().getName() + ".GetOne\"");
     }
 
     @Override
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
+        engine.executeUpdate("DROP ALIAS IF EXISTS \"" + getTestSchema() + "\".TimesTwo");
         engine.executeUpdate(
-            "CREATE ALIAS IF NOT EXISTS \"" + getTestSchema() + "\".TimesTwo FOR \"com.feedzai.commons.sql.abstraction.engine.impl.h2.H2EngineSchemaTest.TimesTwo\";"
+                "CREATE ALIAS IF NOT EXISTS \"" + getTestSchema() + "\".TimesTwo FOR \"" + this.getClass().getName() + ".TimesTwo\""
         );
     }
 

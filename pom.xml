@@ -278,6 +278,11 @@
                     <version>2.22.2</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
                     <version>${maven-source-plugin.version}</version>
@@ -349,6 +354,10 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
                 <groupId>com.mycila</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <configuration>
@@ -376,7 +385,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -390,7 +398,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
                     <doclint>none</doclint>
                 </configuration>
@@ -407,7 +414,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>${maven-gpg-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>sign-artifacts</id>
@@ -445,13 +451,6 @@
     <profiles>
         <profile>
             <id>h2remote</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.h2database</groupId>
-                    <artifactId>h2</artifactId>
-                </dependency>
-            </dependencies>
-
             <build>
                 <plugins>
                     <plugin>
@@ -467,7 +466,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <phase>test-compile</phase>
@@ -478,6 +476,8 @@
                         </executions>
                         <configuration>
                             <executable>java</executable>
+                            <!-- add test artifacts (UDFs) to server classpath -->
+                            <classpathScope>test</classpathScope>
                             <arguments>
                                 <argument>-classpath</argument>
                                 <!-- automatically creates the classpath using all project dependencies,
@@ -501,14 +501,24 @@
         </profile>
 
         <profile>
-            <id>h2v2remote</id>
-            <dependencies>
-                <dependency>
-                    <groupId>com.h2database</groupId>
-                    <artifactId>h2</artifactId>
-                </dependency>
-            </dependencies>
+            <id>h2v2</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <systemProperties>
+                                <instances>h2v2</instances>
+                            </systemProperties>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
 
+        <profile>
+            <id>h2v2remote</id>
             <build>
                 <plugins>
                     <plugin>
@@ -524,7 +534,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.0.0</version>
                         <executions>
                             <execution>
                                 <phase>test-compile</phase>
@@ -535,6 +544,8 @@
                         </executions>
                         <configuration>
                             <executable>java</executable>
+                            <!-- add test artifacts (UDFs) to server classpath -->
+                            <classpathScope>test</classpathScope>
                             <arguments>
                                 <argument>-classpath</argument>
                                 <!-- automatically creates the classpath using all project dependencies,
@@ -543,6 +554,9 @@
                                 <argument>org.h2.tools.Server</argument>
                                 <!-- make db available via tcp -->
                                 <argument>-tcp</argument>
+                                <!-- use port 9093, different from the one used in h2remote profile (the default 9092) -->
+                                <argument>-tcpPort</argument>
+                                <argument>9093</argument>
                                 <!-- set local file inside test output directory -->
                                 <argument>-baseDir</argument>
                                 <argument>${project.build.testOutputDirectory}/pdb-h2v2-remote</argument>
@@ -713,7 +727,7 @@
         <profile>
             <id>cockroach</id>
             <properties>
-                <image.cockroach>cockroachdb/cockroach:v19.2.0</image.cockroach>
+                <image.cockroach>cockroachdb/cockroach:v21.2.5</image.cockroach>
             </properties>
             <build>
                 <plugins>
@@ -743,7 +757,7 @@
                                             <port>8080:8080</port>
                                             <port>26257:26257</port>
                                         </ports>
-                                        <cmd>start --insecure</cmd>
+                                        <cmd>start-single-node --insecure</cmd>
                                         <wait>
                                             <time>40000</time>
                                             <log>CockroachDB node starting</log>

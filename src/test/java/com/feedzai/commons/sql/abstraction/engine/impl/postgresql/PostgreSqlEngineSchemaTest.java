@@ -47,26 +47,26 @@ public class PostgreSqlEngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION GetOne() " +
-            "RETURNS INTEGER " +
-            "AS 'SELECT 1;' " +
-            "LANGUAGE SQL;"
+                "CREATE OR REPLACE FUNCTION GetOne()" +
+                        " RETURNS INTEGER" +
+                        " AS 'SELECT 1;'" +
+                        " LANGUAGE SQL;"
         );
     }
 
     @Override
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION \"" + getTestSchema() + "\".TimesTwo(INTEGER) " +
-            "RETURNS INTEGER " +
-            "AS 'SELECT $1 * 2;' " +
-            "LANGUAGE SQL;"
+                "CREATE OR REPLACE FUNCTION " + getTestSchema() + ".TimesTwo(INTEGER) " +
+                        " RETURNS INTEGER" +
+                        " AS 'SELECT $1 * 2;'" +
+                        " LANGUAGE SQL;"
         );
     }
 
     @Override
     protected void createSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
-        engine.executeUpdate("CREATE SCHEMA IF NOT EXISTS \"" + schema + "\"");
+        engine.executeUpdate("CREATE SCHEMA \"" + schema + "\"");
 
     }
 

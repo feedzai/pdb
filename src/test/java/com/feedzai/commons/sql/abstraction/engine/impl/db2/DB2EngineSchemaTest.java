@@ -44,24 +44,24 @@ public class DB2EngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION GETONE () " +
-            "    RETURNS INTEGER " +
-            "    NO EXTERNAL ACTION " +
-            "F1: BEGIN ATOMIC " +
-                "RETURN 1; " +
-            "END"
+                "CREATE OR REPLACE FUNCTION GETONE()" +
+                        " RETURNS INTEGER" +
+                        " NO EXTERNAL ACTION" +
+                        " F1: BEGIN ATOMIC" +
+                        "    RETURN 1;" +
+                        " END"
         );
     }
 
     @Override
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION \"" + getTestSchema() + "\".TimesTwo (VARNAME VARCHAR(128)) " +
-            "    RETURNS INTEGER " +
-            "    NO EXTERNAL ACTION " +
-            "F1: BEGIN ATOMIC " +
-            "    RETURN VARNAME * 2; " +
-            "END"
+            "CREATE OR REPLACE FUNCTION \"" + getTestSchema() + "\".TimesTwo(N VARCHAR(128))" +
+                    " RETURNS INTEGER" +
+                    " NO EXTERNAL ACTION" +
+                    " F1: BEGIN ATOMIC" +
+                    "    RETURN N * 2;" +
+                    " END"
         );
     }
 

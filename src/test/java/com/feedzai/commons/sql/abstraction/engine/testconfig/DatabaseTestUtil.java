@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -66,8 +67,8 @@ public class DatabaseTestUtil {
 
     /**
      * Filters the instances given by {@code vendor}.
-     * <p/>
-     * The match is performed by contains, i.e. oracle matches oracle11 and oracle12.
+     * <p>
+     * The match is performed by the start of vendor name, i.e. h2 matches h2, h2remote, h2v2 and h2v2remote.
      *
      * @param vendors The list of instances to test.
      * @return The filtered instances to test.
@@ -75,16 +76,8 @@ public class DatabaseTestUtil {
      */
     public static Collection<DatabaseConfiguration> loadConfigurations(final String... vendors) throws Exception {
         return loadConfigurations().stream()
-            .filter(dbConfig -> {
-                for (String vendor : vendors) {
-                    if (dbConfig.vendor.contains(vendor)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })
-            .collect(Collectors.toList());
+                .filter(dbConfig -> Arrays.stream(vendors).anyMatch(dbConfig.vendor::startsWith))
+                .collect(Collectors.toList());
     }
 
     /**

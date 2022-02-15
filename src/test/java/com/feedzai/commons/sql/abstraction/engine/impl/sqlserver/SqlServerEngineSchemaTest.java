@@ -53,38 +53,24 @@ public class SqlServerEngineSchemaTest extends AbstractEngineSchemaTest {
     }
 
     @Override
-    protected void defineUDFGetOne(DatabaseEngine engine) throws DatabaseEngineException {
+    protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "IF OBJECT_ID (N'GetOne', N'FN') IS NOT NULL " +
-            "    DROP FUNCTION GetOne"
-        );
-
-        engine.executeUpdate(
-            "CREATE FUNCTION GetOne() " +
-            "RETURNS INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN(1) " +
-            "END"
+                "CREATE OR ALTER FUNCTION GetOne() " +
+                        " RETURNS INTEGER AS" +
+                        " BEGIN" +
+                        "    RETURN(1)" +
+                        " END"
         );
     }
 
     @Override
-    protected void defineUDFTimesTwo(DatabaseEngine engine) throws DatabaseEngineException {
+    protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "IF OBJECT_ID (N'" + getTestSchema() + ".TimesTwo', N'FN') IS NOT NULL " +
-            "BEGIN " +
-            "    DROP FUNCTION " + getTestSchema() + ".TimesTwo;" +
-            "END"
-        );
-
-        engine.executeUpdate(
-            "CREATE FUNCTION " + getTestSchema() + ".TimesTwo(@number INTEGER) " +
-            "RETURNS INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN(@number * 2) " +
-            "END"
+                "CREATE OR ALTER FUNCTION " + getTestSchema() + ".TimesTwo(@number INTEGER) " +
+                        " RETURNS INTEGER AS" +
+                        " BEGIN" +
+                        "    RETURN(@number * 2) " +
+                        " END"
         );
     }
 
@@ -95,6 +81,6 @@ public class SqlServerEngineSchemaTest extends AbstractEngineSchemaTest {
 
     @Override
     protected void dropSchema(final DatabaseEngine engine, final String schema) throws DatabaseEngineException {
-        engine.executeUpdate("DROP SCHEMA " + schema);
+        engine.executeUpdate("DROP SCHEMA IF EXISTS " + schema);
     }
 }

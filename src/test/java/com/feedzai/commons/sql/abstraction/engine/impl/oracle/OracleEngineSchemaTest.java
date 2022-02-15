@@ -85,24 +85,22 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION GetOne " +
-            "RETURN INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN 1;" +
-            "END GetOne;"
+                "CREATE OR REPLACE FUNCTION GetOne" +
+                        " RETURN INTEGER AS" +
+                        " BEGIN" +
+                        "    RETURN 1;" +
+                        " END;"
         );
     }
 
     @Override
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate(
-            "CREATE OR REPLACE FUNCTION " + getTestSchema() + ".TimesTwo (n IN INTEGER) " +
-            "RETURN INTEGER " +
-            "AS " +
-            "BEGIN " +
-            "    RETURN n * 2;" +
-            "END TimesTwo;"
+                "CREATE OR REPLACE FUNCTION " + getTestSchema() + ".TimesTwo(n IN INTEGER)" +
+                        " RETURN INTEGER AS" +
+                        " BEGIN" +
+                        "    RETURN n * 2;" +
+                        " END;"
         );
     }
 
@@ -111,8 +109,8 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         // create user (=schema) with all privileges granted
         // schema needs to be quotized to have proper case; assume it already is if it starts with double quote
         engine.executeUpdate(
-            "GRANT ALL PRIVILEGES TO " + (schema.startsWith("\"") ? schema : quotize(schema))
-                + " IDENTIFIED BY " + engine.getProperties().getPassword() + " WITH ADMIN OPTION"
+                "GRANT ALL PRIVILEGES TO " + (schema.startsWith("\"") ? schema : quotize(schema))
+                        + " IDENTIFIED BY " + engine.getProperties().getPassword() + " WITH ADMIN OPTION"
         );
     }
 
@@ -121,13 +119,13 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
         // schema needs to be quotized to have proper case; assume it already is if it starts with double quote
         engine.executeUpdate(
                 "DECLARE\n" +
-                "   not_exists EXCEPTION;" +
-                "   PRAGMA EXCEPTION_INIT(not_exists, -01918);" +
-                "BEGIN\n" +
-                "   EXECUTE IMMEDIATE 'DROP USER " + (schema.startsWith("\"") ? schema : quotize(schema)) + " CASCADE';" +
-                "EXCEPTION\n" +
-                "   WHEN not_exists THEN null; -- ignore the error\n" +
-                "END;"
+                        "   not_exists EXCEPTION;" +
+                        "   PRAGMA EXCEPTION_INIT(not_exists, -01918);" +
+                        "BEGIN\n" +
+                        "   EXECUTE IMMEDIATE 'DROP USER " + (schema.startsWith("\"") ? schema : quotize(schema)) + " CASCADE';" +
+                        "EXCEPTION\n" +
+                        "   WHEN not_exists THEN null; -- ignore the error\n" +
+                        "END;"
         );
     }
 
@@ -208,7 +206,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
 
         final List<Map<String, ResultColumn>> results = engine.query(query);
 
-        assertEquals("Check that two lines are returned",2, results.size());
+        assertEquals("Check that two lines are returned", 2, results.size());
 
         for (final Map<String, ResultColumn> result : results) {
             assertEquals("Check that compression is defined as MEDIUM", result.get(compression).toString(), "MEDIUM");
@@ -347,7 +345,7 @@ public class OracleEngineSchemaTest extends AbstractEngineSchemaTest {
      * @param tablespace the name of the tablespace
      * @param user       the user for which its default tablespace will be assigned
      * @param engine     the database engine used to create the tablespace
-     * @throws DatabaseEngineException  if there is a problem when executing the update tablespace query
+     * @throws DatabaseEngineException if there is a problem when executing the update tablespace query
      */
     private void createUserTablespace(final String tablespace,
                                       final String user,

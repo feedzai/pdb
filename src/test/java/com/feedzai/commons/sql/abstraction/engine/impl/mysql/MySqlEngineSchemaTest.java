@@ -41,9 +41,9 @@ public class MySqlEngineSchemaTest extends AbstractEngineSchemaTest {
     protected void defineUDFGetOne(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate("DROP FUNCTION IF EXISTS GetOne");
         engine.executeUpdate(
-            "CREATE FUNCTION GetOne() " +
-            "RETURNS INTEGER " +
-            "RETURN 1;"
+                "CREATE FUNCTION GetOne()" +
+                        " RETURNS INTEGER DETERMINISTIC" +
+                        " RETURN 1;"
         );
     }
 
@@ -51,9 +51,9 @@ public class MySqlEngineSchemaTest extends AbstractEngineSchemaTest {
     protected void defineUDFTimesTwo(final DatabaseEngine engine) throws DatabaseEngineException {
         engine.executeUpdate("DROP FUNCTION IF EXISTS " + getTestSchema() + ".TimesTwo");
         engine.executeUpdate(
-            "CREATE FUNCTION " + getTestSchema() + ".TimesTwo(number INT) " +
-            "RETURNS INTEGER " +
-            "RETURN number * 2;"
+                "CREATE FUNCTION " + getTestSchema() + ".TimesTwo(number INT)" +
+                        " RETURNS INTEGER DETERMINISTIC" +
+                        " RETURN number * 2;"
         );
     }
 
