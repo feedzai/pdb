@@ -31,6 +31,7 @@ import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -78,6 +79,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint.NOT_NULL;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BLOB;
@@ -119,6 +121,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.min;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notIn;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
@@ -1713,36 +1716,124 @@ public class EngineGeneralTest {
         );
     }
 
+    /**
+     * Tests that the {@link SqlBuilder#in(Expression, Expression) IN} clause with a value filters a row correctly.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
     @Test
     public void inTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        engine.query(
-                select(all())
-                        .from(table("TEST"))
-                        .where(
-                                in(
-                                        L(column("COL1")),
-                                        L((k(1)))
-                                )
-                        )
-        );
+        runInClauseTest(in(column("COL1"), L((k(1)))));
     }
 
+    /**
+     * Tests that the {@link SqlBuilder#in(Expression, Expression) IN} clause with SELECT filters a row correctly.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
     @Test
     public void inSelectTest() throws DatabaseEngineException {
+        runInClauseTest(in(
+                column("COL1"),
+                select(column("COL1")).from(table("TEST")).where(eq(column("COL1"), k(1)))
+        ));
+    }
+
+    /**
+     * Tests that the {@link SqlBuilder#in(Expression, Expression) IN} clause with values filters a row correctly,
+     * when many values are provided.
+     * <p>
+     * This is a regression test for Oracle, which only supports up to 1000 values in IN clauses; the test uses
+     * 20000 values.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
+    @Test
+    public void inManyValuesTest() throws DatabaseEngineException {
+        final List<Expression> numExprs = IntStream.rangeClosed(-19998, 1)
+                .mapToObj(SqlBuilder::k)
+                .collect(Collectors.toList());
+
+        runInClauseTest(in(column("COL1"), L(numExprs)));
+    }
+
+    /**
+     * Tests that the {@link SqlBuilder#notIn(Expression, Expression) (Expression, Expression) negated IN} clause
+     * with a value filters a row correctly.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
+    @Test
+    public void notInTest() throws DatabaseEngineException {
+        runInClauseTest(notIn(column("COL1"), L((k(2)))));
+    }
+
+    /**
+     * Tests that the {@link SqlBuilder#notIn(Expression, Expression) negated IN} clause with SELECT filters a row correctly.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
+    @Test
+    public void notInSelectTest() throws DatabaseEngineException {
+        runInClauseTest(notIn(
+                column("COL1"),
+                select(column("COL1")).from(table("TEST")).where(eq(column("COL1"), k(2)))
+        ));
+    }
+
+    /**
+     * Tests that the {@link SqlBuilder#notIn(Expression, Expression) negated IN} clause with a value filters a row
+     * correctly, when many values are provided.
+     * <p>
+     * This is a regression test for Oracle, which only supports up to 1000 values in IN clauses; the test uses
+     * 20000 values.
+     *
+     * @throws DatabaseEngineException If a DB error occurs, thus failing the test.
+     */
+    @Test
+    public void notInManyValuesTest() throws DatabaseEngineException {
+        final List<Expression> numExprs = IntStream.rangeClosed(2, 20001)
+                .mapToObj(SqlBuilder::k)
+                .collect(Collectors.toList());
+
+        runInClauseTest(notIn(column("COL1"), L(numExprs)));
+    }
+
+    /**
+     * Common code to run IN clause tests.
+     * <p>
+     * This creates 2 entries in the database:
+     * <table>
+     *     <tr><td>COL1</td><td>COL5</td></tr>
+     *     <tr><td>1</td><td>s1</td></tr>
+     *     <tr><td>2</td><td>s2</td></tr>
+     * </table>
+     * <p>
+     * The verifications expect the provided {@code whereInExpression} to filter the entries such that only the first
+     * one is returned.
+     *
+     * @param whereInExpression The {@link Expression} to use in the WHERE clause of the query.
+     * @throws DatabaseEngineException If a DB error occurs.
+     */
+    private void runInClauseTest(final Expression whereInExpression) throws DatabaseEngineException {
         create5ColumnsEntity();
 
-        engine.query(
+        engine.persist("TEST", entry().set("COL1", 1).set("COL5", "s1").build());
+        engine.persist("TEST", entry().set("COL1", 2).set("COL5", "s2").build());
+
+        final List<Map<String, ResultColumn>> results = engine.query(
                 select(all())
                         .from(table("TEST"))
-                        .where(
-                                in(
-                                        L(column("COL1")),
-                                        select(column("COL1")).from(table("TEST"))
-                                )
-                        )
+                        .where(whereInExpression)
         );
+
+        assertThat(results)
+                .as("query should return only 1 result")
+                .hasSize(1)
+                .element(0)
+                .as("result should have have value '1'")
+                .extracting(result -> result.get("COL1").toInt())
+                .isEqualTo(1);
     }
 
     @Test

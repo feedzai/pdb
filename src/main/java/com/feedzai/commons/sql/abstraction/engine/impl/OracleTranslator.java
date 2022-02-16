@@ -31,6 +31,7 @@ import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
@@ -40,7 +41,9 @@ import com.google.common.collect.Lists;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.VARCHAR_SIZE;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -53,6 +56,12 @@ import static java.lang.String.format;
  * @since 2.0.0
  */
 public class OracleTranslator extends AbstractTranslator {
+
+    /**
+     * The maximum number of expressions supported by Oracle in an IN clause.
+     */
+    private static final int IN_CLAUSE_MAX_EXPRESSIONS = 1000;
+
     @Override
     public String translate(AlterColumn ac) {
         final DbColumn column = ac.getColumn();
@@ -128,21 +137,86 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(RepeatDelimiter rd) {
-        final String delimiter = rd.getDelimiter();
+    public String translate(final RepeatDelimiter rd) {
+        String delimiter = rd.getDelimiter();
+        RepeatDelimiter expressionToTranslate = rd;
 
-        final List<Object> all = rd.getExpressions().stream()
+        // if we have an IN/NOTIN expression in the form "column IN (value1, value2, ...)"
+        // we must split the values if there are too many for Oracle to handle
+        if (RepeatDelimiter.IN.equals(delimiter) || RepeatDelimiter.NOTIN.equals(delimiter)) {
+            final Expression inValuesExpression = rd.getExpressions().get(1);
+            if (inValuesExpression instanceof RepeatDelimiter) {
+                final RepeatDelimiter inValuesExpression1 = (RepeatDelimiter) inValuesExpression;
+                if (inValuesExpression1.getExpressions().size() > IN_CLAUSE_MAX_EXPRESSIONS
+                        && RepeatDelimiter.COMMA.equals(inValuesExpression1.getDelimiter())) {
+                    expressionToTranslate = splitValuesInInExpression(rd);
+                    delimiter = expressionToTranslate.getDelimiter();
+                }
+            }
+        }
+
+        final StringJoiner repeatDelimiterExprJoiner;
+        if (expressionToTranslate.isEnclosed()) {
+            repeatDelimiterExprJoiner = new StringJoiner(delimiter, "(", ")");
+        } else {
+            repeatDelimiterExprJoiner = new StringJoiner(delimiter);
+        }
+
+        expressionToTranslate.getExpressions().stream()
                 .map(input -> {
                     inject(input);
                     return input.translate();
                 })
-                .collect(Collectors.toList());
+                .forEach(repeatDelimiterExprJoiner::add);
 
-        if (rd.isEnclosed()) {
-            return "(" + org.apache.commons.lang3.StringUtils.join(all, delimiter) + ")";
-        } else {
-            return org.apache.commons.lang3.StringUtils.join(all, delimiter);
+        return repeatDelimiterExprJoiner.toString();
+    }
+
+    /**
+     * Splits values in IN/NOTIN expressions.
+     * <p>
+     * A number of values in an IN expression greater than {@value IN_CLAUSE_MAX_EXPRESSIONS} will result in an error.
+     * To avoid that error, and eliminate the need for code using PDB to have to use a workaround, this method splits
+     * the list of values into smaller lists connected by OR/AND expressions as appropriate.
+     * <p>
+     * Examples:
+     * <ul>
+     *     <li>
+     *         column1 IN (val1, val2, ..., val1000, val1001)
+     *         <p>becomes</p>
+     *         (column1 IN (val1, val2, ..., val1000) OR column1 IN (val1001))
+     *     </li>
+     *     <li>
+     *         column1 NOT IN (val1, val2, ..., val1000, val1001)
+     *         <p>becomes</p>
+     *         (column1 NOT IN (val1, val2, ..., val1000) AND column1 NOT IN (val1001))
+     *     </li>
+     * </ul>
+     *
+     * @param rd A {@link RepeatDelimiter} representing an IN/NOTIN expression, where the values are to be split.
+     * @return An equivalent OR/AND expression where IN clauses contain a number of values that Oracle can handle.
+     */
+    private RepeatDelimiter splitValuesInInExpression(final RepeatDelimiter rd) {
+        final Expression inColumnExpression = rd.getExpressions().get(0);
+        final List<Expression> inListExpressions = ((RepeatDelimiter) rd.getExpressions().get(1)).getExpressions();
+
+        final Stream<Expression> aggregatedExprs = Lists.partition(inListExpressions, IN_CLAUSE_MAX_EXPRESSIONS)
+                .stream()
+                .map(SqlBuilder::L);
+
+        if (RepeatDelimiter.IN.equals(rd.getDelimiter())) {
+            return (RepeatDelimiter) SqlBuilder.or(
+                    aggregatedExprs
+                            .map(expressions -> SqlBuilder.in(inColumnExpression, expressions))
+                            .collect(Collectors.toList())
+            ).enclose();
         }
+
+        return (RepeatDelimiter) SqlBuilder.and(
+                aggregatedExprs
+                        .map(expressions -> SqlBuilder.notIn(inColumnExpression, expressions))
+                        .collect(Collectors.toList())
+        ).enclose();
     }
 
     @Override
