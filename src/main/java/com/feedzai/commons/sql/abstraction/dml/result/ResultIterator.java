@@ -365,7 +365,7 @@ public abstract class ResultIterator implements AutoCloseable {
      * Indicates whether this iterator needs to run inside a transaction.
      *
      * PostgreSQL (and also CockroachDB) need this in order to keep a cursor on the server, otherwise the fetchsize
-     * setting is ignored and all results ar fetched from the database into memory at once.
+     * setting is ignored and all results are fetched from the database into memory at once.
      *
      * @param fetchSize The fetch size for result sets obtained in this iterator.
      * @return Whether this iterator needs to run inside a transaction.

@@ -141,17 +141,12 @@ public class TimeoutsTest {
             engine != DatabaseEngineDriver.H2 && engine != DatabaseEngineDriver.H2V2
         );
 
-        testRouter = new TestRouter(executor, engine.defaultPort());
+        testRouter = new TestRouter(engine.defaultPort());
     }
 
     @After
     public void cleanResources() {
-        try {
-            testRouter.close();
-        } catch (final Exception ex) {
-            // ignore
-        }
-
+        testRouter.close();
         executor.shutdownNow();
     }
 

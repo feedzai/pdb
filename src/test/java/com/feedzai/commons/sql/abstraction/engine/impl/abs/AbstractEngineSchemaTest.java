@@ -42,8 +42,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
@@ -202,9 +200,8 @@ public abstract class AbstractEngineSchemaTest {
     @Test
     public void testFetchSize() throws Exception {
         final DatabaseEngineDriver engineDriver = DatabaseEngineDriver.fromEngine(properties.getProperty(ENGINE));
-        final ExecutorService executor = Executors.newCachedThreadPool();
 
-        final TestRouter testRouter = new TestRouter(executor, engineDriver.defaultPort());
+        final TestRouter testRouter = new TestRouter(engineDriver.defaultPort());
         testRouter.init();
 
         final Properties testProps = TestRouter.getPatchedDbProperties(properties, testRouter.getDbPort(), testRouter.getLocalPort());
@@ -239,11 +236,10 @@ public abstract class AbstractEngineSchemaTest {
                 // 4th row should be fetched now, but since the connection is broken it should fail
                 // (unless the driver already fetched all results, which should fail the test)
                 assertThatThrownBy(iterator::next)
-                        .isInstanceOf(Exception.class);
+                        .isInstanceOf(DatabaseEngineException.class);
             }
         } finally {
             testRouter.close();
-            executor.shutdownNow();
         }
     }
 

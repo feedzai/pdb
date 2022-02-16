@@ -28,6 +28,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
@@ -59,7 +60,7 @@ public class TestRouter implements Closeable {
     /**
      * An {@link ExecutorService} to handle asynchronous tasks.
      */
-    private final ExecutorService executor;
+    private final ExecutorService executor = Executors.newFixedThreadPool(3);
 
     /**
      * The database port.
@@ -74,12 +75,10 @@ public class TestRouter implements Closeable {
     /**
      * Constructor for this class.
      *
-     * @param executor An {@link ExecutorService} to run tasks asynchronously.
      * @param dbPort   The real DB server port.
      * @throws IOException if some problem occurs creating a new {@link ServerSocket}.
      */
-    TestRouter(final ExecutorService executor, final int dbPort) throws IOException {
-        this.executor = executor;
+    public TestRouter(final int dbPort) throws IOException {
         this.dbPort = dbPort;
     }
 
@@ -90,6 +89,7 @@ public class TestRouter implements Closeable {
      * @param defaultPort  The default DB port.
      * @param newPort      The port to use as replacement in the JDBC URL for the default DB port.
      * @return The patched DB properties.
+     * @implNote This parses the JDBC URL assuming that the DB host is "localhost".
      */
     public static Properties getPatchedDbProperties(final Properties dbProperties, final int defaultPort, final int newPort) {
         final Properties testProps = new Properties();
@@ -162,11 +162,22 @@ public class TestRouter implements Closeable {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
+        closeSilently(socketRouterToDb);
+        closeSilently(serverSocket);
+        executor.shutdownNow();
+    }
+
+    /**
+     * Closes an {@link AutoCloseable} and ignores any exceptions.
+     *
+     * @param autoCloseable The AutoCloseable.
+     */
+    private void closeSilently(final AutoCloseable autoCloseable) {
         try {
-            socketRouterToDb.close();
-        } finally {
-            serverSocket.close();
+            autoCloseable.close();
+        } catch (final Exception e) {
+            // ignore
         }
     }
 }
