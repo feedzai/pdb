@@ -101,14 +101,12 @@ public abstract class ResultIterator implements AutoCloseable {
         try {
             long start = System.currentTimeMillis();
 
+            final Connection connection = statement.getConnection();
+            this.previousAutocommit = connection.getAutoCommit();
             this.isWrappedInTransaction = needsWrapInTransaction(statement.getFetchSize());
 
             if (isWrappedInTransaction) {
-                final Connection connection = statement.getConnection();
-                this.previousAutocommit = connection.getAutoCommit();
                 connection.setAutoCommit(false);
-            } else {
-                this.previousAutocommit = false;
             }
 
             if (isPreparedStatement) {
