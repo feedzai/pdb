@@ -146,7 +146,9 @@ public class TimeoutsTest {
 
     @After
     public void cleanResources() {
-        testRouter.close();
+        if (testRouter != null) {
+            testRouter.close();
+        }
         executor.shutdownNow();
     }
 
