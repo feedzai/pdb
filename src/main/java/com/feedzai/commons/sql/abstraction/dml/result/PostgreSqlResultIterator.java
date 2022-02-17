@@ -62,4 +62,9 @@ public class PostgreSqlResultIterator extends ResultIterator {
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return PG_QUERY_EXCEPTION_HANDLER;
     }
+
+    @Override
+    protected boolean needsWrapInTransaction(final int fetchSize) {
+        return fetchSize > 0;
+    }
 }

@@ -21,6 +21,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.impl.abs.AbstractEngineSchemaTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -43,6 +45,12 @@ public class H2EngineSchemaTest extends AbstractEngineSchemaTest {
     @Override
     protected Ieee754Support getIeee754Support() {
         return SUPPORTED_STRINGS;
+    }
+
+    @Override
+    @Test
+    @Ignore("H2 respects the fetch size, but takes a *very* long time to timeout on closing the DatabaseEngine/ResultSet")
+    public void testFetchSize() {
     }
 
     @Override

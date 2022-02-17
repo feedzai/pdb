@@ -48,6 +48,14 @@ public class SqlServerEngineSchemaTest extends AbstractEngineSchemaTest {
 
     @Override
     @Test
+    @Ignore("Microsoft Sql Server doesn't respect fetch size unless we use a server cursor, but that seems unnecessary" +
+            " because by default it uses adaptative buffering and doesn't fetch all results into memory." +
+            "See https://docs.microsoft.com/en-us/sql/connect/jdbc/using-adaptive-buffering")
+    public void testFetchSize() {
+    }
+
+    @Override
+    @Test
     @Ignore("Microsoft Sql Server doesn't support setting schema per session")
     public void testCreateSameEntityDifferentSchemas() {
     }
