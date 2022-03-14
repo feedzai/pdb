@@ -17,6 +17,8 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
@@ -240,6 +242,20 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The dialect being used.
      */
     Dialect getDialect();
+
+    /**
+     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
+     * statements in the batch is reached.
+     * <p/>
+     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     *
+     * @param batchSize    The batch size.
+     * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
+     * @return The batch.
+     */
+    default <PB extends PdbBatch> PB createBatch(final BatchConfig<PB> batchConfig) {
+        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+    }
 
     /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
