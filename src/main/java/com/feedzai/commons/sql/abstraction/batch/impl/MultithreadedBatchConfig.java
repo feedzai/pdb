@@ -21,19 +21,41 @@ import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
 import java.util.Optional;
 
 /**
- * FIXME
+ * Configuration for {@link MultithreadedBatch}.
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
 public class MultithreadedBatchConfig extends AbstractBatchConfig<MultithreadedBatch, MultithreadedBatchConfig> {
 
+    /**
+     * Constant representing the default number of threads.
+     *
+     * @see #getNumberOfThreads()
+     */
     public static final int DEFAULT_NUMBER_OF_THREADS = 1;
+
+    /**
+     * Constant representing the default capacity of the batch flusher executor queue.
+     *
+     * @see #getExecutorCapacity()
+     */
     public static final int DEFAULT_EXECUTOR_CAPACITY = 1000;
 
+    /**
+     * @see #getNumberOfThreads()
+     */
     private final int numberOfThreads;
 
+    /**
+     * @see #getExecutorCapacity()
+     */
     private final int executorCapacity;
 
+    /**
+     * Constructor for this {@link MultithreadedBatchConfig}.
+     *
+     * @param builder The {@link Builder} for this config.
+     */
     protected MultithreadedBatchConfig(final MultithreadedBatchConfigBuilder builder) {
         super(builder);
 
@@ -49,37 +71,76 @@ public class MultithreadedBatchConfig extends AbstractBatchConfig<MultithreadedB
         return MultithreadedBatch.class;
     }
 
+    /**
+     * Gets the number of threads to use for the batch flusher executor.
+     * <p>
+     * Each thread creates and uses its own connection to the database.
+     *
+     * @return The number of threads of the executor.
+     */
     public int getNumberOfThreads() {
         return numberOfThreads;
     }
 
+    /**
+     * Gets the capacity of the batch flusher executor queue.
+     *
+     * @return The batch flusher executor capacity.
+     */
     public int getExecutorCapacity() {
         return executorCapacity;
     }
 
+    /**
+     * Returns the {@link MultithreadedBatchConfigBuilder builder} to create an instance of this class.
+     *
+     * @return The {@link MultithreadedBatchConfigBuilder builder}.
+     */
     public static MultithreadedBatchConfigBuilder builder() {
         return new MultithreadedBatchConfigBuilder();
     }
+
+    /**
+     * The builder for the {@link MultithreadedBatchConfig}.
+     */
     public static class MultithreadedBatchConfigBuilder
             extends AbstractBatchConfig.Builder<MultithreadedBatch, MultithreadedBatchConfig, MultithreadedBatchConfigBuilder> {
 
-
+        /**
+         * @see #getNumberOfThreads()
+         */
         private Integer numberOfThreads;
+
+        /**
+         * @see #getExecutorCapacity()
+         */
         private Integer executorCapacity;
 
+        /**
+         * Sets the number of threads for the executor.
+         *
+         * @param numberOfThreads The number of threads.
+         * @return This instance.
+         * @see #getNumberOfThreads()
+         */
         public MultithreadedBatchConfigBuilder withNumberOfThreads(final int numberOfThreads) {
             this.numberOfThreads = numberOfThreads;
             return self();
         }
 
+        /**
+         * Sets the executor queue capacity.
+         *
+         * @param executorCapacity The executor capacity.
+         * @return This instance.
+         * @see #getExecutorCapacity()
+         */
         public MultithreadedBatchConfigBuilder withExecutorCapacity(final int executorCapacity) {
             this.executorCapacity = executorCapacity;
             return self();
         }
 
-        /**
-         * @return This instance.
-         */
+        @Override
         protected MultithreadedBatchConfigBuilder self() {
             return this;
         }

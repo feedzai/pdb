@@ -244,13 +244,13 @@ public interface DatabaseEngine extends AutoCloseable {
     Dialect getDialect();
 
     /**
-     * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
-     * statements in the batch is reached.
-     * <p/>
-     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database.
+     * Creates a new {@link PdbBatch} to which entries can be added; it then flushes those entries to the database,
+     * periodically on a set timeout, or when a maximum number of entries has been reached.
+     * <p>
+     * {@link PdbBatch#close()} should be called before closing the session with the database, to dispose of all
+     * the resources such as executors and extra connections.
      *
-     * @param batchSize    The batch size.
-     * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
+     * @param batchConfig The {@link BatchConfig batch configuration}.
      * @return The batch.
      */
     default <PB extends PdbBatch> PB createBatch(final BatchConfig<PB> batchConfig) {

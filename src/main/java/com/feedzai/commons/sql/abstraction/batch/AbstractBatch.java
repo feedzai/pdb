@@ -49,11 +49,11 @@ import static java.util.Objects.isNull;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @since 2.0.0
  */
-public abstract class AbstractBatch implements Runnable {
+public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable, PdbBatch {
     /**
      * The logger.
      */
-    protected final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
+    protected static final Logger logger = LoggerFactory.getLogger(AbstractBatch.class);
 
     /**
      * The confidential logger.
@@ -336,6 +336,11 @@ public abstract class AbstractBatch implements Runnable {
         };
 
         scheduler.scheduleAtFixedRate(resilientTask, 0, batchTimeout + salt, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public void close() throws Exception {
+        destroy();
     }
 
     /**

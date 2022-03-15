@@ -16,13 +16,12 @@
 
 package com.feedzai.commons.sql.abstraction.batch.impl;
 
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.AbstractPdbBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -33,14 +32,17 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import javax.inject.Inject;
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -55,7 +57,7 @@ import java.util.function.Supplier;
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
-public class MultithreadedBatch implements PdbBatch, AutoCloseable {
+public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
     /**
      * The logger.
@@ -73,35 +75,45 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
     private static final Marker DEV = MarkerFactory.getMarker("DEV");
 
     /**
-     * Salt to avoid erroneous flushes.
+     * A delay to make sure that when the next periodic flush is triggered, it occurs after the batch timeout period
+     * has passed since the last flush occurred (unless the flush was triggered by batch size).
      */
     private static final int SALT = 100;
 
+    /**
+     * A map containing the {@link DatabaseEngine database engines} used by each tread (where the key is the thread id).
+     */
     private final Map<Long, DatabaseEngine> dbEnginesMap = new ConcurrentHashMap<>();
 
+    /**
+     * A {@link Supplier} of {@link DatabaseEngine} for the various threads.
+     */
     private final Supplier<DatabaseEngine> dbEngineSupplier;
 
     /**
-     * The Timer that runs this task.
+     * The executor used to schedule periodic batch flushes.
      */
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler;
 
+    /**
+     * The executor used to run the various flush tasks concurrently.
+     */
     private final ExecutorService flusher;
 
     /**
-     * The maximum await time to wait for the batch to shutdown.
+     * The maximum time in milliseconds to wait for the batch to shutdown.
      */
-    private final long maxAwaitTimeShutdown;
+    private final long maxAwaitTimeShutdownMs;
 
     /**
-     * The batchSize.
+     * The batch size.
      */
     protected final int batchSize;
 
     /**
-     * The batch timeout.
+     * The batch timeout in milliseconds.
      */
-    protected final long batchTimeout;
+    protected final long batchTimeoutMs;
 
     /**
      * Timestamp of the last flush.
@@ -109,7 +121,7 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
     protected volatile long lastFlush;
 
     /**
-     * EntityEntry buffer.
+     * A buffer of {@link BatchEntry batch entries}.
      */
     protected BlockingQueue<BatchEntry> buffer;
 
@@ -120,41 +132,30 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
 
     /**
      * The listener for customized behavior when this batch succeeds or fails to persist data.
-     *
-     * @since 2.8.1
      */
     protected final BatchListener batchListener;
 
+    /**
+     * The listener for events that can be used to collect metrics.
+     */
     private final MetricsListener metricsListener;
 
     /**
      * The number of times to retry a batch flush upon failure.
-     * <p>
-     * Defaults to {@value NO_RETRY}.
      */
     protected final int maxFlushRetries;
 
     /**
-     * The time interval (milliseconds) to wait between batch flush retries.
-     * <p>
-     * Defaults to {@value DEFAULT_RETRY_INTERVAL}.
+     * The time interval in milliseconds to wait between batch flush retries.
      */
-    protected final long flushRetryDelay;
+    protected final long flushRetryDelayMs;
 
     /**
-     * Creates a new instance of {@link AbstractBatch} with a {@link BatchListener}.
+     * Creates a new instance of {@link MultithreadedBatch}.
      *
-     * @param dbEngine             The database engine.
-     * @param name                 The batch name (null or empty names are allowed, falling back to "Anonymous Batch").
-     * @param batchSize            The batch size.
-     * @param batchTimeout         The batch timeout.
-     * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
-     * @param batchListener        The listener that will be invoked whenever some batch operation fail or succeeds to persist.
-     * @param maxFlushRetries      The number of times to retry a batch flush upon failure. When set to 0, no retries
-     *                             will be attempted.
-     * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
-     * @param confidentialLogger   The confidential logger.
-     * @since 2.8.8
+     * @param dbEngine    The database engine.
+     * @param batchConfig The batch configuration.
+     * @implNote The internal timer task for periodic flushes is started.
      */
     @Inject
     public MultithreadedBatch(final DatabaseEngine dbEngine, final MultithreadedBatchConfig batchConfig) {
@@ -174,64 +175,78 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
             }
         };
 
-
         this.batchSize = batchConfig.getBatchSize();
         this.buffer = new LinkedBlockingQueue<>(this.batchSize);
-        this.batchTimeout = batchConfig.getBatchTimeoutMs();
+        this.batchTimeoutMs = batchConfig.getBatchTimeout().toMillis();
         this.lastFlush = System.currentTimeMillis();
         this.name = batchConfig.getName();
-        this.maxAwaitTimeShutdown = batchConfig.getMaxAwaitTimeShutdownMsOpt()
+        this.maxAwaitTimeShutdownMs = Optional.ofNullable(batchConfig.getMaxAwaitTimeShutdown())
+                .map(Duration::toMillis)
                 .orElse(dbEngine.getProperties().getMaximumAwaitTimeBatchShutdown());
         this.batchListener = batchConfig.getBatchListener();
         this.metricsListener = batchConfig.getMetricsListener();
         this.maxFlushRetries = batchConfig.getMaxFlushRetries();
-        this.flushRetryDelay = batchConfig.getFlushRetryDelayMs();
+        this.flushRetryDelayMs = batchConfig.getFlushRetryDelay().toMillis();
         this.confidentialLogger = batchConfig.getConfidentialLogger().orElse(logger);
+
+        this.scheduler = Executors.newScheduledThreadPool(
+                1,
+                new ThreadFactoryBuilder().setNameFormat("MultiThreadedBatch-scheduler-" + name + "-%d").build()
+        );
 
         this.flusher = new ThreadPoolExecutor(
                 numberOfThreads, numberOfThreads,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(batchConfig.getExecutorCapacity()),
-                new ThreadFactoryBuilder().setNameFormat("asyncBatch-" + name + "-%d").build()
+                new ThreadFactoryBuilder().setNameFormat("MultiThreadedBatch-" + name + "-%d").build()
         );
 
-        scheduler.scheduleAtFixedRate(periodicFlushTask(), 0, batchTimeout + SALT, TimeUnit.MILLISECONDS);
+        scheduler.scheduleAtFixedRate(periodicFlushTask(), 0, batchTimeoutMs + SALT, TimeUnit.MILLISECONDS);
 
         logger.info("{} - MultithreadedBatch started", name);
     }
 
     /**
-     * Destroys this batch.
+     * Closes this batch.
      */
-    public void close() throws Exception {
-        logger.info("{} - Destroy called on Batch", name);
+    public void close() {
+        logger.info("{} - MultithreadedBatch closing", name);
 
-        long remainingTimeout = this.maxAwaitTimeShutdown;
+        long remainingTimeout = this.maxAwaitTimeShutdownMs;
         final long start = System.currentTimeMillis();
 
         orderlyShutdownExecutor(scheduler, remainingTimeout);
 
-        remainingTimeout = Math.max(this.maxAwaitTimeShutdown - (System.currentTimeMillis() - start), 1);
+        remainingTimeout = Math.max(this.maxAwaitTimeShutdownMs - (System.currentTimeMillis() - start), 1);
         try {
-            flush().get(remainingTimeout, TimeUnit.MILLISECONDS);
+            flushAsync().get(remainingTimeout, TimeUnit.MILLISECONDS);
         } catch (final Exception e) {
             // ignore, continue shutdown of executors and connections
         }
 
-        remainingTimeout = Math.max(this.maxAwaitTimeShutdown - (System.currentTimeMillis() - start), 1);
+        remainingTimeout = Math.max(this.maxAwaitTimeShutdownMs - (System.currentTimeMillis() - start), 1);
         orderlyShutdownExecutor(flusher, remainingTimeout);
 
         logger.trace("Closing internal database connections");
         dbEnginesMap.values().forEach(DatabaseEngine::close);
     }
 
-    private void orderlyShutdownExecutor(final ExecutorService executor, final long remainingTimeout) {
+    /**
+     * Performs a shutdown of the provided executor.
+     * <p>
+     * This helper method first tries to perform an orderly shutdown of the executor, waiting the specified amount of
+     * time. If after the time the executor hasn't terminated yet, performs a forceful shutdown.
+     *
+     * @param executor        The executor to shutdown.
+     * @param shutdownTimeout The maximum time to wait for an orderly shutdown of the executor.
+     */
+    private void orderlyShutdownExecutor(final ExecutorService executor, final long shutdownTimeout) {
         executor.shutdown();
 
         try {
-            if (!executor.awaitTermination(remainingTimeout, TimeUnit.MILLISECONDS)) {
+            if (!executor.awaitTermination(shutdownTimeout, TimeUnit.MILLISECONDS)) {
                 logger.warn("Could not terminate batch within {}. Forcing shutdown.",
-                        DurationFormatUtils.formatDurationWords(remainingTimeout, true, true));
+                        DurationFormatUtils.formatDurationWords(shutdownTimeout, true, true));
                 executor.shutdownNow();
             }
         } catch (final InterruptedException e) {
@@ -240,37 +255,24 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
         }
     }
 
-    /**
-     * Adds the fields to the batch.
-     *
-     * @param entityName The table name.
-     * @param ee         The entity entry.
-     * @throws DatabaseEngineException If an error with the database occurs.
-     */
-    public void add(final String entityName, final EntityEntry ee) throws InterruptedException {
-        add(new BatchEntry(entityName, ee));
-    }
-
-    /**
-     * Adds the fields to the batch.
-     *
-     * @param batchEntry The batch entry.
-     */
+    @Override
     public void add(final BatchEntry batchEntry) throws InterruptedException {
         this.buffer.put(batchEntry);
 
         this.metricsListener.onEntryAdded();
 
         if (this.buffer.size() == this.batchSize) {
-            flush();
+            flushAsync();
         }
     }
 
-    /**
-     * Flushes the pending batches asynchronously.
-     * @return
-     */
-    public CompletableFuture<Void> flush() {
+    @Override
+    public void flush() throws ExecutionException, InterruptedException {
+        flushAsync().get();
+    }
+
+    @Override
+    public CompletableFuture<Void> flushAsync() {
         // No-op if batch is empty
         if (buffer.isEmpty()) {
             logger.trace("[{}] Batch empty, not flushing", name);
@@ -304,7 +306,7 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
     /**
      * Flushes the given list batch entries to {@link DatabaseEngine} immediately.
      *
-     * @param temp List of batch entries to be written to the data base.
+     * @param temp List of batch entries to be written to the database.
      */
     private void flush(final List<BatchEntry> temp) {
         final long start = System.currentTimeMillis();
@@ -332,7 +334,7 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
 
             for (retryCount = 0; retryCount < this.maxFlushRetries && !success; retryCount++) {
                 try {
-                    Thread.sleep(this.flushRetryDelay);
+                    Thread.sleep(this.flushRetryDelayMs);
 
                     // If the connection was established, we might need a rollback.
                     if (de.checkConnection() && de.isTransactionActive()) {
@@ -397,31 +399,42 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
         }
     }
 
-    private void onFlushFailure(final List<BatchEntry> temp) {
+    /**
+     * Notifies listeners when called upon flush failure.
+     *
+     * @param entries The entries that were part of the batch that failed.
+     */
+    private void onFlushFailure(final List<BatchEntry> entries) {
         this.metricsListener.onFlushFailure();
-        this.batchListener.onFailure(temp.toArray(new BatchEntry[0]));
+        this.batchListener.onFailure(entries.toArray(new BatchEntry[0]));
     }
 
-    private void onFlushSuccess(final List<BatchEntry> temp, final long elapsed) {
+    /**
+     * Notifies listeners when called upon flush success.
+     *
+     * @param entries The entries that were part of the batch that succeeded.
+     * @param elapsed The time elapsed (in milliseconds) since the batch flush was triggered.
+     */
+    private void onFlushSuccess(final List<BatchEntry> entries, final long elapsed) {
         this.metricsListener.onFlushSuccess(elapsed);
-        this.batchListener.onSuccess(temp.toArray(new BatchEntry[0]));
+        this.batchListener.onSuccess(entries.toArray(new BatchEntry[0]));
     }
 
     /**
      * Processes all batch entries.
      * <p>
-     * This is done by creating a transaction (by disabling auto-commit), adding all {@link BatchEntry batch entries} to
-     * their respective prepared statements, flush them and finally perform a commit on the transaction (which will
-     * enable auto-commit again afterwards).
+     * This is done by starting a transaction, adding all {@link BatchEntry batch entries} to their respective prepared
+     * statements, flushing them and finally performing a commit on the transaction (which will finish that transaction).
      *
-     * @param de
-     * @param batchEntries The list of batch entries to be flush on the DB
-     * @throws DatabaseEngineException If the operation failed
+     * @param de           The {@link DatabaseEngine} on which to perform the flush.
+     * @param batchEntries The list of batch entries to be flushed.
+     * @throws DatabaseEngineException If the operation failed.
      */
     private void processBatch(final DatabaseEngine de, final List<BatchEntry> batchEntries) throws DatabaseEngineException {
-        // begin the transaction before the addBatch calls in order to force the retry
-        // of the connection if the same was lost during or since the last batch. Otherwise
-        // the addBatch call that uses a prepared statement will fail
+        /*
+        Begin transaction before the addBatch calls, in order to force the retry of the connection if it was lost during
+         or since the last batch. Otherwise the addBatch call that uses a prepared statement will fail.
+         */
         de.beginTransaction();
 
         for (final BatchEntry entry : batchEntries) {
@@ -429,22 +442,25 @@ public class MultithreadedBatch implements PdbBatch, AutoCloseable {
         }
 
         de.flush();
-        de.commit(); // automatically ends transaction
+        de.commit();
     }
 
     /**
-     * FIXME javadoc
-     *         // if a periodic execution throws an exception, future executions are suspended,
-     *         // this task wraps the call in a try-catch block to prevent that. Errors are still propagated.
+     * Gets a {@link Runnable} task to execute flushes.
+     * <p>
+     * This is meant to be executed periodically by the {@link #scheduler}, so that periodic flushes occur when they
+     * aren't otherwise triggered by the number of batch entries.
+     * Future executions of this task would be suspended if it were to throw an exception. For that reason, this task
+     * wraps the flush call in a try-catch block to prevent that; errors are still propagated.
      *
-     * @return
+     * @return The task to execute flushes.
      */
     private Runnable periodicFlushTask() {
         return () -> {
             try {
-                if (System.currentTimeMillis() - lastFlush >= batchTimeout) {
+                if (System.currentTimeMillis() - lastFlush >= batchTimeoutMs) {
                     logger.trace("[{}] Flush timeout occurred", name);
-                    flush();
+                    flushAsync();
                 }
             } catch (final Exception e) {
                 logger.error("[{}] Error during timeout-initiated flush", name, e);

@@ -20,77 +20,140 @@ import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Optional;
 
 /**
- * FIXME
+ * Abstract configuration for {@link PdbBatch} implementations, containing common properties.
  *
+ * @param <PB>   The type of {@link PdbBatch} that this config class applies to.
+ * @param <SELF> The concrete type of concrete {@link BatchConfig} overriding this abstract class.
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
 public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends AbstractBatchConfig<PB, SELF>> implements BatchConfig<PB> {
 
-    public static final String DEFAULT_BATCH_NAME = "Anonymous Batch";
+    /**
+     * The default name of the batch, when a name isn't explicitly provided in the config builder.
+     */
+    public final String defaultBatchName = "Anonymous " + this.getClass().getSimpleName();
 
     /**
-     * Constant representing that no retries should be attempted on batch flush failures.
+     * Constant representing the default batch size.
+     *
+     * @see #getBatchSize()
      */
     public static final int DEFAULT_BATCH_SIZE = 1000;
 
     /**
-     * Constant representing that no retries should be attempted on batch flush failures.
+     * Constant representing the default batch timeout.
+     *
+     * @see #getBatchTimeout()
      */
-    public static final long DEFAULT_BATCH_TIMEOUT_MS = 1000;
+    public static final Duration DEFAULT_BATCH_TIMEOUT = Duration.ofSeconds(1);
 
     /**
      * Constant representing that no retries should be attempted on batch flush failures.
+     *
+     * @see #getMaxFlushRetries()
      */
     public static final int NO_RETRY = 0;
 
     /**
-     * Constant representing the default time interval (milliseconds) to wait between batch flush retries.
+     * Constant representing the default time interval to wait between batch flush retries.
+     *
+     * @see #getFlushRetryDelay()
      */
-    public static final long DEFAULT_RETRY_INTERVAL_MS = 300;
+    public static final Duration DEFAULT_RETRY_INTERVAL = Duration.ofMillis(300);
 
+    /**
+     * @see #getName()
+     */
     private final String name;
+
+    /**
+     * @see #getBatchSize()
+     */
     private final int batchSize;
-    private final long batchTimeoutMs;
-    private final Long maxAwaitTimeShutdownMs;
+
+    /**
+     * @see #getBatchTimeout()
+     */
+    private final Duration batchTimeout;
+
+    /**
+     * @see #getMaxAwaitTimeShutdown()
+     */
+    private final Duration maxAwaitTimeShutdown;
+
+    /**
+     * @see #getMaxFlushRetries()
+     */
     private final int maxFlushRetries;
-    private final long flushRetryDelayMs;
+
+    /**
+     * @see #getFlushRetryDelay()
+     */
+    private final Duration flushRetryDelay;
+
+    /**
+     * @see #getBatchListener()
+     */
     private final BatchListener batchListener;
+
+    /**
+     * @see #getMetricsListener()
+     */
     private final MetricsListener metricsListener;
+
+    /**
+     * @see #getConfidentialLogger()
+     */
     private final Logger confidentialLogger;
 
+    /**
+     * Constructor for this {@link AbstractBatchConfig}.
+     *
+     * @param builder The {@link Builder} for this config.
+     */
     protected AbstractBatchConfig(final AbstractBatchConfig.Builder<PB, SELF, ?> builder) {
-        this.name = Strings.isNullOrEmpty(builder.name) ? DEFAULT_BATCH_NAME : builder.name;
+        this.name = StringUtils.defaultIfBlank(builder.name, defaultBatchName);
 
         this.batchSize = Optional.ofNullable(builder.batchSize).orElse(DEFAULT_BATCH_SIZE);
         checkArgument(this.batchSize > 0, "batchSize must be > 0 (was set to %s)", this.batchSize);
 
-        this.batchTimeoutMs = Optional.ofNullable(builder.batchTimeoutMs).orElse(DEFAULT_BATCH_TIMEOUT_MS);
-        checkArgument(this.batchTimeoutMs >= 0, "batchTimeoutMs must be >= 0 (was set to %s)", this.batchTimeoutMs);
+        this.batchTimeout = Optional.ofNullable(builder.batchTimeout).orElse(DEFAULT_BATCH_TIMEOUT);
+        checkArgument(!this.batchTimeout.isNegative(), "batchTimeout must be >= 0 (was set to %s)", builder.batchTimeout);
 
-        this.maxAwaitTimeShutdownMs = builder.maxAwaitTimeShutdownMs;
-        getMaxAwaitTimeShutdownMsOpt().ifPresent(maxAwaitTimeShutdown ->
-                checkArgument(maxAwaitTimeShutdown >= 0,
-                        "When maxAwaitTimeShutdownMs is defined it must be >= 0 (was set to %s)", this.maxAwaitTimeShutdownMs)
+        this.maxAwaitTimeShutdown = builder.maxAwaitTimeShutdown;
+        Optional.ofNullable(getMaxAwaitTimeShutdown()).ifPresent(maxAwaitTimeShutdown ->
+                checkArgument(!this.maxAwaitTimeShutdown.isNegative(),
+                        "When maxAwaitTimeShutdown is defined it must be >= 0 (was set to %s)", this.maxAwaitTimeShutdown)
         );
 
         this.maxFlushRetries = Optional.ofNullable(builder.maxFlushRetries).orElse(NO_RETRY);
         checkArgument(this.maxFlushRetries >= 0, "maxFlushRetries must be >= 0 (was set to %s)", this.maxFlushRetries);
 
-        this.flushRetryDelayMs = Optional.ofNullable(builder.flushRetryDelayMs).orElse(DEFAULT_RETRY_INTERVAL_MS);
-        checkArgument(this.flushRetryDelayMs >= 0, "flushRetryDelayMs must be >= 0 (was set to %s)", this.flushRetryDelayMs);
+        this.flushRetryDelay = Optional.ofNullable(builder.flushRetryDelay).orElse(DEFAULT_RETRY_INTERVAL);
+        checkArgument(!this.flushRetryDelay.isNegative(), "flushRetryDelay must be >= 0 (was set to %s)", this.flushRetryDelay);
 
         this.batchListener = Optional.ofNullable(builder.batchListener).orElse(NoopBatchListener.INSTANCE);
         this.metricsListener = Optional.ofNullable(builder.metricsListener).orElse(NoopMetricsListener.INSTANCE);
         this.confidentialLogger = builder.confidentialLogger;
     }
 
+    /**
+     * Checks that configuration arguments pass the verification specified in the condition expression.
+     *
+     * @param condition          A boolean expression for verification of the configuration arguments.
+     * @param errorMessageFormat An error message to include in the exception when the verification fails (supports
+     *                           {@link String#format} parameters).
+     * @param errorMessageArg    Arguments for the error message template specified in {@code errorMessageFormat}.
+     * @throws IllegalArgumentException if {@code expression} is false
+     */
     protected static void checkArgument(final boolean condition, final String errorMessageFormat, final Object errorMessageArg) {
         if (!condition) {
             throw new IllegalArgumentException(String.format(errorMessageFormat, errorMessageArg));
@@ -108,13 +171,13 @@ public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends Abst
     }
 
     @Override
-    public long getBatchTimeoutMs() {
-        return batchTimeoutMs;
+    public Duration getBatchTimeout() {
+        return batchTimeout;
     }
 
     @Override
-    public Optional<Long> getMaxAwaitTimeShutdownMsOpt() {
-        return Optional.ofNullable(maxAwaitTimeShutdownMs);
+    public Duration getMaxAwaitTimeShutdown() {
+        return maxAwaitTimeShutdown;
     }
 
     @Override
@@ -123,8 +186,8 @@ public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends Abst
     }
 
     @Override
-    public long getFlushRetryDelayMs() {
-        return flushRetryDelayMs;
+    public Duration getFlushRetryDelay() {
+        return flushRetryDelay;
     }
 
     @Override
@@ -142,64 +205,175 @@ public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends Abst
         return Optional.ofNullable(confidentialLogger);
     }
 
-    public abstract static class Builder<PB extends PdbBatch, BC extends AbstractBatchConfig<PB, ?>, SELF extends Builder<PB, BC, SELF>> {
+    /**
+     * A builder for the {@link AbstractBatchConfig}.
+     *
+     * @param <PB>   The type of {@link PdbBatch} that the config built from this builder applies to.
+     * @param <BC>   The type of {@link BatchConfig} that this builder generates.
+     * @param <SELF> The concrete type of concrete {@link Builder} overriding this abstract class.
+     */
+    public abstract static class Builder<
+            PB extends PdbBatch,
+            BC extends AbstractBatchConfig<PB, ?>,
+            SELF extends Builder<PB, BC, SELF>
+            > {
 
+        /**
+         * @see #getName()
+         */
         protected String name;
+
+        /**
+         * @see #getBatchSize()
+         */
         protected Integer batchSize;
-        protected Long batchTimeoutMs;
-        protected Long maxAwaitTimeShutdownMs;
+
+        /**
+         * @see #getBatchTimeout()
+         */
+        protected Duration batchTimeout;
+
+        /**
+         * @see #getMaxAwaitTimeShutdown()
+         */
+        protected Duration maxAwaitTimeShutdown;
+
+        /**
+         * @see #getMaxFlushRetries()
+         */
         protected Integer maxFlushRetries;
-        protected Long flushRetryDelayMs;
+
+        /**
+         * @see #getFlushRetryDelay()
+         */
+        protected Duration flushRetryDelay;
+
+        /**
+         * @see #getBatchListener()
+         */
         protected BatchListener batchListener;
+
+        /**
+         * @see #getMetricsListener()
+         */
         protected MetricsListener metricsListener;
+
+        /**
+         * @see #getConfidentialLogger()
+         */
         protected Logger confidentialLogger;
 
+        /**
+         * Sets a name for the batch.
+         *
+         * @param name The name.
+         * @return This instance.
+         * @see #getName()
+         */
         public final SELF withName(@Nullable final String name) {
             this.name = name;
             return self();
         }
 
+        /**
+         * Sets the batch size.
+         *
+         * @param batchSize The batch size.
+         * @return This instance.
+         * @see #getBatchSize()
+         */
         public final SELF withBatchSize(final int batchSize) {
             this.batchSize = batchSize;
             return self();
         }
 
-        public final SELF withBatchTimeoutMs(final long batchTimeoutMs) {
-            this.batchTimeoutMs = batchTimeoutMs;
+        /**
+         * Sets the batch timeout.
+         *
+         * @param batchTimeout The batch timeout.
+         * @return This instance.
+         * @see #getBatchTimeout()
+         */
+        public final SELF withBatchTimeout(final Duration batchTimeout) {
+            this.batchTimeout = batchTimeout;
             return self();
         }
 
-        public final SELF withMaxAwaitTimeShutdownMs(final long maxAwaitTimeShutdownMs) {
-            this.maxAwaitTimeShutdownMs = maxAwaitTimeShutdownMs;
+        /**
+         * Sets the maximum time to wait for shutdown.
+         *
+         * @param maxAwaitTimeShutdown The maximum time to wait for shutdown.
+         * @return This instance.
+         * @see #getMaxAwaitTimeShutdown()
+         */
+        public final SELF withMaxAwaitTimeShutdown(final Duration maxAwaitTimeShutdown) {
+            this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
             return self();
         }
 
+        /**
+         * Sets the maximum number of flush retries.
+         *
+         * @param maxFlushRetries The maximum flush retries.
+         * @return This instance.
+         * @see #getMaxFlushRetries()
+         */
         public final SELF withMaxFlushRetries(final int maxFlushRetries) {
             this.maxFlushRetries = maxFlushRetries;
             return self();
         }
 
-        public final SELF withFlushRetryDelayMs(final long flushRetryDelayMs) {
-            this.flushRetryDelayMs = flushRetryDelayMs;
+        /**
+         * Sets the flush retry delay.
+         *
+         * @param flushRetryDelay The flush retry delay.
+         * @return This instance.
+         * @see #getFlushRetryDelay()
+         */
+        public final SELF withFlushRetryDelay(final Duration flushRetryDelay) {
+            this.flushRetryDelay = flushRetryDelay;
             return self();
         }
 
+        /**
+         * Sets the batch listener.
+         *
+         * @param batchListener The batch listener.
+         * @return This instance.
+         * @see #getBatchListener()
+         */
         public final SELF withBatchListener(final BatchListener batchListener) {
             this.batchListener = batchListener;
             return self();
         }
 
+        /**
+         * Sets the metrics listener.
+         *
+         * @param metricsListener The metrics listener.
+         * @return This instance.
+         * @see #getMetricsListener()
+         */
         public final SELF withMetricsListener(final MetricsListener metricsListener) {
             this.metricsListener = metricsListener;
             return self();
         }
 
+        /**
+         * Sets the confidential logger.
+         *
+         * @param confidentialLogger The confidential logger.
+         * @return This instance.
+         * @see #getConfidentialLogger()
+         */
         public final SELF withConfidentialLogger(final Logger confidentialLogger) {
             this.confidentialLogger = confidentialLogger;
             return self();
         }
 
         /**
+         * Helper method to return the current instance, with the correct type.
+         *
          * @return This instance.
          */
         protected abstract SELF self();

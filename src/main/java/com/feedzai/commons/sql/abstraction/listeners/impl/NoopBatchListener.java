@@ -20,13 +20,22 @@ import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 
 /**
- * FIXME
+ * A {@link BatchListener} that does nothing on the callbacks.
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
 public class NoopBatchListener implements BatchListener {
 
+    /**
+     * A singleton instance of this class.
+     */
     public static final NoopBatchListener INSTANCE = new NoopBatchListener();
+
+    /**
+     * Private constructor to prevent direct instantiation.
+     */
+    private NoopBatchListener() {
+    }
 
     @Override
     public void onFailure(final BatchEntry[] rowsFailed) {

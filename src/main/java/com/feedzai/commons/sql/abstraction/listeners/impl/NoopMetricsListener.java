@@ -19,13 +19,22 @@ package com.feedzai.commons.sql.abstraction.listeners.impl;
 import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 
 /**
- * FIXME
+ * A {@link NoopMetricsListener} that does nothing on the callbacks.
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
 public class NoopMetricsListener implements MetricsListener {
 
+    /**
+     * A singleton instance of this class.
+     */
     public static final NoopMetricsListener INSTANCE = new NoopMetricsListener();
+
+    /**
+     * Private constructor to prevent direct instantiation.
+     */
+    private NoopMetricsListener() {
+    }
 
     @Override
     public void onEntryAdded() {

@@ -17,18 +17,43 @@
 package com.feedzai.commons.sql.abstraction.listeners;
 
 /**
- * FIXME
+ * Listener interface to report actions for metrics.
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  */
 public interface MetricsListener {
+
+    /**
+     * Called when an entry is added to the batch.
+     */
     void onEntryAdded();
 
+    /**
+     * Called when a batch flush is triggered and is not empty.
+     *
+     * @param flushEntriesCount The number of entries to be flushed.
+     */
     void onFlush(int flushEntriesCount);
 
+    /**
+     * Called when a batch flush is finished.
+     *
+     * This may happen if the flush was rejected due to capacity constraints, or if it finished (either with success or
+     * failure).
+     *
+     * @param flushEntriesCount The number of entries flushed.
+     */
     void onFlushed(int flushEntriesCount);
 
+    /**
+     * Called upon batch flush failure.
+     */
     void onFlushFailure();
 
+    /**
+     * Called upon batch flush success.
+     *
+     * @param elapsed The time elapsed (in milliseconds) since the batch flush was triggered.
+     */
     void onFlushSuccess(final long elapsed);
 }
