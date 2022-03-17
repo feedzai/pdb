@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -151,6 +152,11 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
     protected final long flushRetryDelayMs;
 
     /**
+     * A set of {@link CompletableFuture} corresponding to flush operations currently running.
+     */
+    private final Set<CompletableFuture<Void>> pendingFlushFutures = ConcurrentHashMap.newKeySet();
+
+    /**
      * Creates a new instance of {@link MultithreadedBatch}.
      *
      * @param dbEngine    The database engine.
@@ -166,7 +172,7 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
         logger.info("Running MultithreadedBatch with {} threads.", numberOfThreads);
 
         final Properties properties = new Properties();
-        properties.setProperty(PdbProperties.SCHEMA_POLICY, "none"); // TODO shema policies should be in an enum
+        properties.setProperty(PdbProperties.SCHEMA_POLICY, "none");
         this.dbEngineSupplier = () -> {
             try {
                 return dbEngine.duplicate(properties, true);
@@ -268,11 +274,32 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
     @Override
     public void flush() throws ExecutionException, InterruptedException {
-        flushAsync().get();
+        flushAsync();
+        CompletableFuture.allOf(pendingFlushFutures.toArray(new CompletableFuture[0])).get();
     }
 
     @Override
     public CompletableFuture<Void> flushAsync() {
+        final CompletableFuture<Void> flushAsyncFuture = flushAsyncInternal();
+
+        if (!flushAsyncFuture.isDone()) {
+            /*
+             Add the future to the set of pending futures, so that the blocking flush() can wait for all of them.
+             When done, the future removes itself (if done already, all this can be skipped).
+             */
+            pendingFlushFutures.add(flushAsyncFuture);
+            flushAsyncFuture.thenRun(() -> pendingFlushFutures.remove(flushAsyncFuture));
+        }
+
+        return flushAsyncFuture;
+    }
+
+    /**
+     * Internal method to perform flushes of pending batches asynchronously.
+     *
+     * @return A void {@link CompletableFuture} that completes when the flush action finishes.
+     */
+    private CompletableFuture<Void> flushAsyncInternal() {
         // No-op if batch is empty
         if (buffer.isEmpty()) {
             logger.trace("[{}] Batch empty, not flushing", name);

@@ -266,7 +266,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param batchSize    The batch size.
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
      * @return The batch.
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     AbstractBatch createBatch(final int batchSize, final long batchTimeout);
 
     /**
@@ -279,7 +281,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
      * @param batchName    The batch name.
      * @return The batch.
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName);
 
     /**
@@ -299,7 +303,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      *
      * @since 2.8.8
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger confidentialLogger) {
         throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
     }
@@ -341,7 +347,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      *
      * @since 2.8.1
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, @Nullable final BatchListener batchListener) {
         final FailureListener failureListener = Objects.isNull(batchListener) ? failed -> { } : batchListener::onFailure;
         return createBatch(batchSize, batchTimeout, batchName, failureListener);

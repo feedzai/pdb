@@ -20,7 +20,6 @@ import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
 import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
 import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
-import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
@@ -45,8 +44,10 @@ import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutput
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Stage;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -1092,16 +1093,22 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     @Override
     public <PB extends PdbBatch> PB createBatch(final BatchConfig<PB> batchConfig) {
-        final Injector childInjector = injector.createChildInjector(new AbstractModule() {
-            @Override
-            protected void configure() {
-                super.configure();
-                bind(DatabaseEngine.class).toInstance(AbstractDatabaseEngine.this);
-                bind((Class) batchConfig.getClass()).toInstance(batchConfig);
-            }
-        });
+        final Class<PB> batchClass = batchConfig.getBatchClass();
 
-        return childInjector.getInstance(batchConfig.getBatchClass());
+        final Injector batchInjector = Guice.createInjector(
+                Stage.PRODUCTION,
+                new AbstractModule() {
+                    @Override
+                    protected void configure() {
+                        super.configure();
+                        bind(AbstractTranslator.class).toInstance(translator);
+                        bind(DatabaseEngine.class).toInstance(AbstractDatabaseEngine.this);
+                        bind((Class) batchConfig.getClass()).toInstance(batchConfig);
+                        bind(batchClass);
+                    }
+                });
+
+        return batchInjector.getInstance(batchClass);
     }
 
     /**

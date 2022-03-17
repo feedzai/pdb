@@ -33,8 +33,15 @@ public abstract class AbstractPdbBatch implements PdbBatch {
     }
 
     @Override
-    public CompletableFuture<Void> flushAsync() throws Exception {
-        flush();
-        return CompletableFuture.completedFuture(null);
+    public CompletableFuture<Void> flushAsync() {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                flush();
+            } catch (final RuntimeException e) {
+                throw e;
+            } catch (final Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

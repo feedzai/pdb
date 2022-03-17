@@ -39,7 +39,7 @@ public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends Abst
     /**
      * The default name of the batch, when a name isn't explicitly provided in the config builder.
      */
-    public final String defaultBatchName = "Anonymous " + this.getClass().getSimpleName();
+    public final String defaultBatchName = "Anonymous " + this.getBatchClass().getSimpleName();
 
     /**
      * Constant representing the default batch size.

@@ -20,6 +20,7 @@ import com.google.common.base.Throwables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Stage;
 import com.google.inject.util.Providers;
 import org.apache.commons.lang3.StringUtils;
 
@@ -79,6 +80,7 @@ public final class DatabaseFactory {
 
 
             final Injector injector = Guice.createInjector(
+                    Stage.PRODUCTION,
                     new PdbModule.Builder()
                             .withTranslator(tc)
                             .withPdbProperties(pdbProperties)
