@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -90,6 +91,21 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     public static final int MAXIMUM_VARBINARY_SIZE = 8000;
 
     /**
+     * The name of the JDBC URL property to enable/disable encryption.
+     */
+    private static final String JDBC_URL_ENCRYPTION_PROPERTY = "encrypt";
+
+    /**
+     * The pattern to detect the {@link #JDBC_URL_ENCRYPTION_PROPERTY} in the JDBC URL.
+     *
+     * With driver v10 encryption is enabled by default, unless explicitly set to false in the URL.
+     * This is needed to avoid requiring configuration changes, by keeping the old behavior where if encryption was not
+     * explicitly enabled, then it would be assumed to be disabled. If the property is not found in the JDBC URL
+     * according to this pattern, then it will be added to the properties with the value {@code false}.
+     */
+    private static final Pattern JDBC_URL_ENCRYPTION_PATTERN = Pattern.compile(";\\s*" + JDBC_URL_ENCRYPTION_PROPERTY + "\\s*=.*;?");
+
+    /**
      * Creates a new SQL Server connection.
      *
      * @param properties The properties for the database connection.
@@ -110,6 +126,11 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
          set to the value specified by the SOCKET_TIMEOUT Pdb property
          */
         props.setProperty("socketTimeout", Long.toString(TimeUnit.SECONDS.toMillis(this.properties.getLoginTimeout())));
+
+        // disable encryption by default, to avoid breaking changes
+        if (!JDBC_URL_ENCRYPTION_PATTERN.matcher(this.properties.getJdbc()).find()) {
+            props.setProperty(JDBC_URL_ENCRYPTION_PROPERTY, Boolean.FALSE.toString());
+        }
 
         return props;
     }
@@ -385,7 +406,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addSequences(DbEntity entity) throws DatabaseEngineException {
+    protected void addSequences(DbEntity entity) {
         /*
          * SQL Server uses IDENTITY to perform sequencing.
          */
@@ -437,7 +458,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void dropSequences(DbEntity entity) throws DatabaseEngineException {
+    protected void dropSequences(DbEntity entity) {
         /*
          * SQL Server uses IDENTITY for sequencing.
          */

@@ -622,7 +622,7 @@
         <profile>
             <id>sqlserver</id>
             <properties>
-                <image.sqlserver>mcr.microsoft.com/mssql/server:2017-CU17</image.sqlserver>
+                <image.sqlserver>mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04</image.sqlserver>
             </properties>
             <build>
                 <plugins>
