@@ -86,7 +86,7 @@
             <dependency>
                 <groupId>com.microsoft.sqlserver</groupId>
                 <artifactId>mssql-jdbc</artifactId>
-                <version>9.4.0.jre8</version>
+                <version>10.2.0.jre8</version>
             </dependency>
             <dependency>
                 <groupId>org.jmockit</groupId>
@@ -622,7 +622,7 @@
         <profile>
             <id>sqlserver</id>
             <properties>
-                <image.sqlserver>mcr.microsoft.com/mssql/server:2017-CU17</image.sqlserver>
+                <image.sqlserver>mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04</image.sqlserver>
             </properties>
             <build>
                 <plugins>
