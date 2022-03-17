@@ -197,14 +197,22 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
         this.scheduler = Executors.newScheduledThreadPool(
                 1,
-                new ThreadFactoryBuilder().setNameFormat("MultiThreadedBatch-scheduler-" + name + "-%d").build()
+                new ThreadFactoryBuilder()
+                        .setNameFormat("MultiThreadedBatch-scheduler-" + name + "-%d")
+                        .setUncaughtExceptionHandler((thread, throwable) ->
+                                logger.error("Uncaught exception in scheduler worker thread.", throwable))
+                        .build()
         );
 
         this.flusher = new ThreadPoolExecutor(
                 numberOfThreads, numberOfThreads,
                 0L, TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(batchConfig.getExecutorCapacity()),
-                new ThreadFactoryBuilder().setNameFormat("MultiThreadedBatch-" + name + "-%d").build()
+                new ThreadFactoryBuilder()
+                        .setNameFormat("MultiThreadedBatch-" + name + "-%d")
+                        .setUncaughtExceptionHandler((thread, throwable) ->
+                                logger.error("Uncaught exception in flusher worker thread.", throwable))
+                        .build()
         );
 
         scheduler.scheduleAtFixedRate(periodicFlushTask(), 0, batchTimeoutMs + SALT, TimeUnit.MILLISECONDS);

@@ -210,7 +210,7 @@ public abstract class AbstractBatchConfig<PB extends PdbBatch, SELF extends Abst
      *
      * @param <PB>   The type of {@link PdbBatch} that the config built from this builder applies to.
      * @param <BC>   The type of {@link BatchConfig} that this builder generates.
-     * @param <SELF> The concrete type of concrete {@link Builder} overriding this abstract class.
+     * @param <SELF> The concrete type of {@link Builder} overriding this abstract class.
      */
     public abstract static class Builder<
             PB extends PdbBatch,
