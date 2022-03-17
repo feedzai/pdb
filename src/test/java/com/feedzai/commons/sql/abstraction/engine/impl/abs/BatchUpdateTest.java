@@ -98,7 +98,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Tests for AbstractBatch.
+ * Tests for {@link PdbBatch} implementations.
  *
  * @author Paulo Leitao (paulo.leitao@feedzai.com)
  * @since 2.1.4
@@ -651,8 +651,8 @@ public class BatchUpdateTest {
     }
 
     /**
-     * Tests that there is no race condition between the {@link AbstractBatch#destroy()} and {@link AbstractBatch#run()}
-     * methods.
+     * Tests that there is no race condition between the {@link AbstractBatch#destroy()} (called by
+     * {@link AbstractBatch#close()}) and {@link AbstractBatch#run()} methods.
      * <p>
      * This is a regression test for PULSEDEV-18139, where a race condition was causing the scheduler to attempt to
      * call run while it another thread was already inside `destroy` but had not yet called shutdown on the scheduler.
