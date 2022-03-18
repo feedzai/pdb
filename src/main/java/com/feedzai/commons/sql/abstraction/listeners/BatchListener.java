@@ -18,10 +18,10 @@ package com.feedzai.commons.sql.abstraction.listeners;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 
 /**
- * Listener interface to add behavior after executing batch
- * operations on databases (e.g. write rows to file).
+ * Listener interface to add behavior after executing batch operations on databases (e.g. write rows to file).
  *
  * @author João Fernandes (joao.fernandes@feedzai.com)
+ * @implSpec The method calls on the listener should not block nor throw any exceptions.
  * @since 2.8.1
  */
 public interface BatchListener {

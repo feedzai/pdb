@@ -30,34 +30,23 @@ public class NoopMetricsListener implements MetricsListener {
      */
     public static final NoopMetricsListener INSTANCE = new NoopMetricsListener();
 
-    /**
-     * Private constructor to prevent direct instantiation.
-     */
-    private NoopMetricsListener() {
-    }
-
     @Override
     public void onEntryAdded() {
         // do nothing
     }
 
     @Override
-    public void onFlush(final int flushEntriesCount) {
+    public void onFlushTriggered() {
         // do nothing
     }
 
     @Override
-    public void onFlushed(final int flushEntriesCount) {
+    public void onFlushStarted(long elapsed, int flushEntriesCount) {
         // do nothing
     }
 
     @Override
-    public void onFlushFailure() {
-        // do nothing
-    }
-
-    @Override
-    public void onFlushSuccess(final long elapsed) {
+    public void onFlushFinished(final long elapsed, final int successfulEntriesCount, final int failedEntriesCount) {
         // do nothing
     }
 }

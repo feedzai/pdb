@@ -24,6 +24,8 @@ import java.util.concurrent.CompletableFuture;
  * Interface specifying a batch that periodically flushes pending insertions to the database.
  *
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
+ * @implSpec Implementations are expected to have a constructor annotated with {@link javax.inject.Inject}, so that
+ * instances can be generated from config using Guice injection.
  */
 public interface PdbBatch extends AutoCloseable {
 

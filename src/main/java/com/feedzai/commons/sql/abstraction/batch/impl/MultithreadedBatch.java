@@ -20,7 +20,6 @@ import com.feedzai.commons.sql.abstraction.batch.AbstractPdbBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
 import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
@@ -33,6 +32,7 @@ import org.slf4j.MarkerFactory;
 
 import javax.inject.Inject;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -288,28 +288,14 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
     @Override
     public CompletableFuture<Void> flushAsync() {
-        final CompletableFuture<Void> flushAsyncFuture = flushAsyncInternal();
+        this.metricsListener.onFlushTriggered();
+        final long flushTriggeredMs = System.currentTimeMillis();
+        // Reset the last flush timestamp, even if the batch is empty or flush fails
+        lastFlush = flushTriggeredMs;
 
-        if (!flushAsyncFuture.isDone()) {
-            /*
-             Add the future to the set of pending futures, so that the blocking flush() can wait for all of them.
-             When done, the future removes itself (if done already, all this can be skipped).
-             */
-            pendingFlushFutures.add(flushAsyncFuture);
-            flushAsyncFuture.thenRun(() -> pendingFlushFutures.remove(flushAsyncFuture));
-        }
-
-        return flushAsyncFuture;
-    }
-
-    /**
-     * Internal method to perform flushes of pending batches asynchronously.
-     *
-     * @return A void {@link CompletableFuture} that completes when the flush action finishes.
-     */
-    private CompletableFuture<Void> flushAsyncInternal() {
         // No-op if batch is empty
         if (buffer.isEmpty()) {
+            onFlushFinished(flushTriggeredMs, Collections.emptyList(), Collections.emptyList());
             logger.trace("[{}] Batch empty, not flushing", name);
             return CompletableFuture.completedFuture(null);
         }
@@ -318,42 +304,53 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
         buffer.drainTo(temp);
 
         if (temp.isEmpty()) {
+            onFlushFinished(flushTriggeredMs, Collections.emptyList(), Collections.emptyList());
             logger.trace("[{}] Batch empty, not flushing", name);
             return CompletableFuture.completedFuture(null);
         }
 
-        this.metricsListener.onFlush(temp.size());
-
         try {
-            return CompletableFuture.runAsync(() -> {
-                flush(temp);
-                this.metricsListener.onFlushed(temp.size());
-            }, this.flusher);
+            final CompletableFuture<Void> flushAsyncFuture = CompletableFuture.runAsync(() -> flush(flushTriggeredMs, temp), this.flusher);
+
+            if (!flushAsyncFuture.isDone()) {
+                /*
+                 Add the future to the set of pending futures, so that the blocking flush() can wait for all of them.
+                 When done, the future removes itself (if done already, all this can be skipped).
+                 */
+                this.pendingFlushFutures.add(flushAsyncFuture);
+                flushAsyncFuture.whenComplete((unused, throwable) -> this.pendingFlushFutures.remove(flushAsyncFuture));
+            }
+
+            return flushAsyncFuture;
+
         } catch (final RejectedExecutionException e) {
             logger.trace("[{}] Rejected execution while flushing batch", name);
-            onFlushFailure(temp);
-            return CompletableFuture.completedFuture(null);
-        } finally {
-            this.metricsListener.onFlushed(temp.size());
+
+            onFlushFinished(flushTriggeredMs, Collections.emptyList(), temp);
+
+            final CompletableFuture<Void> flushFuture = new CompletableFuture<>();
+            flushFuture.completeExceptionally(e);
+            return flushFuture;
         }
     }
 
     /**
      * Flushes the given list batch entries to {@link DatabaseEngine} immediately.
      *
-     * @param temp List of batch entries to be written to the database.
+     * @param flushTriggeredMs The timestamp (in milliseconds since Unix epoch) when batch flush was triggered.
+     * @param batchEntries     List of batch entries to be written to the database.
      */
-    private void flush(final List<BatchEntry> temp) {
-        final long start = System.currentTimeMillis();
-        this.lastFlush = start;
+    private void flush(final long flushTriggeredMs, final List<BatchEntry> batchEntries) {
         final DatabaseEngine de = dbEnginesMap.computeIfAbsent(Thread.currentThread().getId(), ignored -> dbEngineSupplier.get());
+        this.metricsListener.onFlushStarted(flushTriggeredMs, batchEntries.size());
 
         try {
-            processBatch(de, temp);
+            processBatch(de, batchEntries);
 
-            final long elapsed = System.currentTimeMillis() - start;
-            onFlushSuccess(temp, elapsed);
-            logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, elapsed, temp.size());
+            onFlushFinished(flushTriggeredMs, batchEntries, Collections.emptyList());
+
+            logger.trace("[{}] Batch flushed. Took {} ms, {} rows.",
+                    name, System.currentTimeMillis() - flushTriggeredMs, batchEntries.size());
 
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
@@ -376,7 +373,7 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
                         de.rollback();
                     }
 
-                    processBatch(de, temp);
+                    processBatch(de, batchEntries);
 
                     success = true;
 
@@ -408,16 +405,17 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
                     }
                 }
 
-                onFlushFailure(temp);
+                onFlushFinished(flushTriggeredMs, Collections.emptyList(), batchEntries);
+
                 final String msg = "[{}] Error occurred while flushing. Aborting batch flush.";
                 confidentialLogger.error(DEV, msg, name, e);
                 if (confidentialLogger != logger) {
                     logger.error(DEV, msg, name);
                 }
             } else {
-                final long elapsed = System.currentTimeMillis() - start;
-                onFlushSuccess(temp, elapsed);
-                logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name, elapsed, retryCount, temp.size());
+                onFlushFinished(flushTriggeredMs, batchEntries, Collections.emptyList());
+                logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.",
+                        name, System.currentTimeMillis() - flushTriggeredMs, retryCount, batchEntries.size());
             }
         } finally {
             try {
@@ -435,49 +433,26 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
     }
 
     /**
-     * Notifies listeners when called upon flush failure.
+     * Notifies the listeners when the flush finishes.
      *
-     * @param entries The entries that were part of the batch that failed.
+     * @param flushTriggeredMs  The timestamp (in milliseconds since Unix epoch) when batch flush was triggered.
+     * @param successfulEntries The entries that were part of the batch that succeeded.
+     * @param failedEntries     The entries that were part of the batch that failed.
      */
-    private void onFlushFailure(final List<BatchEntry> entries) {
-        this.metricsListener.onFlushFailure();
-        this.batchListener.onFailure(entries.toArray(new BatchEntry[0]));
-    }
+    private void onFlushFinished(final long flushTriggeredMs,
+                                 final List<BatchEntry> successfulEntries,
+                                 final List<BatchEntry> failedEntries) {
 
-    /**
-     * Notifies listeners when called upon flush success.
-     *
-     * @param entries The entries that were part of the batch that succeeded.
-     * @param elapsed The time elapsed (in milliseconds) since the batch flush was triggered.
-     */
-    private void onFlushSuccess(final List<BatchEntry> entries, final long elapsed) {
-        this.metricsListener.onFlushSuccess(elapsed);
-        this.batchListener.onSuccess(entries.toArray(new BatchEntry[0]));
-    }
+        final long elapsed = System.currentTimeMillis() - flushTriggeredMs;
+        this.metricsListener.onFlushFinished(elapsed, successfulEntries.size(), failedEntries.size());
 
-    /**
-     * Processes all batch entries.
-     * <p>
-     * This is done by starting a transaction, adding all {@link BatchEntry batch entries} to their respective prepared
-     * statements, flushing them and finally performing a commit on the transaction (which will finish that transaction).
-     *
-     * @param de           The {@link DatabaseEngine} on which to perform the flush.
-     * @param batchEntries The list of batch entries to be flushed.
-     * @throws DatabaseEngineException If the operation failed.
-     */
-    private void processBatch(final DatabaseEngine de, final List<BatchEntry> batchEntries) throws DatabaseEngineException {
-        /*
-        Begin transaction before the addBatch calls, in order to force the retry of the connection if it was lost during
-         or since the last batch. Otherwise the addBatch call that uses a prepared statement will fail.
-         */
-        de.beginTransaction();
-
-        for (final BatchEntry entry : batchEntries) {
-            de.addBatch(entry.getTableName(), entry.getEntityEntry());
+        if (!failedEntries.isEmpty()) {
+            this.batchListener.onFailure(failedEntries.toArray(new BatchEntry[0]));
         }
 
-        de.flush();
-        de.commit();
+        if (!successfulEntries.isEmpty()) {
+            this.batchListener.onSuccess(successfulEntries.toArray(new BatchEntry[0]));
+        }
     }
 
     /**

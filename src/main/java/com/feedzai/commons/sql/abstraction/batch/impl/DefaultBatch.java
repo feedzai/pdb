@@ -21,8 +21,6 @@ import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 
 import javax.inject.Inject;
-import java.time.Duration;
-import java.util.Optional;
 
 /**
  * The default batch implementation.
@@ -43,20 +41,7 @@ public class DefaultBatch extends AbstractBatch implements PdbBatch {
      */
     @Inject
     public DefaultBatch(final DatabaseEngine de, final DefaultBatchConfig config) {
-        super(
-                de,
-                config.getName(),
-                config.getBatchSize(),
-                config.getBatchTimeout().toMillis(),
-                Optional.ofNullable(config.getMaxAwaitTimeShutdown())
-                        .map(Duration::toMillis)
-                        .orElse(de.getProperties().getMaximumAwaitTimeBatchShutdown()),
-                config.getBatchListener(),
-                config.getMaxFlushRetries(),
-                config.getFlushRetryDelay().toMillis(),
-                config.getConfidentialLogger().orElse(logger)
-        );
-
+        super(de, config);
         start();
     }
 }

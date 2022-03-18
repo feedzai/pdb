@@ -31,12 +31,6 @@ public class NoopBatchListener implements BatchListener {
      */
     public static final NoopBatchListener INSTANCE = new NoopBatchListener();
 
-    /**
-     * Private constructor to prevent direct instantiation.
-     */
-    private NoopBatchListener() {
-    }
-
     @Override
     public void onFailure(final BatchEntry[] rowsFailed) {
         // do nothing

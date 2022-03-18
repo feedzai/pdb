@@ -20,6 +20,7 @@ import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import org.slf4j.Logger;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Optional;
@@ -37,6 +38,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The batch class.
      */
+    @Nonnull
     Class<C> getBatchClass();
 
     /**
@@ -44,6 +46,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The batch name.
      */
+    @Nonnull
     String getName();
 
     /**
@@ -62,6 +65,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The batch timeout.
      */
+    @Nonnull
     Duration getBatchTimeout();
 
     /**
@@ -86,6 +90,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The time delay between flush retries.
      */
+    @Nonnull
     Duration getFlushRetryDelay();
 
     /**
@@ -93,6 +98,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The {@link BatchListener}.
      */
+    @Nonnull
     BatchListener getBatchListener();
 
     /**
@@ -101,6 +107,7 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The {@link MetricsListener}.
      */
+    @Nonnull
     MetricsListener getMetricsListener();
 
     /**
@@ -108,5 +115,6 @@ public interface BatchConfig<C extends PdbBatch> {
      *
      * @return The {@link Optional} confidential logger.
      */
+    @Nonnull
     Optional<Logger> getConfidentialLogger();
 }

@@ -36,6 +36,8 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -202,7 +204,7 @@ public class BatchUpdateTest {
     @Test
     public void batchInsertFlushBySizeTest() throws Exception {
         final int numTestEntries = 5;
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
 
@@ -262,7 +264,7 @@ public class BatchUpdateTest {
     @Test(timeout = 30000)
     public void batchInsertFlushBySizeWithDBErrorTest() throws Exception {
         final int numTestEntries = 5;
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
 
@@ -295,11 +297,11 @@ public class BatchUpdateTest {
     /**
      * Checks that batch entries are passed to onFlushFailure on DB errors when the batch timeout expires.
      */
-    @Test
+    @Test(timeout = 30000)
     public void batchInsertFlushByTimeWithDBErrorTest() throws Exception {
         final int numTestEntries = 5;
         final long batchTimeout = 1000;
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
 
@@ -340,7 +342,7 @@ public class BatchUpdateTest {
     public void batchInsertFlushRetryAfterDBErrorTest() throws Exception {
         final int numTestEntries = 5;
         final int numRetries = 2;
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
 
@@ -395,7 +397,7 @@ public class BatchUpdateTest {
      */
     @Test
     public void batchInsertFlushRetryAfterDBConnectionErrorTest() throws Exception {
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
         final AtomicBoolean allowConnection = new AtomicBoolean(true);
         final ThreadLocal<Integer> failedConnectionsCount = ThreadLocal.withInitial(() -> 0);
 
@@ -485,7 +487,7 @@ public class BatchUpdateTest {
     public void batchInsertFlushAbortAfterExhaustingRetriesTest() throws Exception {
         final int numTestEntries = 5;
         final int numRetries = 2;
-        final MockBatchListener batchListener = new MockBatchListener();
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
 
@@ -527,6 +529,79 @@ public class BatchUpdateTest {
 
         // Check that entries were added to onFlushFailure().
         assertEquals("Entries were added to failed", numTestEntries, batchListener.failed.size());
+    }
+
+    /**
+     * Checks that the {@link MetricsListener} reports metrics events correctly.
+     */
+    @Test
+    public void metricsListenerTest() throws Exception {
+        final TestMetricsListener metricsListener = new TestMetricsListener();
+        final AtomicBoolean allowFlush = new AtomicBoolean(true);
+
+        addTestEntity();
+
+        // Set a big batch size and timeout, flushes are going to be explicitly triggered in this test
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("metricsListenerTest")
+                .withBatchSize(1000)
+                .withBatchTimeout(Duration.ofSeconds(1000))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withMetricsListener(metricsListener)
+                .build()
+        );
+
+        // Simulate failures in beginTransaction() for flush to fail
+        new MockUp<AbstractDatabaseEngine>(AbstractDatabaseEngine.class) {
+            @Mock
+            void beginTransaction(final Invocation inv) throws DatabaseEngineRuntimeException {
+                if (allowFlush.get()) {
+                    inv.proceed();
+                } else {
+                    throw new DatabaseEngineRuntimeException("Error !");
+                }
+            }
+        };
+
+        final List<EntityEntry> successEntries = ImmutableList.of(getTestEntry(0), getTestEntry(1));
+        final List<EntityEntry> failEntries = ImmutableList.of(getTestEntry(2), getTestEntry(3));
+
+        // First flush is empty, should only report flush triggered and finished, not started
+        batch.flush();
+
+        // Second flush should succeed: should report 2 entries added, flush triggered, started and finished with those entries
+        for (final EntityEntry successEntry : successEntries) {
+            batch.add("TEST", successEntry);
+        }
+        batch.flush();
+
+        // Third flush should fail: should report 2 entries added, flush triggered, started and finished with those entries
+        allowFlush.set(false);
+        for (final EntityEntry failEntry : failEntries) {
+            batch.add("TEST", failEntry);
+        }
+        batch.flush();
+
+        assertEquals("All added entries should be counted", 4, metricsListener.addedCounter.get());
+
+        assertEquals("All flushes should be counted", 3, metricsListener.flushTriggerCounter.get());
+
+        assertThat(metricsListener.startedMetrics)
+                .as("All started flushes should be counted")
+                .hasSize(2)
+                .as("All started flushes should have 2 entries")
+                .allMatch(entry -> entry.successfulEntriesCount == 2 && entry.failedEntriesCount == 0);
+
+        assertEquals("All finished flushes should be counted", 3, metricsListener.finishedMetrics.size());
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("First finished metric should not contain any entries (empty flush).")
+                .matches(entry -> entry.successfulEntriesCount == 0 && entry.failedEntriesCount == 0);
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("Second finished metric should only contain 2 successful entries.")
+                .matches(entry -> entry.successfulEntriesCount == 2 && entry.failedEntriesCount == 0);
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("Third finished metric should only contain 2 failed entries (flush failed on purpose).")
+                .matches(entry -> entry.successfulEntriesCount == 0 && entry.failedEntriesCount == 2);
     }
 
     /**
@@ -719,14 +794,14 @@ public class BatchUpdateTest {
     }
 
     /**
-     * Helper method to check that the given number of entries appear on the {@link MockBatchListener} failed list and
+     * Helper method to check that the given number of entries appear on the {@link TestBatchListener} failed list and
      * correspond to the test entries originally added to the batch.
      *
      * @param batchListener The mocked batch listener used in the batch.
      * @param numEntries    The expected number of test entries in the failed list.
      * @throws InterruptedException If this check is interrupted while waiting.
      */
-    private void checkFailedEntries(final MockBatchListener batchListener, final int numEntries) throws InterruptedException {
+    private void checkFailedEntries(final TestBatchListener batchListener, final int numEntries) throws InterruptedException {
         final List<BatchEntry> failedEntries = new ArrayList<>();
 
         while (true) {
@@ -796,7 +871,7 @@ public class BatchUpdateTest {
     /**
      * A {@link BatchListener} for the tests.
      */
-    private static class MockBatchListener implements BatchListener {
+    private static class TestBatchListener implements BatchListener {
 
         /**
          * The entries that succeeded to be persisted.
@@ -807,12 +882,6 @@ public class BatchUpdateTest {
          * The entries that failed to be persisted.
          */
         final BlockingQueue<BatchEntry> failed = new LinkedBlockingQueue<>();
-
-        /**
-         * Default constructor.
-         */
-        public MockBatchListener() {
-        }
 
         @Override
         public void onFailure(final BatchEntry[] rowsFailed) {
@@ -825,4 +894,76 @@ public class BatchUpdateTest {
         }
     }
 
+    /**
+     * A {@link MetricsListener} for the tests.
+     */
+    private static class TestMetricsListener implements MetricsListener {
+
+        /**
+         * Class to hold flush metrics values.
+         */
+        static class FlushMetricsEntry {
+
+            /**
+             * Number of entries successfully flushed/added.
+             */
+            int successfulEntriesCount;
+
+            /**
+             * Number of entries that failed to be flushed.
+             */
+            int failedEntriesCount;
+
+            /**
+             * Constructor for a new metric entry.
+             *
+             * @param successfulEntriesCount Number of entries successfully flushed/added.
+             * @param failedEntriesCount     Number of entries that failed to be flushed.
+             */
+            public FlushMetricsEntry(final int successfulEntriesCount, final int failedEntriesCount) {
+                this.successfulEntriesCount = successfulEntriesCount;
+                this.failedEntriesCount = failedEntriesCount;
+            }
+        }
+
+        /**
+         * The counter for "entry added" events.
+         */
+        final AtomicInteger addedCounter = new AtomicInteger();
+
+        /**
+         * The counter for "flush triggered" events.
+         */
+        final AtomicInteger flushTriggerCounter = new AtomicInteger();
+
+        /**
+         * A queue to hold metrics for "flush started" events.
+         */
+        final BlockingQueue<FlushMetricsEntry> startedMetrics = new LinkedBlockingQueue<>();
+
+        /**
+         * A queue to hold metrics for "flush finished" events.
+         */
+        final BlockingQueue<FlushMetricsEntry> finishedMetrics = new LinkedBlockingQueue<>();
+
+        @Override
+        public void onEntryAdded() {
+            addedCounter.getAndIncrement();
+        }
+
+        @Override
+        public void onFlushTriggered() {
+            flushTriggerCounter.getAndIncrement();
+        }
+
+        @Override
+        public void onFlushStarted(final long elapsed, final int flushEntriesCount) {
+            startedMetrics.add(new FlushMetricsEntry(flushEntriesCount, 0));
+        }
+
+        @Override
+        public void onFlushFinished(final long elapsed, final int successfulEntriesCount, final int failedEntriesCount) {
+            finishedMetrics.add(new FlushMetricsEntry(successfulEntriesCount, failedEntriesCount));
+        }
+    }
 }

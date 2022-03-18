@@ -20,6 +20,9 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
@@ -28,6 +31,8 @@ import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -37,8 +42,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import static java.util.Objects.isNull;
 
 /**
  * A Batch that periodically flushes pending insertions to the database.
@@ -138,7 +141,12 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      *
      * @since 2.8.1
      */
-    protected Optional<BatchListener> batchListener = Optional.empty();
+    protected BatchListener batchListener;
+
+    /**
+     * The listener for events that can be used to collect metrics.
+     */
+    private final MetricsListener metricsListener;
 
     /**
      * The number of times to retry a batch flush upon failure.
@@ -152,6 +160,32 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * Defaults to {@value DEFAULT_RETRY_INTERVAL}.
      */
     protected final long flushRetryDelay;
+
+    /**
+     * Creates a new instance of {@link AbstractBatch}.
+     *
+     * @param de     The database engine.
+     * @param config The batch configuration.
+     */
+    protected AbstractBatch(final DatabaseEngine de, final BatchConfig<?> config) {
+        Objects.requireNonNull(de, "The provided database engine is null.");
+        Objects.requireNonNull(config, "The provided config is null.");
+
+        this.de = de;
+        this.batchSize = config.getBatchSize();
+        this.batch = batchSize;
+        this.batchTimeout = config.getBatchTimeout().toMillis();
+        this.lastFlush = System.currentTimeMillis();
+        this.name = config.getName();
+        this.maxAwaitTimeShutdown = Optional.ofNullable(config.getMaxAwaitTimeShutdown())
+                .map(Duration::toMillis)
+                .orElse(de.getProperties().getMaximumAwaitTimeBatchShutdown());
+        this.batchListener = config.getBatchListener();
+        this.metricsListener = config.getMetricsListener();
+        this.maxFlushRetries = config.getMaxFlushRetries();
+        this.flushRetryDelay = config.getFlushRetryDelay().toMillis();
+        this.confidentialLogger = config.getConfidentialLogger().orElse(logger);
+    }
 
     /**
      * Creates a new instance of {@link AbstractBatch} with a {@link BatchListener}.
@@ -168,7 +202,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param confidentialLogger   The confidential logger.
      *
      * @since 2.8.8
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
+    @Deprecated
     protected AbstractBatch(
         final DatabaseEngine de,
         final String name,
@@ -188,10 +224,11 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
         this.lastFlush = System.currentTimeMillis();
         this.name = Strings.isNullOrEmpty(name) ? "Anonymous Batch" : name;
         this.maxAwaitTimeShutdown = maxAwaitTimeShutdown;
-        this.batchListener = Optional.ofNullable(batchListener);
+        this.batchListener = Optional.ofNullable(batchListener).orElse(NoopBatchListener.INSTANCE);
+        this.metricsListener = NoopMetricsListener.INSTANCE;
         this.maxFlushRetries = maxFlushRetries;
         this.flushRetryDelay = flushRetryDelay;
-        this.confidentialLogger = isNull(confidentialLogger) ? logger : confidentialLogger;
+        this.confidentialLogger = Optional.ofNullable(confidentialLogger).orElse(logger);
     }
 
     /**
@@ -208,7 +245,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
      *
      * @since 2.8.1
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
+    @Deprecated
     protected AbstractBatch(
             final DatabaseEngine de,
             final String name,
@@ -232,7 +271,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param batchListener        The listener that will be invoked whenever some batch operation fail or succeeds to persist.
      *
      * @since 2.8.1
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
+    @Deprecated
     protected AbstractBatch(
         final DatabaseEngine de,
         final String name,
@@ -257,7 +298,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param flushRetryDelay      The time interval (milliseconds) to wait between batch flush retries.
      *
      * @since 2.1.12
-     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, String, int, long, long, BatchListener, int, long)} instead.
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
     @Deprecated
     protected AbstractBatch(
@@ -283,7 +324,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param failureListener      The listener that will be invoked whenever some batch operation fail to persist.
      *
      * @since 2.1.11
-     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, String, int, long, long, BatchListener)} instead.
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
     @Deprecated
     protected AbstractBatch(
@@ -304,7 +345,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param batchSize            The batch size.
      * @param batchTimeout         The batch timeout.
      * @param maxAwaitTimeShutdown The maximum await time for the batch to shutdown.
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
+    @Deprecated
     protected AbstractBatch(final DatabaseEngine de, String name, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
         this(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, (BatchListener) null);
     }
@@ -315,11 +358,12 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param de           The database engine.
      * @param batchSize    The batch size.
      * @param batchTimeout The batch timeout.
+     * @deprecated Use {@link #AbstractBatch(DatabaseEngine, BatchConfig)} instead.
      */
+    @Deprecated
     protected AbstractBatch(final DatabaseEngine de, final int batchSize, final long batchTimeout, final long maxAwaitTimeShutdown) {
         this(de, null, batchSize, batchTimeout, maxAwaitTimeShutdown);
     }
-
 
     /**
      * Starts the timer task.
@@ -379,6 +423,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     public void add(BatchEntry batchEntry) throws DatabaseEngineException {
         bufferLock.lock();
         try {
+            this.metricsListener.onEntryAdded();
             buffer.add(batchEntry);
             batch--;
         } finally {
@@ -406,6 +451,8 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @implSpec Same as {@link #flush(boolean)} with {@link false}.
      */
     public void flush() {
+        this.metricsListener.onFlushTriggered();
+        final long flushTriggeredMs = System.currentTimeMillis();
         List<BatchEntry> temp;
 
         bufferLock.lock();
@@ -415,6 +462,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
 
             // No-op if batch is empty
             if (batch == batchSize) {
+                onFlushFinished(flushTriggeredMs, Collections.emptyList(), Collections.emptyList());
                 logger.trace("[{}] Batch empty, not flushing", name);
                 return;
             }
@@ -433,12 +481,13 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
         long start = System.currentTimeMillis();
         try {
             flushTransactionLock.lock();
+            this.metricsListener.onFlushStarted(flushTriggeredMs, temp.size());
             start = System.currentTimeMillis();
 
-            processBatch(temp);
+            processBatch(de, temp);
 
-            onFlushSuccess(temp.toArray(new BatchEntry[0]));
-            logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, (System.currentTimeMillis() - start), temp.size());
+            onFlushFinished(flushTriggeredMs, temp, Collections.emptyList());
+            logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, System.currentTimeMillis() - start, temp.size());
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
                 final String msg = "[{}] Error occurred while flushing. Retrying.";
@@ -460,7 +509,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                         de.rollback();
                     }
 
-                    processBatch(temp);
+                    processBatch(de, temp);
 
                     success = true;
                 } catch (final InterruptedException ex) {
@@ -490,16 +539,17 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                     }
                 }
 
-                onFlushFailure(temp.toArray(new BatchEntry[0]));
+                onFlushFinished(flushTriggeredMs, Collections.emptyList(), temp);
+
                 final String msg = "[{}] Error occurred while flushing. Aborting batch flush.";
                 confidentialLogger.error(dev, msg, name, e);
                 if (confidentialLogger != logger) {
                     logger.error(dev, msg, name);
                 }
             } else {
-                onFlushSuccess(temp.toArray(new BatchEntry[0]));
-                logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.", name,
-                        (System.currentTimeMillis() - start), retryCount, temp.size());
+                onFlushFinished(flushTriggeredMs, temp, Collections.emptyList());
+                logger.trace("[{}] Batch flushed. Took {} ms, {} retries, {} rows.",
+                        name, System.currentTimeMillis() - start, retryCount, temp.size());
             }
         } finally {
             try {
@@ -556,7 +606,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param entries The entries that are pending to be persisted.
      */
     public void onFlushFailure(final BatchEntry[] entries) {
-        this.batchListener.ifPresent(batchListener -> batchListener.onFailure(entries));
+        batchListener.onFailure(entries);
     }
 
     /**
@@ -567,7 +617,30 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @since 2.8.1
      */
     public void onFlushSuccess(final BatchEntry[] entries) {
-        this.batchListener.ifPresent(batchListener -> batchListener.onSuccess(entries));
+        batchListener.onSuccess(entries);
+    }
+
+    /**
+     * Notifies the listeners when the flush finishes.
+     *
+     * @param flushTriggeredMs  The timestamp (in milliseconds since Unix epoch) when batch flush was triggered.
+     * @param successfulEntries The entries that were part of the batch that succeeded.
+     * @param failedEntries     The entries that were part of the batch that failed.
+     */
+    private void onFlushFinished(final long flushTriggeredMs,
+                                 final List<BatchEntry> successfulEntries,
+                                 final List<BatchEntry> failedEntries) {
+
+        final long elapsed = System.currentTimeMillis() - flushTriggeredMs;
+        this.metricsListener.onFlushFinished(elapsed, successfulEntries.size(), failedEntries.size());
+
+        if (!failedEntries.isEmpty()) {
+            onFlushFailure(failedEntries.toArray(new BatchEntry[0]));
+        }
+
+        if (!successfulEntries.isEmpty()) {
+            onFlushSuccess(successfulEntries.toArray(new BatchEntry[0]));
+        }
     }
 
     @Override
@@ -576,30 +649,6 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
             logger.trace("[{}] Flush timeout occurred", name);
             flush();
         }
-    }
-
-    /**
-     * Processes all batch entries.
-     * <p>
-     * This is done by creating a transaction (by disabling auto-commit), adding all {@link BatchEntry batch entries} to
-     * their respective prepared statements, flush them and finally perform a commit on the transaction (which will
-     * enable auto-commit again afterwards).
-     *
-     * @param batchEntries The list of batch entries to be flush on the DB
-     * @throws DatabaseEngineException If the operation failed
-     */
-    private void processBatch(final List<BatchEntry> batchEntries) throws DatabaseEngineException {
-        // begin the transaction before the addBatch calls in order to force the retry
-        // of the connection if the same was lost during or since the last batch. Otherwise
-        // the addBatch call that uses a prepared statement will fail
-        de.beginTransaction();
-
-        for (final BatchEntry entry : batchEntries) {
-            de.addBatch(entry.getTableName(), entry.getEntityEntry());
-        }
-
-        de.flush();
-        de.commit(); // automatically ends transaction
     }
 
     /**
@@ -612,15 +661,10 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @deprecated The {@link FailureListener} is deprecated and this method will be removed once it is removed.
      */
     public static BatchListener convertToBatchListener(final FailureListener failureListener) {
-        return new BatchListener() {
+        return new NoopBatchListener() {
             @Override
             public void onFailure(final BatchEntry[] rowsFailed) {
                 failureListener.onFailure(rowsFailed);
-            }
-
-            @Override
-            public void onSuccess(final BatchEntry[] rowsSucceeded) {
-                // Do nothing.
             }
         };
     }
