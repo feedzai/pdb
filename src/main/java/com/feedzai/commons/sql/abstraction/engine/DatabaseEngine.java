@@ -17,6 +17,8 @@ package com.feedzai.commons.sql.abstraction.engine;
 
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
@@ -242,6 +244,20 @@ public interface DatabaseEngine extends AutoCloseable {
     Dialect getDialect();
 
     /**
+     * Creates a new {@link PdbBatch} to which entries can be added; it then flushes those entries to the database,
+     * periodically on a set timeout, or when a maximum number of entries has been reached.
+     * <p>
+     * {@link PdbBatch#close()} should be called before closing the session with the database, to dispose of all
+     * the resources such as executors and extra connections.
+     *
+     * @param batchConfig The {@link BatchConfig batch configuration}.
+     * @return The batch.
+     */
+    default <PB extends PdbBatch> PB createBatch(final BatchConfig<PB> batchConfig) {
+        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+    }
+
+    /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of
      * statements in the batch is reached.
      * <p/>
@@ -250,7 +266,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param batchSize    The batch size.
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
      * @return The batch.
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     AbstractBatch createBatch(final int batchSize, final long batchTimeout);
 
     /**
@@ -263,7 +281,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
      * @param batchName    The batch name.
      * @return The batch.
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName);
 
     /**
@@ -283,7 +303,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      *
      * @since 2.8.8
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, final BatchListener batchListener, final Logger confidentialLogger) {
         throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
     }
@@ -325,7 +347,9 @@ public interface DatabaseEngine extends AutoCloseable {
      * @return The batch.
      *
      * @since 2.8.1
+     * @deprecated Use {@link #createBatch(BatchConfig)} instead.
      */
+    @Deprecated
     default AbstractBatch createBatch(final int batchSize, final long batchTimeout, final String batchName, @Nullable final BatchListener batchListener) {
         final FailureListener failureListener = Objects.isNull(batchListener) ? failed -> { } : batchListener::onFailure;
         return createBatch(batchSize, batchTimeout, batchName, failureListener);

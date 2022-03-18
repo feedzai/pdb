@@ -29,7 +29,9 @@ import org.slf4j.Logger;
  * @author Rui Vilao (rui.vilao@feedzai.com)
  * @see AbstractBatch
  * @since 2.0.0
+ * @deprecated Use {@link com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch} instead.
  */
+@Deprecated
 public class DefaultBatch extends AbstractBatch {
 
     /**

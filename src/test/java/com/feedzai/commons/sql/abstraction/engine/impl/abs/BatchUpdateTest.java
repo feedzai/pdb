@@ -18,8 +18,12 @@ package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
-import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
@@ -28,17 +32,19 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
-import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
-import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
-import mockit.Mocked;
+import org.assertj.core.api.ObjectAssert;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -47,17 +53,27 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
@@ -72,16 +88,19 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.JDBC;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.MAX_NUMBER_OF_RETRIES;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
+import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.RETRY_INTERVAL;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 
 /**
- * Tests for AbstractBatch.
+ * Tests for {@link PdbBatch} implementations.
  *
  * @author Paulo Leitao (paulo.leitao@feedzai.com)
  * @since 2.1.4
@@ -93,17 +112,30 @@ public class BatchUpdateTest {
     protected Properties properties;
 
     /**
-     * The {@link AbstractBatch} used in each test (extracted to a field so that it can be closed after the test).
+     * The {@link PdbBatch} used in each test (extracted to a field so that it can be closed after the test).
      */
-    protected AbstractBatch batch;
+    protected PdbBatch batch;
 
     @Parameterized.Parameters
-    public static Collection<DatabaseConfiguration> data() throws Exception {
-        return DatabaseTestUtil.loadConfigurations();
+    public static List<Object[]> data() throws Exception {
+        final Set<DatabaseConfiguration> databaseConfigurations = new HashSet<>(DatabaseTestUtil.loadConfigurations());
+        final Set<Supplier<AbstractBatchConfig.Builder<?, ?, ?>>> batchConfigs = ImmutableSet.of(
+                DefaultBatchConfig::builder,
+                MultithreadedBatchConfig::builder,
+                () -> MultithreadedBatchConfig.builder().withNumberOfThreads(3)
+        );
+
+        return Sets.cartesianProduct(databaseConfigurations, batchConfigs)
+                .stream()
+                .map(List::toArray)
+                .collect(Collectors.toList());
     }
 
     @Parameterized.Parameter
-    public DatabaseConfiguration config;
+    public DatabaseConfiguration dbConfig;
+
+    @Parameterized.Parameter(1)
+    public Supplier<AbstractBatchConfig.Builder<?, ?, ?>> batchConfigBuilderSupplier;
 
     @BeforeClass
     public static void initStatic() {
@@ -115,11 +147,13 @@ public class BatchUpdateTest {
         properties = new Properties() {
 
             {
-                setProperty(JDBC, config.jdbc);
-                setProperty(USERNAME, config.username);
-                setProperty(PASSWORD, config.password);
-                setProperty(ENGINE, config.engine);
+                setProperty(JDBC, dbConfig.jdbc);
+                setProperty(USERNAME, dbConfig.username);
+                setProperty(PASSWORD, dbConfig.password);
+                setProperty(ENGINE, dbConfig.engine);
                 setProperty(SCHEMA_POLICY, "drop-create");
+                setProperty(MAX_NUMBER_OF_RETRIES, "5");
+                setProperty(RETRY_INTERVAL, "1000");
             }
         };
 
@@ -127,10 +161,10 @@ public class BatchUpdateTest {
     }
 
     @After
-    public void cleanup() {
+    public void cleanup() throws Exception {
         engine.close();
         if (batch != null) {
-            batch.destroy();
+            batch.close();
         }
 
     }
@@ -141,21 +175,19 @@ public class BatchUpdateTest {
     @Test
     public void batchInsertExplicitFlushTest() throws Exception {
         final int numTestEntries = 5;
-        DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING)
-                .build();
 
-        engine.addEntity(entity);
+        addTestEntity();
 
-        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, 100000, 1000000);
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertExplicitFlushTest")
+                .withBatchSize(numTestEntries + 1)
+                .withBatchTimeout(Duration.ofSeconds(100))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .build()
+        );
 
         // Add entries to batch no flush should take place because numEntries < batch size and batch timeout is huge
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
@@ -172,35 +204,26 @@ public class BatchUpdateTest {
     @Test
     public void batchInsertFlushBySizeTest() throws Exception {
         final int numTestEntries = 5;
+        final TestBatchListener batchListener = new TestBatchListener();
 
         addTestEntity();
-        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries, 100000, 1000000);
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushBySizeTest")
+                .withBatchSize(numTestEntries)
+                .withBatchTimeout(Duration.ofSeconds(100))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .build()
+        );
 
         // Add entries to batch, no flush needed because #inserted entries = batch size
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
-        // Check entries are in DB
-        checkTestEntriesInDB(numTestEntries);
-    }
-
-    /**
-     * Checks that batch entries are inserted in the DB after the buffer fills up.
-     * <p>
-     * This test creates the necessary batch using the database engine.
-     */
-    @Test
-    public void engineBatchInsertFlushBySizeTest() throws Exception {
-        final int numTestEntries = 5;
-
-        addTestEntity();
-        engine.getProperties().setProperty(PdbProperties.MAXIMUM_TIME_BATCH_SHUTDOWN, "1000000");
-        batch = engine.createBatch(numTestEntries, 100000, "batchInsertWithDBConnDownTest");
-        // Add entries to batch, no flush needed because #inserted entries = batch size
-        for(int i = 0 ; i < numTestEntries; i++) {
-            batch.add("TEST", getTestEntry(i));
-        }
+        // wait for success of flush triggered by batch size, at most 5 seconds
+        batchListener.succeeded.poll(5, TimeUnit.SECONDS);
 
         // Check entries are in DB
         checkTestEntriesInDB(numTestEntries);
@@ -215,8 +238,16 @@ public class BatchUpdateTest {
         final long batchTimeout = 1000;     // Flush after 1 sec
 
         addTestEntity();
-        batch = DefaultBatch.create(engine, "batchInsertWithDBConnDownTest", numTestEntries + 1, batchTimeout, 1000000);
-        for(int i = 0 ; i < numTestEntries; i++) {
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushByTimeTest")
+                .withBatchSize(numTestEntries + 1)
+                .withBatchTimeout(Duration.ofMillis(batchTimeout))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .build()
+        );
+
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
@@ -230,60 +261,68 @@ public class BatchUpdateTest {
     /**
      * Checks that batch entries are passed to onFlushFailure on DB errors when the buffer fills up.
      */
-    @Test
-    public void batchInsertFlushBySizeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
+    @Test(timeout = 30000)
+    public void batchInsertFlushBySizeWithDBErrorTest() throws Exception {
         final int numTestEntries = 5;
+        final TestBatchListener batchListener = new TestBatchListener();
 
-        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
-        batch = MockedBatch.create(
-                engine,
-                "batchInsertWithDBConnDownTest",
-                numTestEntries,
-                100000,
-                1000000,
-                batchListener
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushBySizeWithDBErrorTest")
+                .withBatchSize(numTestEntries)
+                .withBatchTimeout(Duration.ofSeconds(100))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .build()
         );
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
-            engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
-        }};
+        new MockUp<AbstractDatabaseEngine>(AbstractDatabaseEngine.class) {
+            @Mock
+            void beginTransaction() throws DatabaseEngineRuntimeException {
+                throw new DatabaseEngineRuntimeException("Error !");
+            }
+        };
 
         // Add entries to batch, no flush needed because #inserted entries = batch size
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", batchListener.failed.size(), numTestEntries);
+        checkFailedEntries(batchListener, numTestEntries);
     }
 
     /**
      * Checks that batch entries are passed to onFlushFailure on DB errors when the batch timeout expires.
      */
-    @Test
-    public void batchInsertFlushByTimeWithDBErrorTest(@Mocked final DatabaseEngine engine) throws Exception {
+    @Test(timeout = 30000)
+    public void batchInsertFlushByTimeWithDBErrorTest() throws Exception {
         final int numTestEntries = 5;
-        final long batchTimeout = 1000;     // Flush after 1 sec
+        final long batchTimeout = 1000;
+        final TestBatchListener batchListener = new TestBatchListener();
 
-        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
-        batch = MockedBatch.create(
-                engine,
-                "batchInsertWithDBConnDownTest",
-                numTestEntries + 1,
-                batchTimeout,
-                1000000,
-                batchListener
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushByTimeWithDBErrorTest")
+                .withBatchSize(numTestEntries + 1)
+                .withBatchTimeout(Duration.ofMillis(batchTimeout))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .build()
         );
 
         // Simulate failures in beginTransaction() for flush to fail
-        new Expectations() {{
-            engine.beginTransaction(); result = new DatabaseEngineRuntimeException("Error !");
-        }};
+        new MockUp<AbstractDatabaseEngine>(AbstractDatabaseEngine.class) {
+            @Mock
+            void beginTransaction() throws DatabaseEngineRuntimeException {
+                throw new DatabaseEngineRuntimeException("Error !");
+            }
+        };
 
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
@@ -291,7 +330,7 @@ public class BatchUpdateTest {
         Thread.sleep(batchTimeout + 1000);
 
         // Check that entries were added to onFlushFailure()
-        assertEquals("Entries were added to failed", batchListener.failed.size(), numTestEntries);
+        checkFailedEntries(batchListener, numTestEntries);
     }
 
     /**
@@ -303,18 +342,19 @@ public class BatchUpdateTest {
     public void batchInsertFlushRetryAfterDBErrorTest() throws Exception {
         final int numTestEntries = 5;
         final int numRetries = 2;
+        final TestBatchListener batchListener = new TestBatchListener();
 
-        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
-        batch = DefaultBatch.create(
-                engine,
-                "batchInsertFlushRetryAfterDBErrorTest",
-                numTestEntries + 1,
-                10000,
-                1000000,
-                batchListener,
-                numRetries,
-                200
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushRetryAfterDBErrorTest")
+                .withBatchSize(numTestEntries + 1)
+                .withBatchTimeout(Duration.ofSeconds(10))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .withMaxFlushRetries(numRetries)
+                .withFlushRetryDelay(Duration.ofMillis(200))
+                .build()
         );
 
         final AtomicInteger callCounter = new AtomicInteger(0);
@@ -331,7 +371,7 @@ public class BatchUpdateTest {
             }
         };
 
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
@@ -353,6 +393,92 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Checks that flushing batch entries retries successfully on recoverable DB connection failure.
+     */
+    @Test
+    public void batchInsertFlushRetryAfterDBConnectionErrorTest() throws Exception {
+        final TestBatchListener batchListener = new TestBatchListener();
+        final AtomicBoolean allowConnection = new AtomicBoolean(true);
+        final ThreadLocal<Integer> failedConnectionsCount = ThreadLocal.withInitial(() -> 0);
+
+        addTestEntity();
+
+        // Set a big batch size and timeout, flushes are going to be explicitly triggered in this test
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushRetryAfterDBConnectionErrorTest")
+                .withBatchSize(1000)
+                .withBatchTimeout(Duration.ofSeconds(1000))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .build()
+        );
+
+
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            void connect(final Invocation inv) throws Exception {
+                if (allowConnection.get()) {
+                    failedConnectionsCount.set(0);
+                    inv.proceed();
+                } else {
+                    final int count = failedConnectionsCount.get();
+                    if (count == 6) {
+                        allowConnection.set(true);
+                    }
+                    failedConnectionsCount.set(count + 1);
+                    throw new SQLException("Could not connect");
+                }
+            }
+
+            @Mock
+            public Connection getConnection(final Invocation inv) throws Exception {
+                if (!allowConnection.get() && inv.<AbstractDatabaseEngine>getInvokedInstance().checkConnection(false)) {
+                    inv.<Connection>proceed().close();
+                }
+                return inv.proceed();
+            }
+
+            @Mock
+            public DatabaseEngine duplicate(final Invocation inv, final Properties mergeProperties, final boolean copyEntities) {
+                // Temporarily ignore the test blocking the connection, so that it can duplicate
+                final boolean isAllow = allowConnection.get();
+                allowConnection.set(true);
+                try {
+                    return inv.proceed();
+                } finally {
+                    failedConnectionsCount.set(0);
+                    allowConnection.set(isAllow);
+                }
+            }
+        };
+
+        // 1. perform a simple add with a connection ok
+        batch.add("TEST", getTestEntry(0));
+        batch.flush();
+        assertTrue("Check that there were no failure results", batchListener.failed.isEmpty());
+
+        // 2. force an error disallowing the connections to be fetched and disallow new connections to force to exhaust the retry mechanism
+        allowConnection.set(false);
+
+        final EntityEntry failTestEntry = getTestEntry(10);
+        batch.add("TEST", failTestEntry);
+        batch.flush();
+        assertEquals("Check that entry was sent to the failure batch", 1, batchListener.failed.size());
+        final BatchEntry entry = batchListener.failed.take();
+        assertEquals("table name ok?", "TEST", entry.getTableName());
+        assertEquals("test entry ok?", failTestEntry, entry.getEntityEntry());
+
+        // 3. restore the connection and make sure that the code tries to reconnect and doesn't fail the batch
+        allowConnection.set(true);
+        batch.add("TEST", getTestEntry(1));
+        batch.flush();
+        assertTrue("Check that there were no failure results", batchListener.failed.isEmpty());
+
+        // Check entries in DB.
+        checkTestEntriesInDB(2);
+    }
+
+    /**
      * Checks that flushing batch entries fails after exhausting all configured retries.
      *
      * @since 2.1.12
@@ -361,23 +487,24 @@ public class BatchUpdateTest {
     public void batchInsertFlushAbortAfterExhaustingRetriesTest() throws Exception {
         final int numTestEntries = 5;
         final int numRetries = 2;
+        final TestBatchListener batchListener = new TestBatchListener();
 
-        final MockBatchListener batchListener = new MockBatchListener();
         addTestEntity();
-        batch = DefaultBatch.create(
-                engine,
-                "batchInsertFlushRetryAfterDBErrorTest",
-                numTestEntries + 1,
-                10000,
-                1000000,
-                batchListener,
-                numRetries,
-                200
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("batchInsertFlushAbortAfterExhaustingRetriesTest")
+                .withBatchSize(numTestEntries + 1)
+                .withBatchTimeout(Duration.ofSeconds(10))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withBatchListener(batchListener)
+                .withMaxFlushRetries(numRetries)
+                .withFlushRetryDelay(Duration.ofMillis(200))
+                .build()
         );
 
         final AtomicInteger callCounter = new AtomicInteger(0);
 
-        new MockUp<AbstractDatabaseEngine>() {
+        new MockUp<AbstractDatabaseEngine>(AbstractDatabaseEngine.class) {
             // This mock will fail exceptionally for all configured retries (but would succeed if called after that).
             @Mock
             void beginTransaction(final Invocation inv) throws DatabaseEngineRuntimeException {
@@ -389,7 +516,7 @@ public class BatchUpdateTest {
             }
         };
 
-        for(int i = 0 ; i < numTestEntries; i++) {
+        for (int i = 0; i < numTestEntries; i++) {
             batch.add("TEST", getTestEntry(i));
         }
 
@@ -405,16 +532,110 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Checks that the {@link MetricsListener} reports metrics events correctly.
+     */
+    @Test
+    public void metricsListenerTest() throws Exception {
+        final TestMetricsListener metricsListener = new TestMetricsListener();
+        final AtomicBoolean allowFlush = new AtomicBoolean(true);
+
+        addTestEntity();
+
+        // Set a big batch size and timeout, flushes are going to be explicitly triggered in this test
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("metricsListenerTest")
+                .withBatchSize(1000)
+                .withBatchTimeout(Duration.ofSeconds(1000))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .withMetricsListener(metricsListener)
+                .build()
+        );
+
+        // Simulate failures in beginTransaction() for flush to fail
+        new MockUp<AbstractDatabaseEngine>(AbstractDatabaseEngine.class) {
+            @Mock
+            void beginTransaction(final Invocation inv) throws DatabaseEngineRuntimeException {
+                if (allowFlush.get()) {
+                    inv.proceed();
+                } else {
+                    throw new DatabaseEngineRuntimeException("Error !");
+                }
+            }
+        };
+
+        final List<EntityEntry> successEntries = ImmutableList.of(getTestEntry(0), getTestEntry(1));
+        final List<EntityEntry> failEntries = ImmutableList.of(getTestEntry(2), getTestEntry(3));
+
+        // First flush is empty, should only report flush triggered and finished, not started
+        batch.flush();
+
+        // Second flush should succeed: should report 2 entries added, flush triggered, started and finished with those entries
+        for (final EntityEntry successEntry : successEntries) {
+            batch.add("TEST", successEntry);
+        }
+        batch.flush();
+
+        // Third flush should fail: should report 2 entries added, flush triggered, started and finished with those entries
+        allowFlush.set(false);
+        for (final EntityEntry failEntry : failEntries) {
+            batch.add("TEST", failEntry);
+        }
+        batch.flush();
+
+        assertEquals("All added entries should be counted", 4, metricsListener.addedCounter.get());
+
+        assertEquals("All flushes should be counted", 3, metricsListener.flushTriggerCounter.get());
+
+        assertThat(metricsListener.startedMetrics)
+                .as("All started flushes should be counted")
+                .hasSize(2)
+                .as("All started flushes should have 2 entries")
+                .allMatch(entry -> entry.successfulEntriesCount == 2 && entry.failedEntriesCount == 0);
+
+        assertEquals("All finished flushes should be counted", 3, metricsListener.finishedMetrics.size());
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("First finished metric should not contain any entries (empty flush).")
+                .matches(entry -> entry.successfulEntriesCount == 0 && entry.failedEntriesCount == 0);
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("Second finished metric should only contain 2 successful entries.")
+                .matches(entry -> entry.successfulEntriesCount == 2 && entry.failedEntriesCount == 0);
+        assertThat(metricsListener.finishedMetrics.take())
+                .as("Third finished metric should only contain 2 failed entries (flush failed on purpose).")
+                .matches(entry -> entry.successfulEntriesCount == 0 && entry.failedEntriesCount == 2);
+    }
+
+    /**
      * Ensures that the batch transaction is rolled back when the flush fails.
      *
      * @since 2.1.5
      */
     @Test
-    public void flushFreesConnectionOnFailure() throws DatabaseEngineException {
-        batch = DefaultBatch.create(engine, "flushFreesConnectionOnFailure", 2, 1000, 1000000);
+    public void flushFreesConnectionOnFailure() throws Exception {
+        final LinkedBlockingQueue<DatabaseEngine> dbEngines = new LinkedBlockingQueue<>();
+
+        new MockUp<AbstractDatabaseEngine>() {
+            @Mock
+            void connect(final Invocation inv) {
+                dbEngines.add(inv.getInvokedInstance());
+                inv.proceed();
+            }
+        };
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                .withName("flushFreesConnectionOnFailure")
+                .withBatchSize(2)
+                .withBatchTimeout(Duration.ofSeconds(1))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                .build()
+        );
+
         batch.add("unknown_table", entry().build()); // This will only fail when flushing
         batch.flush();
+
         assertFalse("Flush failed but the transaction is still active", engine.isTransactionActive());
+
+        dbEngines.forEach(dbEngine ->
+                assertFalse("Flush failed but the transaction is still active in one of the internal engines", dbEngine.isTransactionActive()));
     }
 
     /**
@@ -424,7 +645,9 @@ public class BatchUpdateTest {
      * @since 2.1.6
      */
     @Test(timeout = 30000)
-    public void testFlushBatchSync() throws DatabaseEngineException, InterruptedException {
+    public void testFlushBatchSync() throws Exception {
+        assumeTrue("Test only applies to DefaultBatch", batchConfigBuilderSupplier instanceof DefaultBatchConfig.DefaultBatchConfigBuilder);
+
         final AtomicInteger transactions = new AtomicInteger();
         final CountDownLatch firstFlushStartedLatch = new CountDownLatch(1);
         final CountDownLatch firstFlushFinishedLatch = new CountDownLatch(1);
@@ -449,18 +672,18 @@ public class BatchUpdateTest {
             }
         };
 
-        final DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING).build();
-
-        engine.addEntity(entity);
+        addTestEntity();
 
         // create a batch with huge batchTimeout, so that it doesn't automatically flush
-        batch = DefaultBatch.create(engine, "testFlushBatchSync", 5, 1000000L, 1000);
+        final DefaultBatch batch = engine.createBatch((DefaultBatchConfig) batchConfigBuilderSupplier.get()
+                .withName("testFlushBatchSync")
+                .withBatchSize(5)
+                .withBatchTimeout(Duration.ofSeconds(1000))
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(1))
+                .build()
+        );
+        this.batch = batch;
+
         batch.add("TEST", entry().set("COL1", 1).build());
 
         final List<String> resultOrder = Collections.synchronizedList(new ArrayList<>());
@@ -503,8 +726,9 @@ public class BatchUpdateTest {
     }
 
     /**
-     * Tests that there is no race condition between the {@link AbstractBatch#destroy()} and {@link AbstractBatch#run()}
-     * methods.
+     * Tests that there is no race condition between the {@link AbstractBatch#destroy()} (called by
+     * {@link AbstractBatch#close()}) and {@link AbstractBatch#run()} methods.
+     * <p>
      * This is a regression test for PULSEDEV-18139, where a race condition was causing the scheduler to attempt to
      * call run while it another thread was already inside `destroy` but had not yet called shutdown on the scheduler.
      * Since those two methods were synchronized, the `run` would not finish while destroy was waiting for all tasks in
@@ -512,29 +736,28 @@ public class BatchUpdateTest {
      * For this test to properly work it is critical that the batch is configured to wait more for the scheduler termination
      * than the test timeout.
      *
-     * @since 2.1.10
      * @throws DatabaseEngineException If the operations on the engine fail.
+     * @since 2.1.10
      */
     @Test(timeout = 30000)
-    public void testBatchRunDestroyRace() throws DatabaseEngineException {
-        final DbEntity entity = dbEntity()
-                .name("TEST")
-                .addColumn("COL1", INT)
-                .addColumn("COL2", BOOLEAN)
-                .addColumn("COL3", DOUBLE)
-                .addColumn("COL4", LONG)
-                .addColumn("COL5", STRING).build();
-
-        engine.addEntity(entity);
-
+    public void testBatchRunDestroyRace() throws Exception {
+        addTestEntity();
 
         for (int i = 0; i < 40; i++) {
             // The maxAwaitTimeShutdown parameter must be larger than the test timeout.
-            final MockedBatch batch = MockedBatch.create(engine, "test", 5, 10L, 50000);
+            final PdbBatch batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                    .withName("testBatchRunDestroyRace")
+                    .withBatchSize(5)
+                    .withBatchTimeout(Duration.ofMillis(10))
+                    .withMaxAwaitTimeShutdown(Duration.ofSeconds(50))
+                    .build()
+            );
+
             batch.add("TEST", entry().set("COL1", 1).build());
 
             // Call `destroy` which will wait, if the data race occurs, for more than the test timeout
-            batch.destroy();
+            Thread.sleep(200);
+            batch.close();
         }
     }
 
@@ -542,7 +765,7 @@ public class BatchUpdateTest {
      * Create test table.
      */
     private void addTestEntity() throws DatabaseEngineException {
-        DbEntity entity = dbEntity()
+        final DbEntity entity = dbEntity()
                 .name("TEST")
                 .addColumn("COL1", INT)
                 .addColumn("COL2", BOOLEAN)
@@ -550,16 +773,17 @@ public class BatchUpdateTest {
                 .addColumn("COL4", LONG)
                 .addColumn("COL5", STRING)
                 .build();
+
         engine.addEntity(entity);
     }
 
     /**
      * Creates a test row with values dependent on its position.
      *
-     * @param idx  The row position.
-     * @return     The test row.
+     * @param idx The row position.
+     * @return The test row.
      */
-    private EntityEntry getTestEntry(int idx) {
+    private EntityEntry getTestEntry(final int idx) {
         return entry()
                 .set("COL1", 200 + idx)
                 .set("COL2", false)
@@ -570,16 +794,55 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Helper method to check that the given number of entries appear on the {@link TestBatchListener} failed list and
+     * correspond to the test entries originally added to the batch.
+     *
+     * @param batchListener The mocked batch listener used in the batch.
+     * @param numEntries    The expected number of test entries in the failed list.
+     * @throws InterruptedException If this check is interrupted while waiting.
+     */
+    private void checkFailedEntries(final TestBatchListener batchListener, final int numEntries) throws InterruptedException {
+        final List<BatchEntry> failedEntries = new ArrayList<>();
+
+        while (true) {
+            final BatchEntry entry = batchListener.failed.poll(5, TimeUnit.SECONDS);
+            if (entry == null) {
+                break;
+            }
+
+            failedEntries.add(entry);
+        }
+
+        assertEquals("The total number of failed entries should match the entries added to the batch.", numEntries, failedEntries.size());
+
+        failedEntries.sort(Comparator.comparingInt(entry -> (int) entry.getEntityEntry().get("COL1")));
+
+        for (int i = 0; i < failedEntries.size(); i++) {
+            final ObjectAssert<BatchEntry> batchEntryAssert = assertThat(failedEntries.get(i));
+
+            batchEntryAssert.extracting(BatchEntry::getTableName)
+                    .as("Failed entry '%s' should have the correct table name.", i)
+                    .isEqualTo("TEST");
+
+            batchEntryAssert.extracting(BatchEntry::getEntityEntry)
+                    .as("Failed entry '%s' should match the entry added to the batch.", i)
+                    .isEqualTo(getTestEntry(i));
+        }
+    }
+
+    /**
      * Checks that the test table has a given number of rows and that each row corresponds
      * to the row generated with getTestEntry().
      *
-     * @param numEntries  The number of entries
+     * @param numEntries The number of entries
      * @throws DatabaseEngineException If the operations on the engine fail.
      */
     private void checkTestEntriesInDB(int numEntries) throws DatabaseEngineException {
-        List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
+        final List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
+
         assertEquals("Inserted entries not as expected", numEntries, result.size());
-        for(int i = 0 ; i < numEntries ; i++) {
+
+        for (int i = 0; i < numEntries; i++) {
             checkTestEntry(i, result.get(i));
         }
     }
@@ -587,10 +850,10 @@ public class BatchUpdateTest {
     /**
      * Checks that a DB row in a given position matches the test row for that position.
      *
-     * @param idx   The position.
-     * @param row   The DB row.
+     * @param idx The position.
+     * @param row The DB row.
      */
-    private void checkTestEntry(int idx, Map<String,ResultColumn> row) {
+    private void checkTestEntry(int idx, Map<String, ResultColumn> row) {
         assertTrue("COL1 exists", row.containsKey("COL1"));
         assertTrue("COL2 exists", row.containsKey("COL2"));
         assertTrue("COL3 exists", row.containsKey("COL3"));
@@ -606,69 +869,19 @@ public class BatchUpdateTest {
     }
 
     /**
-     * Concrete abstract batch that just collects the entries passed to onFlushFailure,
-     * so it can be checked that onFlushFailure is invoked as expected.
-     */
-    private static class MockedBatch extends AbstractBatch {
-
-        /**
-         * Duration of the sleep in the beginning of the destroy method.
-         */
-        static final long PRE_DESTROY_SLEEP_DURATION = 500L;
-
-        private MockedBatch(final DatabaseEngine de,
-                            final String name,
-                            final int batchSize,
-                            final long batchTimeout,
-                            final long maxAwaitTimeShutdown,
-                            final BatchListener listener) {
-            super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
-        }
-
-        private MockedBatch(DatabaseEngine de, String name, int batchSize, long batchTimeout, long maxAwaitTimeShutdown) {
-            super(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
-        }
-
-        public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                                         final long maxAwaitTimeShutdown, final BatchListener listener) {
-            final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown, listener);
-            b.start();
-            return b;
-        }
-
-        public static MockedBatch create(final DatabaseEngine de, final String name, final int batchSize, final long batchTimeout,
-                                         final long maxAwaitTimeShutdown) {
-            final MockedBatch b = new MockedBatch(de, name, batchSize, batchTimeout, maxAwaitTimeShutdown);
-            b.start();
-            return b;
-        }
-
-        @Override
-        public synchronized void destroy() {
-            Uninterruptibles.sleepUninterruptibly(PRE_DESTROY_SLEEP_DURATION, TimeUnit.MILLISECONDS);
-            super.destroy();
-        }
-    }
-
-    /**
      * A {@link BatchListener} for the tests.
      */
-    private class MockBatchListener implements BatchListener {
+    private static class TestBatchListener implements BatchListener {
 
         /**
          * The entries that succeeded to be persisted.
          */
-        final List<BatchEntry> succeeded = new ArrayList<>();
+        final BlockingQueue<BatchEntry> succeeded = new LinkedBlockingQueue<>();
 
         /**
          * The entries that failed to be persisted.
          */
-        final List<BatchEntry> failed = new ArrayList<>();
-
-        /**
-         * Default constructor.
-         */
-        public MockBatchListener() { }
+        final BlockingQueue<BatchEntry> failed = new LinkedBlockingQueue<>();
 
         @Override
         public void onFailure(final BatchEntry[] rowsFailed) {
@@ -681,4 +894,76 @@ public class BatchUpdateTest {
         }
     }
 
+    /**
+     * A {@link MetricsListener} for the tests.
+     */
+    private static class TestMetricsListener implements MetricsListener {
+
+        /**
+         * Class to hold flush metrics values.
+         */
+        static class FlushMetricsEntry {
+
+            /**
+             * Number of entries successfully flushed/added.
+             */
+            int successfulEntriesCount;
+
+            /**
+             * Number of entries that failed to be flushed.
+             */
+            int failedEntriesCount;
+
+            /**
+             * Constructor for a new metric entry.
+             *
+             * @param successfulEntriesCount Number of entries successfully flushed/added.
+             * @param failedEntriesCount     Number of entries that failed to be flushed.
+             */
+            public FlushMetricsEntry(final int successfulEntriesCount, final int failedEntriesCount) {
+                this.successfulEntriesCount = successfulEntriesCount;
+                this.failedEntriesCount = failedEntriesCount;
+            }
+        }
+
+        /**
+         * The counter for "entry added" events.
+         */
+        final AtomicInteger addedCounter = new AtomicInteger();
+
+        /**
+         * The counter for "flush triggered" events.
+         */
+        final AtomicInteger flushTriggerCounter = new AtomicInteger();
+
+        /**
+         * A queue to hold metrics for "flush started" events.
+         */
+        final BlockingQueue<FlushMetricsEntry> startedMetrics = new LinkedBlockingQueue<>();
+
+        /**
+         * A queue to hold metrics for "flush finished" events.
+         */
+        final BlockingQueue<FlushMetricsEntry> finishedMetrics = new LinkedBlockingQueue<>();
+
+        @Override
+        public void onEntryAdded() {
+            addedCounter.getAndIncrement();
+        }
+
+        @Override
+        public void onFlushTriggered() {
+            flushTriggerCounter.getAndIncrement();
+        }
+
+        @Override
+        public void onFlushStarted(final long elapsed, final int flushEntriesCount) {
+            startedMetrics.add(new FlushMetricsEntry(flushEntriesCount, 0));
+        }
+
+        @Override
+        public void onFlushFinished(final long elapsed, final int successfulEntriesCount, final int failedEntriesCount) {
+            finishedMetrics.add(new FlushMetricsEntry(successfulEntriesCount, failedEntriesCount));
+        }
+    }
 }
