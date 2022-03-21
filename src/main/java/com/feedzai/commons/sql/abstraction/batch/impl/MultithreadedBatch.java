@@ -241,6 +241,12 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
         remainingTimeout = Math.max(this.maxAwaitTimeShutdownMs - (System.currentTimeMillis() - start), 1);
         orderlyShutdownExecutor(flusher, remainingTimeout);
 
+        try {
+            this.metricsListener.close();
+        } catch (final Exception e) {
+            // ignore, continue closing DB connections
+        }
+
         logger.trace("Closing internal database connections");
         dbEnginesMap.values().forEach(DatabaseEngine::close);
     }

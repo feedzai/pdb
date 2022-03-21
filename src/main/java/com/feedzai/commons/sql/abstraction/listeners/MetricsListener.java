@@ -22,7 +22,7 @@ package com.feedzai.commons.sql.abstraction.listeners;
  * @author José Fidalgo (jose.fidalgo@feedzai.com)
  * @implSpec The method calls on the listener should not block nor throw any exceptions.
  */
-public interface MetricsListener {
+public interface MetricsListener extends AutoCloseable {
 
     /**
      * Called when an entry is added to the batch.
@@ -60,4 +60,9 @@ public interface MetricsListener {
      * @param failedEntriesCount     The number of entries that failed to be flushed.
      */
     void onFlushFinished(long elapsed, int successfulEntriesCount, int failedEntriesCount);
+
+    @Override
+    default void close() throws Exception {
+        // do nothing by default
+    }
 }
