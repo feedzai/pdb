@@ -385,6 +385,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     @Override
     public void close() throws Exception {
         destroy();
+        this.metricsListener.close();
     }
 
     /**
