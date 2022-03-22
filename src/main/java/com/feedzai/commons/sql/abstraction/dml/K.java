@@ -15,6 +15,8 @@
  */
 package com.feedzai.commons.sql.abstraction.dml;
 
+import java.util.Objects;
+
 /**
  * Represents a SQL constant.
  *
@@ -30,10 +32,10 @@ public class K extends Expression {
     /**
      * Creates a new instance of {@link K}.
      *
-     * @param o The constant object.
+     * @param constant The constant object.
      */
-    public K(Object o) {
-        this.constant = o;
+    public K(final Object constant) {
+        this.constant = constant;
     }
 
     /**
@@ -48,5 +50,29 @@ public class K extends Expression {
     @Override
     public String translate() {
         return translator.translate(this);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(this.constant);
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (obj == null || getClass() != obj.getClass()) {
+            return false;
+        }
+
+        final K other = (K) obj;
+        return Objects.equals(this.constant, other.constant);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("K(%s)", this.constant);
     }
 }

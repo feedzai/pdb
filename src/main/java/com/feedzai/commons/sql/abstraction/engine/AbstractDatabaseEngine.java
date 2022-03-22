@@ -1315,32 +1315,113 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * Translates the given entry entity to the prepared statement when used in the context of
-     * batch updates. This is to be overriden on engines where a distinct treatment is required
-     * for these situations.
+     * Translates the given entry entity to the prepared statement when used in the context of batch updates.
+     * <p>
+     * This can be overridden on engines where a distinct treatment is required for these situations, if it isn't
+     * possible to accommodate that behaviour by overriding {@link #setPreparedStatementValue}.
      *
-     * @param entity The entity.
-     * @param ps     The prepared statement.
-     * @param entry  The entry.
+     * @param entity     The entity.
+     * @param ps         The prepared statement.
+     * @param entry      The entry.
+     * @param useAutoInc Whether to use autoinc (auto incrementation of values for columns that support it).
      * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
      * @throws DatabaseEngineException if something occurs during the translation.
-     *
      * @since 2.4.2
      */
-    protected int entityToPreparedStatementForBatch(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException {
-        return entityToPreparedStatement(entity, ps, entry, useAutoIncs);
+    protected int entityToPreparedStatementForBatch(final DbEntity entity,
+                                                    final PreparedStatement ps,
+                                                    final EntityEntry entry,
+                                                    final boolean useAutoInc) throws DatabaseEngineException {
+        return entityToPreparedStatementInternal(entity, ps, entry, useAutoInc, true);
     }
 
     /**
      * Translates the given entry entity to the prepared statement.
+     * <p>
+     * This can be overridden on engines where a distinct treatment is required for these situations, if it isn't
+     * possible to accommodate that behaviour by overriding {@link #setPreparedStatementValue}.
      *
-     * @param entity The entity.
-     * @param ps     The prepared statement.
-     * @param entry  The entry.
+     * @param entity     The entity.
+     * @param ps         The prepared statement.
+     * @param entry      The entry.
+     * @param useAutoInc Whether to use autoinc (auto incrementation of values for columns that support it).
      * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
-     * @throws DatabaseEngineException if something occurs during the translation.
+     * @throws DatabaseEngineException If something wrong occurs during the translation.
      */
-    protected abstract int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoIncs) throws DatabaseEngineException;
+    protected int entityToPreparedStatement(final DbEntity entity,
+                                            final PreparedStatement ps,
+                                            final EntityEntry entry,
+                                            final boolean useAutoInc) throws DatabaseEngineException {
+        return entityToPreparedStatementInternal(entity, ps, entry, useAutoInc, false);
+    }
+
+    /**
+     * Translates the given entry entity to the prepared statement.
+     * <p>
+     * This can be overridden on engines where a distinct treatment is required for these situations, if it isn't
+     * possible to accommodate that behaviour by overriding {@link #setPreparedStatementValue}.
+     *
+     * @param entity     The entity.
+     * @param ps         The prepared statement.
+     * @param entry      The entry.
+     * @param useAutoInc Whether to use autoinc (auto incrementation of values for columns that support it).
+     * @param fromBatch  Whether this translation is to be done in the context of a batch update.
+     * @return The position (1-based) of the last bind parameter that was filled in a prepared statement.
+     * @throws DatabaseEngineException If something wrong occurs during the translation.
+     */
+    protected int entityToPreparedStatementInternal(final DbEntity entity,
+                                                    final PreparedStatement ps,
+                                                    final EntityEntry entry,
+                                                    boolean useAutoInc,
+                                                    boolean fromBatch) throws DatabaseEngineException {
+
+        int i = 1;
+        for (final DbColumn column : entity.getColumns()) {
+            if (column.isAutoInc() && useAutoInc) {
+                continue;
+            }
+
+            final Object val;
+            if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
+                val = column.getDefaultValue().getConstant();
+            } else {
+                final Object tempVal = entry.get(column.getName());
+                if (tempVal instanceof Enum) {
+                    val = tempVal.toString();
+                } else {
+                    val = tempVal;
+                }
+            }
+
+            try {
+                setPreparedStatementValue(ps, i, column, val, fromBatch);
+            } catch (final Exception ex) {
+                throw new DatabaseEngineException("Error while mapping variables to database", ex);
+            }
+
+            i++;
+        }
+
+        return i - 1;
+    }
+
+    /**
+     * Sets a value in the prepared statement.
+     *
+     * @param ps         The prepared statement.
+     * @param index      The index of the value to set in the prepared statement.
+     * @param dbColumn   The {@link DbColumn} for which to set the value in the prepared statement.
+     * @param value      The value to set.
+     * @param fromBatch  Whether this translation is to be done in the context of a batch update.
+     * @throws Exception If something wrong occurs setting the value.
+     */
+    protected void setPreparedStatementValue(final PreparedStatement ps,
+                                             final int index,
+                                             final DbColumn dbColumn,
+                                             final Object value,
+                                             final boolean fromBatch) throws Exception {
+        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+    }
 
     /**
      * Executes the given query.

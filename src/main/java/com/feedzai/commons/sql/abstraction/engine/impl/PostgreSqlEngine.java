@@ -35,7 +35,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
@@ -137,58 +136,39 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+    protected void setPreparedStatementValue(final PreparedStatement ps,
+                                             final int index,
+                                             final DbColumn dbColumn,
+                                             final Object value,
+                                             final boolean fromBatch) throws Exception {
+        switch (dbColumn.getDbColumnType()) {
+            case BLOB:
+                ps.setBytes(index, objectToArray(value));
+                break;
 
-        int i = 1;
-        for (DbColumn column : entity.getColumns()) {
-            if (column.isAutoInc() && useAutoInc) {
-                continue;
-            }
+            case CLOB:
+                if (value == null) {
+                    ps.setNull(index, Types.CLOB);
+                    break;
+                }
 
-            try {
-                final Object val;
-                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                    val = column.getDefaultValue().getConstant();
+                if (value instanceof String) {
+                    //StringReader sr = new StringReader((String) val);
+                    //ps.setClob(i, sr);
+                    // postrgresql driver des not have setClob implemented
+                    ps.setString(index, (String) value);
                 } else {
-                    val = entry.get(column.getName());
+                    throw new DatabaseEngineException("Cannot convert " + value.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                 }
+                break;
 
-                switch (column.getDbColumnType()) {
-                    case BLOB:
-                        ps.setBytes(i, objectToArray(val));
-                        break;
+            case JSON:
+                ps.setObject(index, getJSONValue((String)value));
+                break;
 
-                    case CLOB:
-                        if (val == null) {
-                            ps.setNull(i, Types.CLOB);
-                            break;
-                        }
-
-                        if (val instanceof String) {
-                            //StringReader sr = new StringReader((String) val);
-                            //ps.setClob(i, sr);
-                            // postrgresql driver des not have setClob implemented
-                            ps.setString(i, (String) val);
-                        } else {
-                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
-                        }
-                        break;
-
-                    case JSON:
-                        ps.setObject(i, getJSONValue((String)val));
-                        break;
-
-                    default:
-                        ps.setObject(i, val);
-                }
-            } catch (final Exception ex) {
-                throw new DatabaseEngineException("Error while mapping variables to database", ex);
-            }
-
-            i++;
+            default:
+                ps.setObject(index, value);
         }
-
-        return i - 1;
     }
 
     @Override
