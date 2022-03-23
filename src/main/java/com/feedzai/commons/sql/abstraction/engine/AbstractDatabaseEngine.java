@@ -48,6 +48,7 @@ import com.google.inject.Guice;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
+import com.google.inject.util.Providers;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -1101,8 +1102,9 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     @Override
                     protected void configure() {
                         super.configure();
-                        bind(AbstractTranslator.class).toInstance(translator);
-                        bind(DatabaseEngine.class).toInstance(AbstractDatabaseEngine.this);
+                        bind(PdbProperties.class).toProvider(Providers.of(AbstractDatabaseEngine.this.properties));
+                        bind(AbstractTranslator.class).toProvider(Providers.of(AbstractDatabaseEngine.this.translator));
+                        bind(DatabaseEngine.class).toProvider(Providers.of(AbstractDatabaseEngine.this));
                         bind((Class) batchConfig.getClass()).toInstance(batchConfig);
                         bind(batchClass);
                     }

@@ -247,8 +247,14 @@ public interface DatabaseEngine extends AutoCloseable {
      * Creates a new {@link PdbBatch} to which entries can be added; it then flushes those entries to the database,
      * periodically on a set timeout, or when a maximum number of entries has been reached.
      * <p>
-     * {@link PdbBatch#close()} should be called before closing the session with the database, to dispose of all
-     * the resources such as executors and extra connections.
+     * <strong>NOTES:</strong>
+     * <ol>
+     *     <li>All needed entities should be added before creating a batch, because some batch implementations (such as
+     *     multithreaded) may create new connections, and they will only have visibility on the known entities before
+     *     batch creation.</li>
+     *     <li>{@link PdbBatch#close()} should be called before closing the session with the database, to dispose of all
+     *     the resources such as executors and extra connections.</li>
+     * </ol>
      *
      * @param batchConfig The {@link BatchConfig batch configuration}.
      * @return The batch.

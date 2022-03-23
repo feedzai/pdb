@@ -94,6 +94,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -166,7 +167,40 @@ public class BatchUpdateTest {
         if (batch != null) {
             batch.close();
         }
+    }
 
+    /**
+     * Checks that after creating a batch the connection is still usable.
+     * <p>
+     * This is a regression test for some issues that were detected previously after batch creation (see test comments).
+     */
+    @Test
+    public void createBatchLeavesUsableConnectionTest() throws Exception {
+        final AbstractBatchConfig<?, ?> batchConfig = batchConfigBuilderSupplier.get()
+                .withName("createBatchLeavesUsableConnectionTest")
+                .withMaxAwaitTimeShutdown(Duration.ofSeconds(10))
+                .build();
+
+        batch = engine.createBatch(batchConfig);
+        batch.close();
+
+        /*
+         Previously AbstractDatabaseEngine was using a child injector to create a new batch.
+         The problem with this approach was that the bindings in the child injector would get propagated to the parent,
+         resulting in a CreationException due to some instance being bound multiple times (it was already in the parent).
+         */
+        assertThatCode(() -> batch = engine.createBatch(batchConfig))
+                .doesNotThrowAnyException();
+        batch.close();
+
+        /*
+         Previously AbstractDatabaseEngine was binding "toInstance", which means that Guice would reinject into existing
+         instances. The result was that a new AbstractTranslator instance was being created with empty properties, such
+         that it wouldn't have DEFAULT_VARCHAR_SIZE, and DbColumns without one defined would get translated as
+         VARCHAR(null), failing table creation.
+         */
+        assertThatCode(this::addTestEntity)
+                .doesNotThrowAnyException();
     }
 
     /**

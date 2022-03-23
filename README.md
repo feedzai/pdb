@@ -14,7 +14,7 @@ PDB provides a DSL that covers most of SQL functionalities and allows to easily 
 
 ## Using PDB
 
-Add the following dependency to your Maven pom (example for PDB v2.1.13):
+Add the following dependency to your Maven pom (example for PDB v2.8.14):
 
 ```
 <dependencies>
@@ -22,7 +22,7 @@ Add the following dependency to your Maven pom (example for PDB v2.1.13):
 	<dependency>
 		<groupId>com.feedzai</groupId>
 		<artifactId>pdb</artifactId>
-		<version>2.1.13</version>
+		<version>2.8.14</version>
 	</dependency>
 	...
 </dependencies>
@@ -50,6 +50,14 @@ connection is lost and recovered.
 * H2 version upgraded to 2.1.210
 * `H2Engine` is now deprecated and uses the H2v2 legacy mode if this engine is used with the H2v2 driver (for more information regarding the legacy mode see: http://www.h2database.com/html/features.html)
 * The `H2V2Engine` was created and it is the engine that should be used from now on (it works on regular mode, not legacy)
+
+## Changes from 2.8.14
+* Added a multithreaded implementation for batches, that uses multiple connections to the database. This may improve
+write performance to the database, if it is not otherwise limited by resource usage.
+* Batch implementations should now be obtained by calling the method `DatabaseEngine#createBatch(BatchConfig)`, where the type
+of config dictates the type of batch implementation that is created.
+* NOTE: versions 2.8.12 and 2.8.13 already had introduced this, but due to a bug, creating a batch would change the DatabaseEngine,
+possibly causing it to malfunction. If using that version, avoid the new method to create batches.
 
 ## Compiling PDB
 
