@@ -4202,10 +4202,10 @@ public class EngineGeneralTest {
     }
 
     /**
-     * Tests that a {@link K constant expression} with an enum value behaves as if the enum is a string, both when
-     * persisting an entry and when using the enum value for filtering in a WHERE clause.
+     * Tests that a {@link com.feedzai.commons.sql.abstraction.dml.K constant expression} with an enum value behaves
+     * as if the enum is a string, both when persisting an entry and when using the enum value for filtering in a WHERE clause.
      *
-     * @throws DatabaseEngineException
+     * @throws DatabaseEngineException If something goes wrong creating the test entity or persisting entries.
      */
     @Test
     public void kEnumTest() throws DatabaseEngineException {
