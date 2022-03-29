@@ -34,7 +34,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.mysql.MySqlQueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.StringReader;
 import java.sql.DatabaseMetaData;
@@ -116,63 +115,44 @@ public class MySqlEngine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
+    protected void setPreparedStatementValue(final PreparedStatement ps,
+                                             final int index,
+                                             final DbColumn dbColumn,
+                                             final Object value,
+                                             final boolean fromBatch) throws Exception {
+        switch (dbColumn.getDbColumnType()) {
+            case BLOB:
+                ps.setBytes(index, objectToArray(value));
 
-        int i = 1;
-        for (DbColumn column : entity.getColumns()) {
-            if (column.isAutoInc() && useAutoInc) {
-                continue;
-            }
+                break;
+            case JSON:
+            case CLOB:
+                if (value == null) {
+                    ps.setNull(index, Types.CLOB);
+                    break;
+                }
 
-            try {
-                final Object val;
-                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                    val = column.getDefaultValue().getConstant();
+                if (value instanceof String) {
+                    StringReader sr = new StringReader((String) value);
+                    ps.setClob(index, sr);
                 } else {
-                    val = entry.get(column.getName());
+                    throw new DatabaseEngineException("Cannot convert " + value.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
+                }
+                break;
+            case BOOLEAN:
+                Boolean b = (Boolean) value;
+                if (b == null) {
+                    ps.setObject(index, null);
+                } else if (b) {
+                    ps.setObject(index, 1);
+                } else {
+                    ps.setObject(index, 0);
                 }
 
-                switch (column.getDbColumnType()) {
-                    case BLOB:
-                        ps.setBytes(i, objectToArray(val));
-
-                        break;
-                    case JSON:
-                    case CLOB:
-                        if (val == null) {
-                            ps.setNull(i, Types.CLOB);
-                            break;
-                        }
-
-                        if (val instanceof String) {
-                            StringReader sr = new StringReader((String) val);
-                            ps.setClob(i, sr);
-                        } else {
-                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
-                        }
-                        break;
-                    case BOOLEAN:
-                        Boolean b = (Boolean) val;
-                        if (b == null) {
-                            ps.setObject(i, null);
-                        } else if (b) {
-                            ps.setObject(i, 1);
-                        } else {
-                            ps.setObject(i, 0);
-                        }
-
-                        break;
-                    default:
-                        ps.setObject(i, val);
-                }
-            } catch (final Exception ex) {
-                throw new DatabaseEngineException("Error while mapping variable s to database", ex);
-            }
-
-            i++;
+                break;
+            default:
+                ps.setObject(index, value);
         }
-
-        return i - 1;
     }
 
     @Override

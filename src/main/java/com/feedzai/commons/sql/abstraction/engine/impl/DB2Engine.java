@@ -34,7 +34,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.ibm.db2.jcc.am.SqlSyntaxErrorException;
@@ -113,52 +112,35 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
-        int i = 1;
-        for (DbColumn column : entity.getColumns()) {
-            if (column.isAutoInc() && useAutoInc) {
-                continue;
-            }
+    protected void setPreparedStatementValue(final PreparedStatement ps,
+                                             final int index,
+                                             final DbColumn dbColumn,
+                                             final Object value,
+                                             final boolean fromBatch) throws Exception {
+        switch (dbColumn.getDbColumnType()) {
+            /*
+             * CLOB, BLOB and and JSON are handled the same way in DB2 since neither CLOB nor JSON are supported.
+             */
+            case JSON:
+            case CLOB:
+            case BLOB:
+                ps.setBytes(index, objectToArray(value));
 
-            try {
-                final Object val;
-                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                    val = column.getDefaultValue().getConstant();
+                break;
+            case BOOLEAN:
+                Boolean b = (Boolean) value;
+                if (b == null) {
+                    ps.setObject(index, null);
+                } else if (b) {
+                    ps.setObject(index, "1");
                 } else {
-                    val = entry.get(column.getName());
+                    ps.setObject(index, "0");
                 }
-                switch (column.getDbColumnType()) {
-                    /*
-                     * CLOB, BLOB and and JSON are handled the same way in DB2 since neither CLOB nor JSON are supported.
-                     */
-                    case JSON:
-                    case CLOB:
-                    case BLOB:
-                        ps.setBytes(i, objectToArray(val));
 
-                        break;
-                    case BOOLEAN:
-                        Boolean b = (Boolean) val;
-                        if (b == null) {
-                            ps.setObject(i, null);
-                        } else if (b) {
-                            ps.setObject(i, "1");
-                        } else {
-                            ps.setObject(i, "0");
-                        }
-
-                        break;
-                    default:
-                        ps.setObject(i, val);
-                }
-            } catch (final Exception ex) {
-                throw new DatabaseEngineException("Error while mapping variables to database", ex);
-            }
-
-            i++;
+                break;
+            default:
+                ps.setObject(index, value);
         }
-
-        return i - 1;
     }
 
     @Override

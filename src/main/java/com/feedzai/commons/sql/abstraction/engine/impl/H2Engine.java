@@ -33,7 +33,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.io.ByteArrayInputStream;
 import java.io.Serializable;
@@ -168,54 +167,37 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected int entityToPreparedStatement(final DbEntity entity, final PreparedStatement ps, final EntityEntry entry, final boolean useAutoInc) throws DatabaseEngineException {
-
-        int i = 1;
-        for (DbColumn column : entity.getColumns()) {
-            if ((column.isAutoInc() && useAutoInc)) {
-                continue;
-            }
-
-            try {
-                final Object val;
-                if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                    val = column.getDefaultValue().getConstant();
+    protected void setPreparedStatementValue(final PreparedStatement ps,
+                                             final int index,
+                                             final DbColumn dbColumn,
+                                             final Object value,
+                                             final boolean fromBatch) throws Exception {
+        switch (dbColumn.getDbColumnType()) {
+            case BLOB:
+                if (value == null) {
+                    ps.setNull(index, Types.BLOB);
+                } else if (value instanceof Serializable) {
+                    ps.setBinaryStream(index, new ByteArrayInputStream(objectToArray(value)));
                 } else {
-                    val = entry.get(column.getName());
+                    throw new DatabaseEngineException("Cannot convert " + value.getClass().getSimpleName() + " to byte[]. BLOB columns only accept byte arrays.");
                 }
+                break;
 
-                switch (column.getDbColumnType()) {
-                    case BLOB:
-                        if (val == null) {
-                            ps.setNull(i, Types.BLOB);
-                        } else if (val instanceof Serializable) {
-                            ps.setBinaryStream(i, new ByteArrayInputStream(objectToArray(val)));
-                        } else {
-                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to byte[]. BLOB columns only accept byte arrays.");
-                        }
-                        break;
-                    case JSON:
-                    case CLOB:
-                        if (val == null) {
-                            ps.setNull(i, Types.CLOB);
-                        } else if (val instanceof String) {
-                            StringReader sr = new StringReader((String) val);
-                            ps.setCharacterStream(i, sr);
-                        } else {
-                            throw new DatabaseEngineException("Cannot convert " + val.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
-                        }
-                        break;
-                    default:
-                        ps.setObject(i, val);
+            case JSON:
+            case CLOB:
+                if (value == null) {
+                    ps.setNull(index, Types.CLOB);
+                } else if (value instanceof String) {
+                    StringReader sr = new StringReader((String) value);
+                    ps.setCharacterStream(index, sr);
+                } else {
+                    throw new DatabaseEngineException("Cannot convert " + value.getClass().getSimpleName() + " to String. CLOB columns only accept Strings.");
                 }
-            } catch (final Exception ex) {
-                throw new DatabaseEngineException("Error while mapping variables to database", ex);
-            }
+                break;
 
-            i++;
+            default:
+                ps.setObject(index, value);
         }
-
-        return i - 1;
     }
 
     private DbEntity injectNotNullIfMissing(DbEntity entity) {

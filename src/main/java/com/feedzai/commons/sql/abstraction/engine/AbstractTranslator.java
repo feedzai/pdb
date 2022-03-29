@@ -265,6 +265,8 @@ public abstract class AbstractTranslator {
                 result = o.toString();
             } else if (o instanceof String) {
                 result = singleQuotize(escapeSql((String) o));
+            } else if (o instanceof Enum) {
+                result = singleQuotize(escapeSql(((Enum<?>) o).name()));
             } else if (o instanceof Boolean) {
                 result = (Boolean) o ? translateTrue() : translateFalse();
             } else {
