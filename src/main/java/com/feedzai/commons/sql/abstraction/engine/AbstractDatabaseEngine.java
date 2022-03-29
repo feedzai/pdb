@@ -1101,7 +1101,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 new AbstractModule() {
                     @Override
                     protected void configure() {
-                        super.configure();
                         bind(PdbProperties.class).toProvider(Providers.of(AbstractDatabaseEngine.this.properties));
                         bind(AbstractTranslator.class).toProvider(Providers.of(AbstractDatabaseEngine.this.translator));
                         bind(DatabaseEngine.class).toProvider(Providers.of(AbstractDatabaseEngine.this));
