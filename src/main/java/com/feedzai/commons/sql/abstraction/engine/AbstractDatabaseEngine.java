@@ -1381,20 +1381,20 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 continue;
             }
 
-            final Object val;
+            final Object value;
             if (column.isDefaultValueSet() && !entry.containsKey(column.getName())) {
-                val = column.getDefaultValue().getConstant();
+                value = column.getDefaultValue().getConstant();
             } else {
                 final Object tempVal = entry.get(column.getName());
                 if (tempVal instanceof Enum) {
-                    val = tempVal.toString();
+                    value = ((Enum<?>) tempVal).name();
                 } else {
-                    val = tempVal;
+                    value = tempVal;
                 }
             }
 
             try {
-                setPreparedStatementValue(ps, i, column, val, fromBatch);
+                setPreparedStatementValue(ps, i, column, value, fromBatch);
             } catch (final Exception ex) {
                 throw new DatabaseEngineException("Error while mapping variables to database", ex);
             }

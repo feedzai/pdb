@@ -593,7 +593,7 @@ public final class SqlBuilder {
      * @param exp      The expression.
      * @return The function representation.
      */
-    public static final Expression f(final String function, final Expression exp) {
+    public static Expression f(final String function, final Expression exp) {
         return new InternalFunction(function, exp);
     }
 
@@ -747,7 +747,7 @@ public final class SqlBuilder {
      * @param constants The constant objects to generate the {@link K SQL constants} to include in the list.
      * @return The {@link #L list} expression.
      */
-    public static Expression LofK(final Collection<Object> constants) {
+    public static Expression LofK(final Collection<?> constants) {
         return LofK(constants.stream());
     }
 

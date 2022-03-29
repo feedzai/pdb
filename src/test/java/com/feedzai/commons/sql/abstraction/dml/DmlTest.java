@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import org.assertj.core.api.AbstractObjectAssert;
 import org.junit.Test;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -62,7 +63,7 @@ public class DmlTest {
      * of {@link K constants}.
      */
     @Test
-    public void LofKTest() {
+    public void LofKObjectsTest() {
         final Expression expected = L(k(1), k(2), k("a"));
 
         assertEqualL(expected, LofK(1, 2, "a"));
@@ -71,20 +72,41 @@ public class DmlTest {
     }
 
     /**
+     * Tests that the expression {@link SqlBuilder#LofK} is a shortcut for and works as a {@link SqlBuilder#L list expression}
+     * of {@link K constants}.
+     * <p>
+     * This test is similar to {@link #LofKObjectsTest()}, but using a collection of elements of the same type (strings
+     * in this case). This ensures that {@link SqlBuilder#LofK(Collection)} overload is called when the parameter
+     * supplied is a list of strings. If it accepted a collection of {@link Object} instead of {@code ?}, then the
+     * overload {@link SqlBuilder#LofK(Object...)} would have been called instead.
+     */
+    @Test
+    public void LofKStringsTest() {
+        final Expression expected = L(k("a"), k("b"), k("a"));
+
+        assertEqualL(expected, LofK("a", "b", "a"));
+
+        // make sure the collection has type string
+        final Collection<String> constantsList = ImmutableList.of("a", "b", "a");
+        assertEqualL(expected, LofK(constantsList));
+    }
+
+    /**
      * Tests that {@link SqlBuilder#LofK} properly handles a {@link java.util.stream.Stream} of {@link K constants}.
      * <p>
      * This test uses a stream with a {@link Stream#distinct()} operation, such that the final result is expected to be
-     * equal to a list of constants expression based on a set of values.
+     * equal to a {@link SqlBuilder#L list expression} containing distinct constant expressions (as they are collected
+     * into a set).
      */
     @Test
     public void LofKstreamTest() {
         final List<Integer> values = ImmutableList.of(1, 2, 3, 2, 5);
 
-        final Set<K> baseValuesSet = values.stream()
-                .map(SqlBuilder::k)
-                .collect(Collectors.toSet());
-
-        final Expression expected = L(baseValuesSet);
+        final Expression expected = L(
+                values.stream()
+                        .map(SqlBuilder::k)
+                        .collect(Collectors.toSet())
+        );
 
         assertEqualL(expected, LofK(values.stream().distinct()));
     }

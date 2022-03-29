@@ -4203,7 +4203,8 @@ public class EngineGeneralTest {
 
     /**
      * Tests that a {@link com.feedzai.commons.sql.abstraction.dml.K constant expression} with an enum value behaves
-     * as if the enum is a string, both when persisting an entry and when using the enum value for filtering in a WHERE clause.
+     * as if the enum is a string (obtained from {@link Enum#name()}, both when persisting an entry and when using
+     * the enum value for filtering in a WHERE clause.
      *
      * @throws DatabaseEngineException If something goes wrong creating the test entity or persisting entries.
      */
@@ -4228,7 +4229,7 @@ public class EngineGeneralTest {
                 .element(0)
                 .extracting(element -> element.get("COL5").toString())
                 .as("An enum value should be persisted as its string representation")
-                .isEqualTo(TestEnum.TEST_ENUM_VAL.toString());
+                .isEqualTo(TestEnum.TEST_ENUM_VAL.name());
     }
 
     /**
@@ -4236,5 +4237,10 @@ public class EngineGeneralTest {
      */
     private enum TestEnum {
         TEST_ENUM_VAL;
+
+        @Override
+        public String toString() {
+            return super.toString() + " description";
+        }
     }
 }
