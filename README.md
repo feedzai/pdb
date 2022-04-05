@@ -59,6 +59,10 @@ of config dictates the type of batch implementation that is created.
 * NOTE: versions 2.8.12 and 2.8.13 already had introduced this, but due to a bug, creating a batch would change the DatabaseEngine,
 possibly causing it to malfunction. If using that version, avoid the new method to create batches.
 
+## Changes from 2.8.16
+Version 2.8.15 added back compatibility with Guice v4, but also changed the method SqlBuilder.k to return K instead of Expression.
+This breaks compatibility with existing code compiled with older PDB versions, so 2.8.16 reverts this change.
+
 ## Compiling PDB
 
 In order to compile PDB you will need to have the Oracle Driver JAR in your local repository.  

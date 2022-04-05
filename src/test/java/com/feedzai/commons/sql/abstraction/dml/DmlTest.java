@@ -46,7 +46,7 @@ public class DmlTest {
      */
     @Test
     public void kHashTest() {
-        final Set<K> kSet = new HashSet<>();
+        final Set<Expression> kSet = new HashSet<>();
         kSet.add(k("a"));
         kSet.add(k("b"));
         kSet.add(k(1));

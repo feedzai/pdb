@@ -199,7 +199,7 @@ public final class SqlBuilder {
      * @param constant The constant.
      * @return The expression.
      */
-    public static K k(final Object constant) {
+    public static Expression k(final Object constant) {
         return new K(constant);
     }
 

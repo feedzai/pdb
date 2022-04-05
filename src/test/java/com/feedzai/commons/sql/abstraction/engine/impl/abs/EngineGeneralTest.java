@@ -24,6 +24,7 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.K;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
@@ -4000,10 +4001,10 @@ public class EngineGeneralTest {
         DbEntity.Builder entity =
                 dbEntity()
                         .name("TEST")
-                        .addColumn("COL1", INT, k(1))
-                        .addColumn("COL2", BOOLEAN, k(false))
-                        .addColumn("COL3", DOUBLE, k(2.2d))
-                        .addColumn("COL4", LONG, k(3L))
+                        .addColumn("COL1", INT, new K(1))
+                        .addColumn("COL2", BOOLEAN, new K(false))
+                        .addColumn("COL3", DOUBLE, new K(2.2d))
+                        .addColumn("COL4", LONG, new K(3L))
                         .pkFields("COL1");
 
         engine.addEntity(entity.build());
@@ -4020,9 +4021,11 @@ public class EngineGeneralTest {
         assertEquals("Check COL4", 3L, record.get("COL4").toLong().longValue());
 
 
-        final DbEntity entity1 = entity.addColumn("COL5", STRING, k("mantorras"), NOT_NULL)
-                .addColumn("COL6", BOOLEAN, k(true), NOT_NULL)
-                .addColumn("COL7", INT, k(7), NOT_NULL).build();
+        final DbEntity entity1 = entity
+                .addColumn("COL5", STRING, new K("mantorras"), NOT_NULL)
+                .addColumn("COL6", BOOLEAN, new K(true), NOT_NULL)
+                .addColumn("COL7", INT, new K(7), NOT_NULL)
+                .build();
 
         final Properties propertiesCreate = new Properties();
         for (Map.Entry<Object, Object> prop : properties.entrySet()) {
@@ -4051,10 +4054,10 @@ public class EngineGeneralTest {
         DbEntity.Builder entity =
                 dbEntity()
                         .name("TEST")
-                        .addColumn("COL1", INT, k(1))
-                        .addColumn("COL2", BOOLEAN, k(false), NOT_NULL)
-                        .addColumn("COL3", DOUBLE, k(2.2d))
-                        .addColumn("COL4", LONG, k(3L))
+                        .addColumn("COL1", INT, new K(1))
+                        .addColumn("COL2", BOOLEAN, new K(false), NOT_NULL)
+                        .addColumn("COL3", DOUBLE, new K(2.2d))
+                        .addColumn("COL4", LONG, new K(3L))
                         .pkFields("COL1");
 
         engine.addEntity(entity.build());
