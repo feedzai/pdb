@@ -4256,22 +4256,19 @@ public class EngineGeneralTest {
     }
 
     /**
-     * Tests that on a rollback situation, the prepared statement batches are cleared.
+     * Tests that on a duplicated batch entry situation the right exception is returned.
      *
      * The steps performed on this test are:
      * <ol>
-     *     <li>Add batch to transaction and purposely fail to flush</li>
+     *     <li>Add duplicated batch entries to transaction and fail to flush</li>
      *     <li>Ensure the existence of the Exception and rollback transaction</li>
-     *     <li>Flush again successfully and ensure that the DB table doesn't have any rows</li>
+     *     <li>Ensure the exception is a {@link DatabaseEngineUniqueConstraintViolationException}</li>
      * </ol>
      *
-     * This is a regression test.
-     *
      * @throws DatabaseEngineException If there is a problem on {@link DatabaseEngine} operations.
-     * @since 2.1.12
      */
     @Test
-    public void batchInsertDuplicateRollbackAndDBError() throws DatabaseEngineException {
+    public void batchInsertDuplicateDBError() throws DatabaseEngineException {
         create5ColumnsEntityWithPrimaryKey();
 
         engine.beginTransaction();
@@ -4303,7 +4300,7 @@ public class EngineGeneralTest {
                 .as("Encapsulated exception is SQLException")
                 .isInstanceOf(SQLException.class);
 
-        // Ensure that the exception matches a unique constraint violation and thus is a DatabaseEngineUniqueViolationException.
+        // Ensure that the exception matches a unique constraint violation and thus is a DatabaseEngineUniqueConstraintViolationException.
         assertThat(expectedException)
                 .as("Is unique constraint violation exception")
                 .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class);
