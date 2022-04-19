@@ -796,6 +796,40 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Tests if a batch with entries having duplicate keys fails when flushing.
+     *
+     * @throws Exception if any operations on the batch fail.
+     */
+    @Test
+    public void batchInsertDuplicateFlushWithDBErrorTest() throws Exception {
+        final TestBatchListener batchListener = new TestBatchListener();
+        final int numTestEntries = 2;
+
+        addTestEntityWithPrimaryKey();
+
+        batch = engine.createBatch(batchConfigBuilderSupplier.get()
+                                                             .withName("batchInsertDuplicateFlushWithDBErrorTest")
+                                                             .withBatchSize(numTestEntries + 1)
+                                                             .withBatchTimeout(Duration.ofSeconds(100))
+                                                             .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                                                             .withBatchListener(batchListener)
+                                                             .build()
+        );
+
+        // Add entries to batch, no flush should take place because numTestEntries < batch size and batch timeout is huge
+        final int idx = 0;
+        final EntityEntry testEntry = getTestEntry(idx);
+        batch.add("TEST", testEntry);
+        batch.add("TEST", testEntry);
+
+        // Explicit flush
+        batch.flush();
+
+        // Check that entries were added to onFlushFailure()
+        checkFailedDuplicateEntries(batchListener, numTestEntries, idx);
+    }
+
+    /**
      * Create test table.
      */
     private void addTestEntity() throws DatabaseEngineException {
@@ -825,6 +859,23 @@ public class BatchUpdateTest {
                 .set("COL4", 300L + idx)
                 .set("COL5", "ADEUS" + idx)
                 .build();
+    }
+
+    /**
+     * Create test table with primary key defined.
+     */
+    private void addTestEntityWithPrimaryKey() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", INT)
+                .addColumn("COL2", BOOLEAN)
+                .addColumn("COL3", DOUBLE)
+                .addColumn("COL4", LONG)
+                .addColumn("COL5", STRING)
+                .pkFields("COL1")
+                .build();
+
+        engine.addEntity(entity);
     }
 
     /**
@@ -900,6 +951,41 @@ public class BatchUpdateTest {
         assertEquals("COL3 ok?", (double) expectedEntry.get("COL3"), row.get("COL3").toDouble(), 0);
         assertEquals("COL4 ok?", expectedEntry.get("COL4"), row.get("COL4").toLong());
         assertEquals("COL5 ok?", expectedEntry.get("COL5"), row.get("COL5").toString());
+    }
+
+    /**
+     * Helper method to check that the given number of entries appear on the {@link TestBatchListener} failed list and
+     * correspond to the duplicate test entries originally added to the batch.
+     *
+     * @param batchListener         The mocked batch listener used in the batch.
+     * @param numEntries            The expected number of test entries in the failed list.
+     * @param idx                   The duplicated id.
+     * @throws InterruptedException If this check is interrupted while waiting.
+     */
+    private void checkFailedDuplicateEntries(final TestBatchListener batchListener, final int numEntries, final int idx) throws InterruptedException {
+        final List<BatchEntry> failedEntries = new ArrayList<>();
+
+        while (true) {
+            final BatchEntry entry = batchListener.failed.poll(5, TimeUnit.SECONDS);
+            if (entry == null) {
+                break;
+            }
+
+            failedEntries.add(entry);
+        }
+
+        assertEquals("The total number of failed entries should match the entries added to the batch.", numEntries, failedEntries.size());
+        for (int i = 0; i < failedEntries.size(); i++) {
+            final ObjectAssert<BatchEntry> batchEntryAssert = assertThat(failedEntries.get(i));
+
+            batchEntryAssert.extracting(BatchEntry::getTableName)
+                            .as("Failed entry '%s' should have the correct table name.", i)
+                            .isEqualTo("TEST");
+
+            batchEntryAssert.extracting(BatchEntry::getEntityEntry)
+                            .as("Failed entry '%s' should match the entry added to the batch.", i)
+                            .isEqualTo(getTestEntry(idx));
+        }
     }
 
     /**

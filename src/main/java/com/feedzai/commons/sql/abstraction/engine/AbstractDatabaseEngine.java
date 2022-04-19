@@ -944,7 +944,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 me.getInsert().executeBatch();
             }
         } catch (final Exception ex) {
-            throw new DatabaseEngineException("Something went wrong while flushing", ex);
+            throw getQueryExceptionHandler().handleException(ex, "Something went wrong while flushing");
         }
     }
 

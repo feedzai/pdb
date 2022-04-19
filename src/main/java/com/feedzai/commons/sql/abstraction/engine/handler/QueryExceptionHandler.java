@@ -17,6 +17,7 @@
 package com.feedzai.commons.sql.abstraction.engine.handler;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineUniqueConstraintViolationException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
@@ -61,6 +62,16 @@ public class QueryExceptionHandler {
     }
 
     /**
+     * Checks if an Exception occurred due to a unique constraint violation.
+     *
+     * @param exception  The exception to check.
+     * @return {@code true} if the exception is a unique constraint violation, {@code false} otherwise.
+     */
+    public boolean isUniqueConstraintViolationException(SQLException exception) {
+        return Constants.SQL_STATE_UNIQUE_CONSTRAINT_VIOLATION.equals(exception.getSQLState());
+    }
+
+    /**
      * Handles the Exception, disambiguating it into a specific PDB Exception and throwing it.
      * <p>
      * If a specific type does not match the info in the provided Exception, throws a {@link DatabaseEngineException}.
@@ -81,6 +92,10 @@ public class QueryExceptionHandler {
 
             if (isRetryableException(sqlException)) {
                 throw new DatabaseEngineRetryableException(message + " [retryable]", sqlException);
+            }
+
+            if (isUniqueConstraintViolationException(sqlException)) {
+                throw new DatabaseEngineUniqueConstraintViolationException(message + " [unique_constraint_violation]", sqlException);
             }
         }
 

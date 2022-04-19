@@ -41,8 +41,20 @@ public class OracleQueryExceptionHandler extends QueryExceptionHandler {
      */
     private static final Set<Integer> DEADLOCK_ERROR_CODES = ImmutableSet.of(60, 8177);
 
+    /**
+     * Oracle uses this error code to indicate a unique constraint violation.
+     *
+     * - ORA-00001: unique constraint (string.string) violated
+     */
+    private static final int UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE = 1;
     @Override
     public boolean isRetryableException(final SQLException exception) {
         return DEADLOCK_ERROR_CODES.contains(exception.getErrorCode()) || super.isRetryableException(exception);
+    }
+
+    @Override
+    public boolean isUniqueConstraintViolationException(final SQLException exception) {
+        return UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE
+                == exception.getErrorCode() || super.isUniqueConstraintViolationException(exception);
     }
 }

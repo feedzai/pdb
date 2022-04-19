@@ -39,6 +39,7 @@ import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineUniqueConstraintViolationException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -50,6 +51,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.ImmutableSet;
+import java.sql.SQLException;
 import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
@@ -3683,6 +3685,24 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
+    /**
+     * Creates a {@link DbEntity} with 5 columns being the first the primary key to be used in the tests.
+     *
+     * @throws DatabaseEngineException If something goes wrong creating the entity.
+     */
+    private void create5ColumnsEntityWithPrimaryKey() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity().name("TEST")
+                                          .addColumn("COL1", INT)
+                                          .addColumn("COL2", BOOLEAN)
+                                          .addColumn("COL3", DOUBLE)
+                                          .addColumn("COL4", LONG)
+                                          .addColumn("COL5", STRING)
+                                          .pkFields("COL1")
+                                          .build();
+
+        engine.addEntity(entity);
+    }
+
     protected void userRolePermissionSchema() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("USER")
@@ -4233,6 +4253,63 @@ public class EngineGeneralTest {
                 .extracting(element -> element.get("COL5").toString())
                 .as("An enum value should be persisted as its string representation")
                 .isEqualTo(TestEnum.TEST_ENUM_VAL.name());
+    }
+
+    /**
+     * Tests that on a rollback situation, the prepared statement batches are cleared.
+     *
+     * The steps performed on this test are:
+     * <ol>
+     *     <li>Add batch to transaction and purposely fail to flush</li>
+     *     <li>Ensure the existence of the Exception and rollback transaction</li>
+     *     <li>Flush again successfully and ensure that the DB table doesn't have any rows</li>
+     * </ol>
+     *
+     * This is a regression test.
+     *
+     * @throws DatabaseEngineException If there is a problem on {@link DatabaseEngine} operations.
+     * @since 2.1.12
+     */
+    @Test
+    public void batchInsertDuplicateRollbackAndDBError() throws DatabaseEngineException {
+        create5ColumnsEntityWithPrimaryKey();
+
+        engine.beginTransaction();
+
+        DatabaseEngineException expectedException = null;
+        try {
+            EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
+                                       .build();
+            // Add the same entry twice (repeated value for COL1, id)
+            engine.addBatch("TEST", entry);
+            engine.addBatch("TEST", entry);
+
+            engine.flush();
+
+            fail("Was expecting the flush operation to fail");
+        } catch (final DatabaseEngineException e) {
+            expectedException = e;
+        } finally {
+            if (engine.isTransactionActive()) {
+                engine.rollback();
+            }
+        }
+
+        // Ensure we had an exception and therefore we didn't insert anything on the DB and that we cleared the batches.
+        assertNotNull("DB returned exception when flushing", expectedException);
+
+        // Ensure that the exception thrown is caused by an SQL error.
+        assertThat(expectedException.getCause())
+                .as("Encapsulated exception is SQLException")
+                .isInstanceOf(SQLException.class);
+
+        // Ensure that the exception matches a unique constraint violation and thus is a DatabaseEngineUniqueViolationException.
+        assertThat(expectedException)
+                .as("Is unique constraint violation exception")
+                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class);
+
+        // Ensure that the exception is caught in AbstractDatabaseEngine#flush and then handled in QueryExceptionHandler#handleException.
+        assertEquals("Something went wrong while flushing [unique_constraint_violation]", expectedException.getMessage());
     }
 
     /**

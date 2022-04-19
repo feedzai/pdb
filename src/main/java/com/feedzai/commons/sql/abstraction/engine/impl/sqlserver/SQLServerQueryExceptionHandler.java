@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Feedzai
+ * Copyright 2022 Feedzai
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,23 @@
  * limitations under the License.
  */
 
-package com.feedzai.commons.sql.abstraction.engine.impl.mysql;
-
-import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
-
-import com.mysql.jdbc.exceptions.MySQLTimeoutException;
+package com.feedzai.commons.sql.abstraction.engine.impl.sqlserver;
 
 import java.sql.SQLException;
 
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+
 /**
- * A specific implementation of {@link QueryExceptionHandler} for MySQL engine.
+ * A specific implementation of {@link QueryExceptionHandler} for SQLServer engine.
  *
- * @author José Fidalgo (jose.fidalgo@feedzai.com)
- * @since 2.5.1
+ * @author Ines Fernandes (ines.fernandes@feedzai.com)
  */
-public class MySqlQueryExceptionHandler extends QueryExceptionHandler {
+public class SQLServerQueryExceptionHandler extends QueryExceptionHandler {
 
     /**
-     * The MySQL error code that indicates a unique constraint violation.
+     * The SQLServer State code that indicates a unique constraint violation.
      */
-    private static final int UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE = 1062;
-
-    @Override
-    public boolean isTimeoutException(final SQLException exception) {
-        return exception instanceof MySQLTimeoutException || super.isTimeoutException(exception);
-    }
+    private static final int UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE = 2627;
 
     @Override
     public boolean isUniqueConstraintViolationException(final SQLException exception) {
