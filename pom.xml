@@ -823,7 +823,7 @@
         <profile>
             <id>db2</id>
             <properties>
-                <image.db2>ibmcom/db2:11.5.4.0</image.db2>
+                <image.db2>ibmcom/db2:11.5.7.0a</image.db2>
             </properties>
             <build>
                 <plugins>
@@ -851,7 +851,7 @@
                                         <ports>
                                             <port>50000:50000</port>
                                         </ports>
-                                        <privileged>true</privileged>
+                                        <capAdd>IPC_LOCK,IPC_OWNER</capAdd>
                                         <env>
                                             <LICENSE>accept</LICENSE>
                                             <DB2INST1_PASSWORD>AaBb12.#</DB2INST1_PASSWORD>
