@@ -42,7 +42,7 @@ public class MySqlQueryExceptionHandler extends QueryExceptionHandler {
 
     @Override
     public boolean isUniqueConstraintViolationException(final SQLException exception) {
-        return UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE
-                == exception.getErrorCode() || super.isUniqueConstraintViolationException(exception);
+        return UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE == exception.getErrorCode()
+                || super.isUniqueConstraintViolationException(exception);
     }
 }

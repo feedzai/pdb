@@ -4261,7 +4261,6 @@ public class EngineGeneralTest {
      * The steps performed on this test are:
      * <ol>
      *     <li>Add duplicated entries in a transaction and fail to persist</li>
-     *     <li>Ensure the existence of the Exception and rollback transaction</li>
      *     <li>Ensure the exception is a {@link DatabaseEngineUniqueConstraintViolationException}</li>
      * </ol>
      *
@@ -4271,40 +4270,23 @@ public class EngineGeneralTest {
     public void insertDuplicateDBError() throws Exception {
         create5ColumnsEntityWithPrimaryKey();
 
+        EntityEntry entry = entry().set("COL1", 2)
+                                   .set("COL2", false)
+                                   .set("COL3", 2D)
+                                   .set("COL4", 3L)
+                                   .set("COL5", "ADEUS")
+                                   .build();
+
         engine.beginTransaction();
 
-        DatabaseEngineException expectedException = null;
-        try {
-            EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
-                                       .build();
-            // Add the same entry twice (repeated value for COL1, id)
-            engine.persist("TEST", entry);
-            engine.persist("TEST", entry);
-
-            fail("Was expecting the persist operation to fail");
-        } catch (final DatabaseEngineException e) {
-            expectedException = e;
-        } finally {
-            if (engine.isTransactionActive()) {
-                engine.rollback();
-            }
-        }
-
-        // Ensure we had an exception and therefore we didn't insert anything on the DB and that we cleared the batches.
-        assertNotNull("DB returned exception when flushing", expectedException);
-
-        // Ensure that the exception thrown is caused by an SQL error.
-        assertThat(expectedException.getCause())
-                .as("Encapsulated exception is SQLException")
-                .isInstanceOf(SQLException.class);
-
-        // Ensure that the exception matches a unique constraint violation and thus is a DatabaseEngineUniqueConstraintViolationException.
-        assertThat(expectedException)
+        // Add the same entry twice (repeated value for COL1, id)
+        engine.persist("TEST", entry);
+        assertThatCode(() -> engine.persist("TEST", entry))
                 .as("Is unique constraint violation exception")
-                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class);
-
-        // Ensure that the exception is caught in AbstractDatabaseEngine#persist and then handled in QueryExceptionHandler#handleException.
-        assertEquals("Something went wrong persisting the entity [unique_constraint_violation]", expectedException.getMessage());
+                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class)
+                .as("Encapsulated exception is SQLException")
+                .hasCauseInstanceOf(SQLException.class)
+                .hasMessage("Something went wrong persisting the entity [unique_constraint_violation]");
     }
 
     /**
@@ -4313,7 +4295,6 @@ public class EngineGeneralTest {
      * The steps performed on this test are:
      * <ol>
      *     <li>Add duplicated batch entries to transaction and fail to flush</li>
-     *     <li>Ensure the existence of the Exception and rollback transaction</li>
      *     <li>Ensure the exception is a {@link DatabaseEngineUniqueConstraintViolationException}</li>
      * </ol>
      *
@@ -4323,42 +4304,26 @@ public class EngineGeneralTest {
     public void batchInsertDuplicateDBError() throws DatabaseEngineException {
         create5ColumnsEntityWithPrimaryKey();
 
+        EntityEntry entry = entry().set("COL1", 2)
+                                   .set("COL2", false)
+                                   .set("COL3", 2D)
+                                   .set("COL4", 3L)
+                                   .set("COL5", "ADEUS")
+                                   .build();
+
         engine.beginTransaction();
 
-        DatabaseEngineException expectedException = null;
-        try {
-            EntityEntry entry = entry().set("COL1", 2).set("COL2", false).set("COL3", 2D).set("COL4", 3L).set("COL5", "ADEUS")
-                                       .build();
-            // Add the same entry twice (repeated value for COL1, id)
-            engine.addBatch("TEST", entry);
-            engine.addBatch("TEST", entry);
+        // Add the same entry twice (repeated value for COL1, id)
+        engine.addBatch("TEST", entry);
+        engine.addBatch("TEST", entry);
 
-            engine.flush();
-
-            fail("Was expecting the flush operation to fail");
-        } catch (final DatabaseEngineException e) {
-            expectedException = e;
-        } finally {
-            if (engine.isTransactionActive()) {
-                engine.rollback();
-            }
-        }
-
-        // Ensure we had an exception and therefore we didn't insert anything on the DB and that we cleared the batches.
-        assertNotNull("DB returned exception when flushing", expectedException);
-
-        // Ensure that the exception thrown is caused by an SQL error.
-        assertThat(expectedException.getCause())
-                .as("Encapsulated exception is SQLException")
-                .isInstanceOf(SQLException.class);
-
-        // Ensure that the exception matches a unique constraint violation and thus is a DatabaseEngineUniqueConstraintViolationException.
-        assertThat(expectedException)
+        // Flush the duplicated entries and check the exception
+        assertThatCode(() -> engine.flush())
                 .as("Is unique constraint violation exception")
-                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class);
-
-        // Ensure that the exception is caught in AbstractDatabaseEngine#flush and then handled in QueryExceptionHandler#handleException.
-        assertEquals("Something went wrong while flushing [unique_constraint_violation]", expectedException.getMessage());
+                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class)
+                .as("Encapsulated exception is SQLException")
+                .hasCauseInstanceOf(SQLException.class)
+                .hasMessage("Something went wrong while flushing [unique_constraint_violation]");
     }
 
     /**

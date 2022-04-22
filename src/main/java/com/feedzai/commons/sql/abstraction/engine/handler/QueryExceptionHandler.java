@@ -22,6 +22,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 
+import java.sql.BatchUpdateException;
 import java.sql.SQLException;
 import java.sql.SQLTimeoutException;
 
@@ -67,8 +68,12 @@ public class QueryExceptionHandler {
      * @param exception  The exception to check.
      * @return {@code true} if the exception is a unique constraint violation, {@code false} otherwise.
      */
-    public boolean isUniqueConstraintViolationException(SQLException exception) {
-        return Constants.SQL_STATE_UNIQUE_CONSTRAINT_VIOLATION.equals(exception.getSQLState());
+    public boolean isUniqueConstraintViolationException(final SQLException exception) {
+        if (exception instanceof BatchUpdateException) {
+            return isUniqueConstraintViolationException(exception.getNextException());
+        } else {
+            return Constants.SQL_STATE_UNIQUE_CONSTRAINT_VIOLATION.equals(exception.getSQLState());
+        }
     }
 
     /**

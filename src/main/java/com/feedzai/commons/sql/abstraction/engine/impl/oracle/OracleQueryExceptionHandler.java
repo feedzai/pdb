@@ -47,6 +47,7 @@ public class OracleQueryExceptionHandler extends QueryExceptionHandler {
      * - ORA-00001: unique constraint (string.string) violated
      */
     private static final int UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE = 1;
+
     @Override
     public boolean isRetryableException(final SQLException exception) {
         return DEADLOCK_ERROR_CODES.contains(exception.getErrorCode()) || super.isRetryableException(exception);
@@ -54,7 +55,7 @@ public class OracleQueryExceptionHandler extends QueryExceptionHandler {
 
     @Override
     public boolean isUniqueConstraintViolationException(final SQLException exception) {
-        return UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE
-                == exception.getErrorCode() || super.isUniqueConstraintViolationException(exception);
+        return UNIQUE_CONSTRAINT_VIOLATION_ERROR_CODE == exception.getErrorCode()
+                || super.isUniqueConstraintViolationException(exception);
     }
 }

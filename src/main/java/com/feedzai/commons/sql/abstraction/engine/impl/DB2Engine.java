@@ -34,8 +34,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
-import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.engine.impl.db2.DB2QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.ibm.db2.jcc.am.SqlSyntaxErrorException;
@@ -97,11 +95,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
      * The column must have a {@link DbColumnConstraint#NOT_NULL NOT NULL column constraint}.
      */
     private static final int COLUMN_MUST_BE_NON_NULL = -542;
-
-    /**
-     * An instance of {@link QueryExceptionHandler} specific for DB2 engine, to be used in disambiguating SQL exceptions.
-     */
-    public static final QueryExceptionHandler DB2_QUERY_EXCEPTION_HANDLER = new DB2QueryExceptionHandler();
 
     /**
      * Creates a new DB2 connection.
@@ -986,10 +979,5 @@ public class DB2Engine extends AbstractDatabaseEngine {
     @Override
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new DB2ResultIterator(ps);
-    }
-
-    @Override
-    protected QueryExceptionHandler getQueryExceptionHandler() {
-        return DB2_QUERY_EXCEPTION_HANDLER;
     }
 }

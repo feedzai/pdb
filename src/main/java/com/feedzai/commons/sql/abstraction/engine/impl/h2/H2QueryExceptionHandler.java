@@ -19,7 +19,6 @@ package com.feedzai.commons.sql.abstraction.engine.impl.h2;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 
 import java.sql.SQLException;
-import org.h2.api.ErrorCode;
 
 /**
  * A specific implementation of {@link QueryExceptionHandler} for H2 engine.
