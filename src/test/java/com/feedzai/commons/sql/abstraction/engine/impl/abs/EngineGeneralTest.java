@@ -4277,8 +4277,6 @@ public class EngineGeneralTest {
                                    .set("COL5", "ADEUS")
                                    .build();
 
-        engine.beginTransaction();
-
         // Add the same entry twice (repeated value for COL1, id)
         engine.persist("TEST", entry);
         assertThatCode(() -> engine.persist("TEST", entry))
@@ -4310,8 +4308,6 @@ public class EngineGeneralTest {
                                    .set("COL4", 3L)
                                    .set("COL5", "ADEUS")
                                    .build();
-
-        engine.beginTransaction();
 
         // Add the same entry twice (repeated value for COL1, id)
         engine.addBatch("TEST", entry);
