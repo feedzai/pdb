@@ -449,7 +449,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     /**
      * Flushes the pending batches.
      *
-     * @implSpec Same as {@link #flush(boolean)} with {@link false}.
+     * @implSpec Same as {@link #flush(boolean)} with {@code false}.
      */
     public void flush() {
         this.metricsListener.onFlushTriggered();

@@ -43,7 +43,6 @@
 
         <jmockit.version>1.49</jmockit.version>
 
-        <maven-javadoc-plugin.version>3.3.2</maven-javadoc-plugin.version>
         <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
         <maven-gpg-plugin.version>3.0.1</maven-gpg-plugin.version>
     </properties>
@@ -290,7 +289,27 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>${maven-javadoc-plugin.version}</version>
+                    <version>3.4.0</version>
+                    <configuration>
+                        <tags>
+                            <tag>
+                                <name>apiNote</name>
+                                <placement>a</placement>
+                                <head>API Note:</head>
+                            </tag>
+                            <tag>
+                                <name>implSpec</name>
+                                <placement>a</placement>
+                                <head>Implementation Requirements:</head>
+                            </tag>
+                            <tag>
+                                <name>implNote</name>
+                                <placement>a</placement>
+                                <head>Implementation Note:</head>
+                            </tag>
+                        </tags>
+                    </configuration>
+
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
