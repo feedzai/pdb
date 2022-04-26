@@ -120,6 +120,12 @@ public final class Constants {
     public static final String SQL_STATE_TRANSACTION_FAILURE = "40001";
 
     /**
+     * The SQL standard State code for "unique constraint violation".
+     * A violation of the constraint imposed by a unique index or a unique constraint occurred.
+     */
+    public static final String SQL_STATE_UNIQUE_CONSTRAINT_VIOLATION = "23505";
+
+    /**
      * A set of PDB Exceptions that can be considered retryable (when these are thrown, it is possible that a client
      * application will be successfull if it performs again the same actions that resulted in the exception).
      * @since 2.5.1

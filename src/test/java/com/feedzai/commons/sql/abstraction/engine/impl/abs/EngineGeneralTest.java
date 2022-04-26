@@ -39,6 +39,7 @@ import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -50,6 +51,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.ImmutableSet;
+import java.sql.SQLException;
 import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
@@ -3683,6 +3685,24 @@ public class EngineGeneralTest {
         engine.addEntity(entity);
     }
 
+    /**
+     * Creates a {@link DbEntity} with 5 columns being the first the primary key to be used in the tests.
+     *
+     * @throws DatabaseEngineException If something goes wrong creating the entity.
+     */
+    private void create5ColumnsEntityWithPrimaryKey() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity().name("TEST")
+                                          .addColumn("COL1", INT)
+                                          .addColumn("COL2", BOOLEAN)
+                                          .addColumn("COL3", DOUBLE)
+                                          .addColumn("COL4", LONG)
+                                          .addColumn("COL5", STRING)
+                                          .pkFields("COL1")
+                                          .build();
+
+        engine.addEntity(entity);
+    }
+
     protected void userRolePermissionSchema() throws DatabaseEngineException {
         DbEntity entity = dbEntity()
                 .name("USER")
@@ -4233,6 +4253,73 @@ public class EngineGeneralTest {
                 .extracting(element -> element.get("COL5").toString())
                 .as("An enum value should be persisted as its string representation")
                 .isEqualTo(TestEnum.TEST_ENUM_VAL.name());
+    }
+
+    /**
+     * Tests that when inserting duplicated entries in a table the right exception is returned.
+     *
+     * The steps performed on this test are:
+     * <ol>
+     *     <li>Add duplicated entries in a transaction and fail to persist</li>
+     *     <li>Ensure the exception is a {@link DatabaseEngineUniqueConstraintViolationException}</li>
+     * </ol>
+     *
+     * @throws DatabaseEngineException If there is a problem on {@link DatabaseEngine} operations.
+     */
+    @Test
+    public void insertDuplicateDBError() throws Exception {
+        create5ColumnsEntityWithPrimaryKey();
+
+        EntityEntry entry = entry().set("COL1", 2)
+                                   .set("COL2", false)
+                                   .set("COL3", 2D)
+                                   .set("COL4", 3L)
+                                   .set("COL5", "ADEUS")
+                                   .build();
+
+        // Add the same entry twice (repeated value for COL1, id)
+        engine.persist("TEST", entry);
+        assertThatCode(() -> engine.persist("TEST", entry))
+                .as("Is unique constraint violation exception")
+                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class)
+                .as("Encapsulated exception is SQLException")
+                .hasCauseInstanceOf(SQLException.class)
+                .hasMessage("Something went wrong persisting the entity [unique_constraint_violation]");
+    }
+
+    /**
+     * Tests that on a duplicated batch entry situation the right exception is returned.
+     *
+     * The steps performed on this test are:
+     * <ol>
+     *     <li>Add duplicated batch entries to transaction and fail to flush</li>
+     *     <li>Ensure the exception is a {@link DatabaseEngineUniqueConstraintViolationException}</li>
+     * </ol>
+     *
+     * @throws DatabaseEngineException If there is a problem on {@link DatabaseEngine} operations.
+     */
+    @Test
+    public void batchInsertDuplicateDBError() throws DatabaseEngineException {
+        create5ColumnsEntityWithPrimaryKey();
+
+        EntityEntry entry = entry().set("COL1", 2)
+                                   .set("COL2", false)
+                                   .set("COL3", 2D)
+                                   .set("COL4", 3L)
+                                   .set("COL5", "ADEUS")
+                                   .build();
+
+        // Add the same entry twice (repeated value for COL1, id)
+        engine.addBatch("TEST", entry);
+        engine.addBatch("TEST", entry);
+
+        // Flush the duplicated entries and check the exception
+        assertThatCode(() -> engine.flush())
+                .as("Is unique constraint violation exception")
+                .isInstanceOf(DatabaseEngineUniqueConstraintViolationException.class)
+                .as("Encapsulated exception is SQLException")
+                .hasCauseInstanceOf(SQLException.class)
+                .hasMessage("Something went wrong while flushing [unique_constraint_violation]");
     }
 
     /**

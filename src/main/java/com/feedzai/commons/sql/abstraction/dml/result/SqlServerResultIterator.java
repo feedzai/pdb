@@ -16,10 +16,13 @@
 package com.feedzai.commons.sql.abstraction.dml.result;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine;
 
 import java.sql.PreparedStatement;
 import java.sql.Statement;
+
+import static com.feedzai.commons.sql.abstraction.engine.impl.SqlServerEngine.SQLSERVER_QUERY_EXCEPTION_HANDLER;
 
 /**
  * Result iterator for the {@link SqlServerEngine} engine.
@@ -52,5 +55,10 @@ public class SqlServerResultIterator extends ResultIterator {
     @Override
     public ResultColumn createResultColumn(String name, Object value) {
         return new SqlServerResultColumn(name, value);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return SQLSERVER_QUERY_EXCEPTION_HANDLER;
     }
 }

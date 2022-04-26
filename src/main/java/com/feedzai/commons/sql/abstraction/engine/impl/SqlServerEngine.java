@@ -32,6 +32,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.impl.sqlserver.SQLServerQueryExceptionHandler;
 
 import java.io.StringReader;
 import java.sql.PreparedStatement;
@@ -103,6 +105,11 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
      * according to this pattern, then it will be added to the properties with the value {@code false}.
      */
     private static final Pattern JDBC_URL_ENCRYPTION_PATTERN = Pattern.compile(";\\s*" + JDBC_URL_ENCRYPTION_PROPERTY + "\\s*=.*;?");
+
+    /**
+     * An instance of {@link QueryExceptionHandler} specific for SQLServer engine, to be used in disambiguating SQL exceptions.
+     */
+    public static final QueryExceptionHandler SQLSERVER_QUERY_EXCEPTION_HANDLER = new SQLServerQueryExceptionHandler();
 
     /**
      * Creates a new SQL Server connection.
@@ -757,5 +764,10 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
     @Override
     protected ResultIterator createResultIterator(PreparedStatement ps) throws DatabaseEngineException {
         return new SqlServerResultIterator(ps);
+    }
+
+    @Override
+    protected QueryExceptionHandler getQueryExceptionHandler() {
+        return SQLSERVER_QUERY_EXCEPTION_HANDLER;
     }
 }
