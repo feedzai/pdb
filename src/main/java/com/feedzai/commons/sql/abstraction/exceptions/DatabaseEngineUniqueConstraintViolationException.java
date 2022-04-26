@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.feedzai.commons.sql.abstraction.engine;
+package com.feedzai.commons.sql.abstraction.exceptions;
+
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 
 /**
  * A {@link DatabaseEngineException} that represents a unique constraint violation.

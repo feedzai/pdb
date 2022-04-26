@@ -17,7 +17,7 @@
 package com.feedzai.commons.sql.abstraction.engine.handler;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineUniqueConstraintViolationException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineTimeoutException;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
 import com.feedzai.commons.sql.abstraction.util.Constants;
