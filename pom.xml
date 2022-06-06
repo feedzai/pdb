@@ -100,7 +100,7 @@
             <dependency>
                 <groupId>org.assertj</groupId>
                 <artifactId>assertj-core</artifactId>
-                <version>3.22.0</version>
+                <version>3.23.1</version>
             </dependency>
             <dependency>
                 <groupId>org.awaitility</groupId>
@@ -319,7 +319,7 @@
                 <plugin>
                     <groupId>io.fabric8</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
-                    <version>0.39.1</version>
+                    <version>0.40.0</version>
                     <executions>
                         <execution>
                             <id>start</id>
