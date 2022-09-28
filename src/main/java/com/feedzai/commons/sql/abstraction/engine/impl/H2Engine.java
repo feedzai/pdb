@@ -46,6 +46,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
@@ -66,7 +68,7 @@ import static org.apache.commons.lang3.StringUtils.join;
 public class H2Engine extends AbstractDatabaseEngine {
     /**
      * The max length of a VARCHAR type.
-     * For more information, see: http://www.h2database.com/html/datatypes.html.
+     * For more information, see: <a href="http://www.h2database.com/html/datatypes.html">H2 database ─ data types</a>.
      */
     private static final int MAX_VARCHAR_LENGTH = 1048576;
 
@@ -114,6 +116,16 @@ public class H2Engine extends AbstractDatabaseEngine {
     public static final QueryExceptionHandler H2_QUERY_EXCEPTION_HANDLER = new H2QueryExceptionHandler();
 
     /**
+     * The pattern to detect the AUTO_SERVER flag in the JDBC URL.
+     */
+    private static final Pattern AUTO_SERVER_PATTERN = Pattern.compile("AUTO_SERVER=(TRUE|FALSE)", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * The pattern to detect the DB_CLOSE_ON_EXIT flag in the JDBC URL.
+     */
+    private static final Pattern CLOSE_ON_EXIT_PATTERN = Pattern.compile("DB_CLOSE_ON_EXIT=(TRUE|FALSE)", Pattern.CASE_INSENSITIVE);
+
+    /**
      * Creates a new H2 connection.
      *
      * @param properties The properties for the database connection.
@@ -124,16 +136,40 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected String getFinalJdbcConnection(String jdbc) {
-        if (!jdbc.contains("AUTO_SERVER")) {
-            jdbc = jdbc.concat(";AUTO_SERVER=TRUE");
+    protected String getFinalJdbcConnection(final String jdbc) {
+
+        final Matcher autoServerMatcher = AUTO_SERVER_PATTERN.matcher(jdbc);
+        Boolean autoServer = null;
+        if (autoServerMatcher.find()) {
+            autoServer = Boolean.parseBoolean(autoServerMatcher.group(1));
         }
 
-        if (!jdbc.contains("DB_CLOSE_ON_EXIT")) {
-            jdbc = jdbc.concat(";DB_CLOSE_ON_EXIT=FALSE");
+        final Matcher closeOnExitMatcher = CLOSE_ON_EXIT_PATTERN.matcher(jdbc);
+        Boolean closeOnExit = null;
+        if (closeOnExitMatcher.find()) {
+            closeOnExit = Boolean.parseBoolean(closeOnExitMatcher.group(1));
         }
 
-        return jdbc;
+        String finalJdbc = jdbc;
+
+        /*
+         Having AUTO_SERVER=TRUE and DB_CLOSE_ON_EXIT=FALSE is not allowed.
+         See:
+         - https://github.com/h2database/h2database/pull/3503
+         - https://github.com/h2database/h2database/commit/6a0f7a973251409f428565c7544dbd272de856f3#commitcomment-76882889
+         - https://thepracticaldeveloper.com/book-update-2.7.1/#feature-not-supported-auto_servertrue--db_close_on_exitfalse
+         */
+        if (autoServer == null && !Boolean.FALSE.equals(closeOnExit)) {
+            // if AUTO_SERVER is not explicitly defined, enable it, unless DB_CLOSE_ON_EXIT is explicitly set to false
+            autoServer = true;
+            finalJdbc = finalJdbc.concat(";AUTO_SERVER=TRUE");
+        }
+        if (closeOnExit == null && !Boolean.TRUE.equals(autoServer)) {
+            // if DB_CLOSE_ON_EXIT is not explicitly defined, disable it, unless AUTO_SERVER is enabled
+            finalJdbc = finalJdbc.concat(";DB_CLOSE_ON_EXIT=FALSE");
+        }
+
+        return finalJdbc;
     }
 
     @Override
@@ -390,7 +426,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void addSequences(DbEntity entity) throws DatabaseEngineException {
+    protected void addSequences(DbEntity entity) {
         /*
          * Do nothing by default since we support auto incrementation using the serial types.
          */
@@ -449,7 +485,7 @@ public class H2Engine extends AbstractDatabaseEngine {
                 .setInsert(ps)
                 .setInsertReturning(psReturn)
                 .setInsertWithAutoInc(psWithAutoInc)
-                // The auto incremented column must be set, so when persisting a row, its possible to retrieve its value
+                // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
                 // by consulting the column name from this MappedEntity.
                 .setAutoIncColumn(columnWithAutoIncName);
         } catch (final SQLException ex) {
@@ -458,9 +494,9 @@ public class H2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected void dropSequences(DbEntity entity) throws DatabaseEngineException {
+    protected void dropSequences(DbEntity entity) {
         /*
-         * Remember that we not support sequences in PostgreSql. We're using SERIAL types instead.
+         * H2 does not support sequences. We're using SERIAL types instead.
          */
     }
 
