@@ -21,6 +21,7 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,10 +69,14 @@ public class TimeoutsTest {
     @Rule
     public final TestName testName = new TestName();
 
+    private final String testId = getClass().getSimpleName() + "." + testName.getMethodName();
+
     /**
      * An executor to run actions asynchronously.
      */
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newCachedThreadPool(
+            new ThreadFactoryBuilder().setNameFormat(testId + "-pool-%d").build()
+    );
 
     /**
      * The database properties to use in the tests.
@@ -146,7 +151,6 @@ public class TimeoutsTest {
             engine != DatabaseEngineDriver.H2 && engine != DatabaseEngineDriver.H2V2
         );
 
-        final String testId = getClass().getSimpleName() + "." + testName.getMethodName();
         testRouter = new TestRouter(testId, engine.defaultPort());
     }
 

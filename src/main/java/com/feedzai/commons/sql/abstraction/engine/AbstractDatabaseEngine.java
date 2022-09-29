@@ -307,12 +307,16 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         this.conn.setNetworkTimeout(socketTimeoutExecutor, (int) TimeUnit.SECONDS.toMillis(this.properties.getSocketTimeout()));
 
+        logger.warn("connected");
+
         if (this.properties.isSchemaSet()) {
             setSchema(this.properties.getSchema());
         }
 
+        logger.warn("schema set");
         this.currentSchema = Optional.ofNullable(getSchema())
             .orElseThrow(() -> new DatabaseEngineException("Could not get current schema"));
+        logger.warn("schema read");
 
         setTransactionIsolation();
         onConnectionCreated();
