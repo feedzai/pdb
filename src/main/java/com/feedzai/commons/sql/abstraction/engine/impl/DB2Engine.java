@@ -36,6 +36,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
+import com.ibm.db2.jcc.DB2BaseDataSource;
 import com.ibm.db2.jcc.am.SqlSyntaxErrorException;
 import org.apache.commons.lang3.StringUtils;
 
@@ -111,7 +112,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
     protected Properties getDBProperties() {
         final Properties props = super.getDBProperties();
 
-        props.setProperty("deferPrepares", Boolean.FALSE.toString());
+        props.setProperty(DB2BaseDataSource.propertyKey_deferPrepares, Boolean.FALSE.toString());
 
         return props;
     }
