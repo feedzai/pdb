@@ -51,6 +51,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
@@ -104,6 +105,15 @@ public class DB2Engine extends AbstractDatabaseEngine {
      */
     public DB2Engine(PdbProperties properties) throws DatabaseEngineException {
         super(DB2_DRIVER, properties, Dialect.DB2);
+    }
+
+    @Override
+    protected Properties getDBProperties() {
+        final Properties props = super.getDBProperties();
+
+        props.setProperty("deferPrepares", Boolean.FALSE.toString());
+
+        return props;
     }
 
     @Override
