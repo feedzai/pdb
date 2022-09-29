@@ -35,7 +35,9 @@ import com.google.common.collect.Sets;
 import org.assertj.core.api.MapAssert;
 import org.assertj.core.data.MapEntry;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runners.Parameterized;
 
 import java.util.List;
@@ -76,6 +78,9 @@ import static org.junit.Assume.assumeThat;
  * @since 2.0.0
  */
 public abstract class AbstractEngineSchemaTest {
+
+    @Rule
+    public final TestName testName = new TestName();
 
     /**
      * An enumeration of the level of support of IEEE 754 non-number values a {@link DatabaseEngine} provides.
@@ -201,7 +206,8 @@ public abstract class AbstractEngineSchemaTest {
     public void testFetchSize() throws Exception {
         final DatabaseEngineDriver engineDriver = DatabaseEngineDriver.fromEngine(properties.getProperty(ENGINE));
 
-        final TestRouter testRouter = new TestRouter(engineDriver.defaultPort());
+        final String testId = getClass().getSimpleName() + "." + testName.getMethodName();
+        final TestRouter testRouter = new TestRouter(testId, engineDriver.defaultPort());
         testRouter.init();
 
         final Properties testProps = TestRouter.getPatchedDbProperties(properties, testRouter.getDbPort(), testRouter.getLocalPort());

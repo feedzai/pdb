@@ -17,6 +17,7 @@
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -60,7 +62,7 @@ public class TestRouter implements Closeable {
     /**
      * An {@link ExecutorService} to handle asynchronous tasks.
      */
-    private final ExecutorService executor = Executors.newFixedThreadPool(3);
+    private final ExecutorService executor;
 
     /**
      * The database port.
@@ -78,8 +80,18 @@ public class TestRouter implements Closeable {
      * @param dbPort   The real DB server port.
      * @throws IOException if some problem occurs creating a new {@link ServerSocket}.
      */
-    public TestRouter(final int dbPort) throws IOException {
+    public TestRouter(final String testId, final int dbPort) throws IOException {
         this.dbPort = dbPort;
+        this.executor = Executors.newFixedThreadPool(
+                3,
+                new ThreadFactoryBuilder().setNameFormat(testId + "-test_router-%d").build()
+        );
+
+        logger.info("Created TestRouter for test '{}' running on ports: DB - {}; local - {}",
+                testId,
+                dbPort,
+                serverSocket.getLocalPort()
+        );
     }
 
     /**
@@ -130,9 +142,11 @@ public class TestRouter implements Closeable {
 
         final Future<Socket> socketFuture = executor.submit(serverSocket::accept);
 
+        final CountDownLatch connectedLatch = new CountDownLatch(2);
         executor.submit(() -> {
                     final Socket socketTestToRouter = socketFuture.get();
                     logger.info("Test-to-DB established");
+
                     while (isRunning) {
                         int read = socketTestToRouter.getInputStream().read();
                         socketRouterToDb.getOutputStream().write(read);

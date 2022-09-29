@@ -23,7 +23,9 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -63,6 +65,9 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class TimeoutsTest {
 
+    @Rule
+    public final TestName testName = new TestName();
+
     /**
      * An executor to run actions asynchronously.
      */
@@ -76,7 +81,7 @@ public class TimeoutsTest {
     /**
      * The test value for the login timeout.
      */
-    private static final int LOGIN_TIMEOUT_SECONDS = 2;
+    private static final int LOGIN_TIMEOUT_SECONDS = 4;
 
     /**
      * The test value for the socket timeout (this must be greater than the sum of {@link #LOGIN_TIMEOUT_SECONDS}
@@ -141,7 +146,8 @@ public class TimeoutsTest {
             engine != DatabaseEngineDriver.H2 && engine != DatabaseEngineDriver.H2V2
         );
 
-        testRouter = new TestRouter(engine.defaultPort());
+        final String testId = getClass().getSimpleName() + "." + testName.getMethodName();
+        testRouter = new TestRouter(testId, engine.defaultPort());
     }
 
     @After
