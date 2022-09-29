@@ -710,65 +710,6 @@ public class DB2Engine extends AbstractDatabaseEngine {
     }
 
     @Override
-    protected boolean checkConnection(final Connection conn) {
-        final int timeout = this.properties.getCheckConnectionTimeout();
-        final int socketTimeout;
-        try {
-            socketTimeout = conn.getNetworkTimeout();
-            try {
-                // Set the socket timeout to verify the connection.
-                conn.setNetworkTimeout(socketTimeoutExecutor, timeout * 1000);
-                return pingConnection(conn);
-            } catch (final Exception ex) {
-                logger.debug("It wasn't possible to verify the connection state within the timeout of {} seconds.",
-                        timeout,
-                        ex);
-                return false;
-            } finally {
-                // Make sure to respect it afterwards.
-                conn.setNetworkTimeout(socketTimeoutExecutor, socketTimeout);
-            }
-        } catch (final Exception ex) {
-            logger.warn("It wasn't possible to reset the connection / fetch the timeout.");
-
-            try {
-                conn.close();
-            } catch (final Exception e) {
-                logger.debug("Error closing the connection.", e);
-            }
-
-            return false;
-        }
-    }
-
-    /**
-     * Executes a dummy query to verify if the connection is alive.
-     *
-     * @param conn The connection to test.
-     * @return {@code true} if the connection is valid, {@code false} otherwise.
-     */
-    private boolean pingConnection(final Connection conn) {
-        Statement s = null;
-        try {
-            s = conn.createStatement();
-            s.executeQuery("SELECT 1 FROM sysibm.sysdummy1");
-
-            return true;
-        } catch (final SQLException e) {
-            logger.debug("Connection is down.", e);
-            return false;
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
-        }
-    }
-
-    @Override
     protected ResultIterator createResultIterator(Statement statement, String sql) throws DatabaseEngineException {
         return new DB2ResultIterator(statement, sql);
     }
