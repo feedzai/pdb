@@ -81,7 +81,7 @@ public class TimeoutsTest {
     /**
      * The test value for the login timeout.
      */
-    private static final int LOGIN_TIMEOUT_SECONDS = 4;
+    private static final int LOGIN_TIMEOUT_SECONDS = 2;
 
     /**
      * The test value for the socket timeout (this must be greater than the sum of {@link #LOGIN_TIMEOUT_SECONDS}

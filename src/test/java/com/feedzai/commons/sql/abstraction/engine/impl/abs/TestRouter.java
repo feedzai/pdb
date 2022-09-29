@@ -142,7 +142,6 @@ public class TestRouter implements Closeable {
 
         final Future<Socket> socketFuture = executor.submit(serverSocket::accept);
 
-        final CountDownLatch connectedLatch = new CountDownLatch(2);
         executor.submit(() -> {
                     final Socket socketTestToRouter = socketFuture.get();
                     logger.info("Test-to-DB established");
