@@ -23,7 +23,6 @@ import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
 import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
@@ -101,21 +100,6 @@ public class OracleTranslator extends AbstractTranslator {
         final String pkName = StringUtils.md5(format("PK_%s", tableName), properties.getMaxIdentifierSize());
 
         return String.format("ALTER TABLE %s DROP CONSTRAINT %s", table.translate(), StringUtils.quotize(pkName));
-    }
-
-    @Override
-    public String translate(Function f) {
-        final String function = f.getFunction();
-        final Expression exp = f.getExp();
-        inject(exp);
-
-        String expTranslated = "";
-
-        if (exp != null) {
-            expTranslated = exp.translate();
-        }
-
-        return function + "(" + expTranslated + ")";
     }
 
     @Override

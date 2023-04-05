@@ -15,8 +15,21 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
@@ -71,7 +84,7 @@ public class H2Translator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Function f) {
+    public String translate(final Function f) {
         final Expression exp = f.getExp();
         final String function = f.getFunction();
         inject(exp);
@@ -82,8 +95,8 @@ public class H2Translator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        if (Function.AVG.equals(function)) {
-            expTranslated = String.format("CONVERT(%s, DOUBLE PRECISION)", expTranslated);
+        if (Function.AVG.equalsIgnoreCase(function)) {
+            expTranslated = format("CONVERT(%s, DOUBLE PRECISION)", expTranslated);
         }
 
         return function + "(" + expTranslated + ")";

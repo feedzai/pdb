@@ -62,7 +62,6 @@ import static com.feedzai.commons.sql.abstraction.dml.Function.FLOOR;
 import static com.feedzai.commons.sql.abstraction.dml.Function.LOWER;
 import static com.feedzai.commons.sql.abstraction.dml.Function.MAX;
 import static com.feedzai.commons.sql.abstraction.dml.Function.MIN;
-import static com.feedzai.commons.sql.abstraction.dml.Function.STDDEV;
 import static com.feedzai.commons.sql.abstraction.dml.Function.SUM;
 import static com.feedzai.commons.sql.abstraction.dml.Function.UPPER;
 import static com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter.AND;
@@ -455,13 +454,23 @@ public final class SqlBuilder {
     }
 
     /**
-     * The STDDEV operator.
+     * The STDDEV operator (sample standard deviation).
      *
      * @param exp The expression.
      * @return The STDDEV representation.
      */
     public static Expression stddev(final Expression exp) {
-        return new Function(STDDEV, exp);
+        return new Function(Function.STDDEV, exp);
+    }
+
+    /**
+     * The STDDEV_POP operator (population standard deviation).
+     *
+     * @param exp The expression.
+     * @return The STDDEV_POP representation.
+     */
+    public static Function stddevp(final Expression exp) {
+        return new Function(Function.STDDEV_POP, exp);
     }
 
     /**
@@ -553,6 +562,16 @@ public final class SqlBuilder {
      */
     public static StringAgg stringAgg(final Expression column) {
         return StringAgg.stringAgg(column);
+    }
+
+    /**
+     * The ASCII function (returns the ASCII value of the first character in the string value from the expression).
+     *
+     * @param column The expression inside the operator.
+     * @return The ASCII function.
+     */
+    public static Function ascii(final Expression column) {
+        return new Function(Function.ASCII, column);
     }
 
     /**

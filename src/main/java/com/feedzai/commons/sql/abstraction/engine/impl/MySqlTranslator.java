@@ -15,8 +15,24 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import com.feedzai.commons.sql.abstraction.ddl.*;
-import com.feedzai.commons.sql.abstraction.dml.*;
+import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
+import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
+import com.feedzai.commons.sql.abstraction.ddl.Rename;
+import com.feedzai.commons.sql.abstraction.dml.Cast;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
+import com.feedzai.commons.sql.abstraction.dml.Join;
+import com.feedzai.commons.sql.abstraction.dml.Modulo;
+import com.feedzai.commons.sql.abstraction.dml.Name;
+import com.feedzai.commons.sql.abstraction.dml.Query;
+import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
+import com.feedzai.commons.sql.abstraction.dml.StringAgg;
+import com.feedzai.commons.sql.abstraction.dml.Union;
+import com.feedzai.commons.sql.abstraction.dml.Update;
+import com.feedzai.commons.sql.abstraction.dml.View;
+import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
@@ -75,7 +91,7 @@ public class MySqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(com.feedzai.commons.sql.abstraction.dml.Function f) {
+    public String translate(final Function f) {
         String function = f.getFunction();
         final Expression exp = f.getExp();
         inject(exp);
@@ -86,7 +102,7 @@ public class MySqlTranslator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        if (Function.STDDEV.equals(function)) {
+        if (Function.STDDEV.equalsIgnoreCase(function)) {
             function = "STDDEV_SAMP";
         }
 

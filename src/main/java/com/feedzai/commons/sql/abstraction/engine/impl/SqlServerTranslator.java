@@ -93,7 +93,7 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Function f) {
+    public String translate(final Function f) {
         String function = f.getFunction();
         final Expression exp = f.getExp();
         inject(exp);
@@ -104,16 +104,19 @@ public class SqlServerTranslator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        if (Function.STDDEV.equals(function)) {
-            function = "STDEV";
-        }
-
-        if (Function.AVG.equals(function)) {
-            expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
-        }
-
-        if (Function.CEILING.equals(function)) {
-            function = "CEILING";
+        switch (function.toUpperCase()) {
+            case Function.STDDEV:
+                function = "STDEV";
+                break;
+            case Function.STDDEV_POP:
+                function = "STDEVP";
+                break;
+            case Function.AVG:
+                expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
+                break;
+            case Function.CEILING:
+                function = "CEILING";
+                break;
         }
 
         // if it is a user-defined function
@@ -477,13 +480,10 @@ public class SqlServerTranslator extends AbstractTranslator {
             if (environment != null && !environment.isEmpty()) {
                 final Expression parsedColumn = column(columnName.getName());
                 inject(parsedColumn);
-                switch (column.getOrdering()) {
-                    case "DESC":
-                        parsedColumn.desc();
-                        break;
-                    default:
-                        parsedColumn.asc();
-                        break;
+                if (column.getOrdering().equals("DESC")) {
+                    parsedColumn.desc();
+                } else {
+                    parsedColumn.asc();
                 }
 
                 return parsedColumn;

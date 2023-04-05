@@ -660,7 +660,19 @@ public abstract class AbstractTranslator {
      * @param f The object to translate.
      * @return The string representation of the given object.
      */
-    public abstract String translate(Function f);
+    public String translate(final Function f) {
+        final String function = f.getFunction();
+        final Expression exp = f.getExp();
+        inject(exp);
+
+        String expTranslated = "";
+
+        if (exp != null) {
+            expTranslated = exp.translate();
+        }
+
+        return function + "(" + expTranslated + ")";
+    }
 
     /**
      * Translates {@link Modulo}.
