@@ -47,6 +47,7 @@ import com.feedzai.commons.sql.abstraction.dml.Update;
 import com.feedzai.commons.sql.abstraction.dml.Values;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.With;
+import com.feedzai.commons.sql.abstraction.dml.functions.SubString;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 import java.util.Arrays;
@@ -565,13 +566,49 @@ public final class SqlBuilder {
     }
 
     /**
-     * The ASCII function (returns the ASCII value of the first character in the string value from the expression).
+     * The ASCII SQL function (returns the ASCII code of the first character in the string value from the expression).
      *
      * @param column The expression inside the operator.
      * @return The ASCII function.
      */
     public static Function ascii(final Expression column) {
         return new Function(Function.ASCII, column);
+    }
+
+    /**
+     * The CHAR_LENGTH SQL function (returns the length of string value from the expression, in number of characters).
+     *
+     * @param column The expression inside the operator.
+     * @return The ASCII function.
+     */
+    public static Function length(final Expression column) {
+        return new Function(Function.CHAR_LENGTH, column);
+    }
+
+    /**
+     * The SUBSTRING SQL function (returns a substring of the string value from the expression).
+     *
+     * @param column The expression referring to the column for which to obtain a substring (the expression should
+     *               return a string, can be a constant).
+     * @param start  The start position. The first position in string is 1.
+     * @param length The number of characters to extract. Must be a positive number.
+     * @return The SUBSTRING function.
+     */
+    public static SubString subString(final Expression column, final int start, final int length) {
+        return subString(column, k(start), k(length));
+    }
+
+    /**
+     * The SUBSTRING SQL function (returns a substring of the string value from the expression).
+     *
+     * @param column The expression referring to the column for which to obtain a substring (the expression should
+     *               return a string, can be a constant).
+     * @param start  The expression for getting the start position. The first position in string is 1.
+     * @param length The expression for getting the number of characters to extract. Must be a positive number.
+     * @return The SUBSTRING function.
+     */
+    public static SubString subString(final Expression column, final Expression start, final Expression length) {
+        return new SubString(column, start, length);
     }
 
     /**

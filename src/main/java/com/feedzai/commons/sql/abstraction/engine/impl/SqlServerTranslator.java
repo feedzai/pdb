@@ -117,6 +117,9 @@ public class SqlServerTranslator extends AbstractTranslator {
             case Function.CEILING:
                 function = "CEILING";
                 break;
+            case Function.CHAR_LENGTH:
+                // LEN function in SQL counts the characters after trimming trailing spaces
+                return "(LEN(" + expTranslated + " + '1') - 1)";
         }
 
         // if it is a user-defined function
@@ -480,10 +483,13 @@ public class SqlServerTranslator extends AbstractTranslator {
             if (environment != null && !environment.isEmpty()) {
                 final Expression parsedColumn = column(columnName.getName());
                 inject(parsedColumn);
-                if (column.getOrdering().equals("DESC")) {
-                    parsedColumn.desc();
-                } else {
-                    parsedColumn.asc();
+                switch (column.getOrdering()) {
+                    case "DESC":
+                        parsedColumn.desc();
+                        break;
+                    default:
+                        parsedColumn.asc();
+                        break;
                 }
 
                 return parsedColumn;

@@ -50,6 +50,7 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import mockit.Expectations;
 import mockit.Invocation;
@@ -65,6 +66,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
@@ -78,6 +81,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -127,11 +131,13 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.floor;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.length;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lower;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.min;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.minus;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
@@ -141,6 +147,7 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddevp;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.subString;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
@@ -174,6 +181,11 @@ import static org.junit.Assume.assumeTrue;
  */
 @RunWith(Parameterized.class)
 public class EngineGeneralTest {
+
+    /**
+     * Logger for this class.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(EngineGeneralTest.class);
 
     private static final Offset<Double> DELTA = Assertions.offset(1e-7);
 
@@ -4022,33 +4034,75 @@ public class EngineGeneralTest {
     @Test
     public void stringFunctionsTest() throws DatabaseEngineException {
         create5ColumnsEntity();
-        final String testString = "oLaZaO";
+        final Map<String, Set<Dialect>> testData = ImmutableMap.of(
+                "oLaZAo!", ImmutableSet.of(),
+                " oLaZAo!", ImmutableSet.of(),
+                "oLaZAo! ", ImmutableSet.of(),
+                "oLáZÃo!", ImmutableSet.of(),
+                // H2 doesn't support getting the length for strings with these extended characters
+                "oLáZÃ😁", ImmutableSet.of(Dialect.H2)
+        );
 
-        engine.persist("TEST", entry().set("COL5", testString).build());
+        final SoftAssertions softly = new SoftAssertions();
+        int i = 0;
+
+        for (final Map.Entry<String, Set<Dialect>> testEntry : testData.entrySet()) {
+            final String testString = testEntry.getKey();
+            final Dialect engineDialect = engine.getDialect();
+
+            if (testEntry.getValue().contains(engineDialect)) {
+                logger.debug("Test string '{}' skipped for engine '{}' (not supported)", testString, engineDialect);
+                continue;
+            }
+
+            i++;
+
+            final int testStringLength = testString.codePointCount(0, testString.length());
+            engine.persist("TEST", entry().set("COL1", i).set("COL5", testString).build());
 
         final Name col5 = column("COL5");
         final Map<String, ResultColumn> queryResult = engine.query(
                         select(
                                 upper(col5).alias(Function.UPPER),
                                 lower(col5).alias(Function.LOWER),
-                                ascii(col5).alias(Function.ASCII)
+                                subString(col5, 2, 2).alias("substring1"),
+                                    subString(col5, k(2), minus(length(col5), k(testStringLength - 2))).alias("substring2"),
+                                ascii(col5).alias(Function.ASCII),
+                                length(col5).alias(Function.CHAR_LENGTH)
                         )
-                                .from(table("TEST")))
+                                    .from(table("TEST"))
+                                    .where(eq(column("COL1"), k(i)))
+                    )
                 .get(0);
 
-        final SoftAssertions softly = new SoftAssertions();
         softly.assertThat(queryResult.get(Function.UPPER).toString())
-                .as("text is uppercase")
+                    .as("text '%s' in uppercase", testString)
                 .isEqualTo(testString.toUpperCase());
 
         softly.assertThat(queryResult.get(Function.LOWER).toString())
-                .as("text is lowercase")
+                    .as("text '%s' in lowercase", testString)
                 .isEqualTo(testString.toLowerCase());
+
+        softly.assertThat(queryResult.get("substring1").toString())
+                    .as("substring of text '%s'", testString)
+                // start position is 0-based in Java, 1-based in SQL
+                // SQL start: 2, length: 2 ─> Java start (inclusive): 1, end (exclusive): 1 + 2 = 3
+                .isEqualTo(testString.substring(1, 3));
+
+        softly.assertThat(queryResult.get("substring2").toString())
+                    .as("substring of text '%s'", testString)
+                    // SQL start: 2, length: len - {length - 2} ─> Java start: 1, end: 1 + (length - (length - 2)) = 3
+                .isEqualTo(testString.substring(1, 3));
 
         final char asciiVal = testString.charAt(0);
         softly.assertThat(queryResult.get(Function.ASCII).toInt())
                 .as("ascii for '%s' in '%s' is %d", asciiVal, testString, (int) asciiVal)
                 .isEqualTo(asciiVal);
+
+        softly.assertThat(queryResult.get(Function.CHAR_LENGTH).toInt())
+                    .as("text '%s' length", testString)
+                    .isEqualTo(testStringLength);
+        }
 
         softly.assertAll();
     }
@@ -4059,6 +4113,22 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL5", "OLA").build());
         assertEquals("text is uppercase", "ola", engine.query(select(f("LOWER", column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES")
                 .toString());
+    }
+
+    @Test
+    public void caseInsensitivityTest() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", STRING, DbColumnConstraint.UNIQUE, DbColumnConstraint.NOT_NULL)
+                .build();
+
+        engine.addEntity(entity);
+
+        engine.persist("TEST", entry().set("COL1", "OLA").build());
+
+        assertThatCode(() -> engine.persist("TEST", entry().set("COL1", "ola").build()))
+                .describedAs("Should consider lowercase different from uppercase, and not throw unique constraint violation")
+                .doesNotThrowAnyException();
     }
 
     @Test

@@ -22,8 +22,8 @@ import com.feedzai.commons.sql.abstraction.ddl.DropPrimaryKey;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
@@ -103,12 +103,18 @@ public class PostgreSqlTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Modulo m) {
-        final Expression dividend = m.getDividend();
-        final Expression divisor = m.getDivisor();
-        inject(dividend, divisor);
+    public String translate(Function f) {
+        final Expression exp = f.getExp();
+        final String function = f.getFunction();
+        inject(exp);
 
-        return String.format("MOD(%s, %s)", dividend.translate(), divisor.translate());
+        String expTranslated = "";
+
+        if (exp != null) {
+            expTranslated = exp.translate();
+        }
+
+        return function + "(" + expTranslated + ")";
     }
 
     @Override

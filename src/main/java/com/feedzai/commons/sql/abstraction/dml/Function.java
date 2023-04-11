@@ -75,9 +75,14 @@ public class Function extends Expression {
     public static final String CEILING = "CEIL";
 
     /**
-     * The ASCII function.
+     * The ASCII SQL function (returns the ASCII code of the first character of the provided string).
      */
     public static final String ASCII = "ASCII";
+
+    /**
+     * The CHAR_LENGTH SQL function (returns the length of the provided string in number of characters).
+     */
+    public static final String CHAR_LENGTH = "CHAR_LENGTH";
 
     /**
      * The list of functions.
@@ -98,6 +103,7 @@ public class Function extends Expression {
                 .add(FLOOR)
                 .add(CEILING)
                 .add(ASCII)
+                .add(CHAR_LENGTH)
                 .build();
     }
 

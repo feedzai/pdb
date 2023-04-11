@@ -23,14 +23,15 @@ import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Cast;
 import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
 import com.feedzai.commons.sql.abstraction.dml.StringAgg;
 import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
+import com.feedzai.commons.sql.abstraction.dml.functions.SubString;
 import com.feedzai.commons.sql.abstraction.engine.AbstractTranslator;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
 import com.feedzai.commons.sql.abstraction.engine.OperationNotSupportedRuntimeException;
@@ -103,12 +104,22 @@ public class OracleTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Modulo m) {
-        final Expression dividend = m.getDividend();
-        final Expression divisor = m.getDivisor();
-        inject(dividend, divisor);
+    public String translate(final Function f) {
+        String function = f.getFunction();
+        final Expression exp = f.getExp();
+        inject(exp);
 
-        return String.format("MOD(%s, %s)", dividend.translate(), divisor.translate());
+        String expTranslated = "";
+
+        if (exp != null) {
+            expTranslated = exp.translate();
+        }
+
+        if (Function.CHAR_LENGTH.equalsIgnoreCase(function)) {
+            function = "LENGTH";
+        }
+
+        return function + "(" + expTranslated + ")";
     }
 
     @Override
@@ -447,5 +458,16 @@ public class OracleTranslator extends AbstractTranslator {
     @Override
     public String translateFalse() {
         return "'0'";
+    }
+
+    @Override
+    public String translate(final SubString subString) {
+        inject(subString.getColumn(), subString.getStart(), subString.getLength());
+
+        return new StringJoiner(", ", "SUBSTR(", ")")
+                .add(subString.getColumn().translate())
+                .add(subString.getStart().translate())
+                .add(subString.getLength().translate())
+                .toString();
     }
 }

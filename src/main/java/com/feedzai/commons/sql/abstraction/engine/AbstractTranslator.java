@@ -43,6 +43,7 @@ import com.feedzai.commons.sql.abstraction.dml.View;
 import com.feedzai.commons.sql.abstraction.dml.When;
 import com.feedzai.commons.sql.abstraction.dml.With;
 import com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder;
+import com.feedzai.commons.sql.abstraction.dml.functions.SubString;
 import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.google.common.base.Joiner;
 import com.google.inject.Inject;
@@ -53,6 +54,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.union;
@@ -660,19 +662,7 @@ public abstract class AbstractTranslator {
      * @param f The object to translate.
      * @return The string representation of the given object.
      */
-    public String translate(final Function f) {
-        final String function = f.getFunction();
-        final Expression exp = f.getExp();
-        inject(exp);
-
-        String expTranslated = "";
-
-        if (exp != null) {
-            expTranslated = exp.translate();
-        }
-
-        return function + "(" + expTranslated + ")";
-    }
+    public abstract String translate(Function f);
 
     /**
      * Translates {@link Modulo}.
@@ -680,7 +670,13 @@ public abstract class AbstractTranslator {
      * @param m The object to translate.
      * @return The string representation of the given object.
      */
-    public abstract String translate(Modulo m);
+    public String translate(final Modulo m) {
+        final Expression dividend = m.getDividend();
+        final Expression divisor = m.getDivisor();
+        inject(dividend, divisor);
+
+        return String.format("MOD(%s, %s)", dividend.translate(), divisor.translate());
+    }
 
     /**
      * Translates {@link Rename}.
@@ -729,4 +725,20 @@ public abstract class AbstractTranslator {
      * @return The string representation of the given object.
      */
     public abstract String translate(StringAgg stringAgg);
+
+    /**
+     * Translates {@link SubString} SQL function.
+     *
+     * @param subString The {@link SubString} expression to translate.
+     * @return The string representation of the given expression.
+     */
+    public String translate(final SubString subString) {
+        inject(subString.getColumn(), subString.getStart(), subString.getLength());
+
+        return new StringJoiner(", ", "SUBSTRING(", ")")
+                .add(subString.getColumn().translate())
+                .add(subString.getStart().translate())
+                .add(subString.getLength().translate())
+                .toString();
+    }
 }
