@@ -93,7 +93,7 @@ public class SqlServerTranslator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Function f) {
+    public String translate(final Function f) {
         String function = f.getFunction();
         final Expression exp = f.getExp();
         inject(exp);
@@ -104,16 +104,22 @@ public class SqlServerTranslator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        if (Function.STDDEV.equals(function)) {
-            function = "STDEV";
-        }
-
-        if (Function.AVG.equals(function)) {
-            expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
-        }
-
-        if (Function.CEILING.equals(function)) {
-            function = "CEILING";
+        switch (function.toUpperCase()) {
+            case Function.STDDEV:
+                function = "STDEV";
+                break;
+            case Function.STDDEV_POP:
+                function = "STDEVP";
+                break;
+            case Function.AVG:
+                expTranslated = String.format("CONVERT(DOUBLE PRECISION, %s)", expTranslated);
+                break;
+            case Function.CEILING:
+                function = "CEILING";
+                break;
+            case Function.CHAR_LENGTH:
+                // LEN function in SQL counts the characters after trimming trailing spaces
+                return "(LEN(" + expTranslated + " + '1') - 1)";
         }
 
         // if it is a user-defined function

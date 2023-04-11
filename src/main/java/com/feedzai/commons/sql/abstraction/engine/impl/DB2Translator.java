@@ -25,7 +25,6 @@ import com.feedzai.commons.sql.abstraction.dml.Concat;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
 import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.Join;
-import com.feedzai.commons.sql.abstraction.dml.Modulo;
 import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.RepeatDelimiter;
@@ -106,9 +105,9 @@ public class DB2Translator extends AbstractTranslator {
     }
 
     @Override
-    public String translate(Function f) {
+    public String translate(final Function f) {
         final Expression exp = f.getExp();
-        final String function = f.getFunction();
+        String function = f.getFunction();
         inject(exp);
 
 
@@ -118,14 +117,13 @@ public class DB2Translator extends AbstractTranslator {
             expTranslated = exp.translate();
         }
 
-        if (Function.STDDEV.equalsIgnoreCase(function)) {
-            /* DB2 STDDEV divides VARIANCE by N instead of N-1 (why IBM??? why?), this fixes it */
-            return "SQRT(VARIANCE(" + expTranslated + ")*COUNT(1)/(COUNT(1)-1))";
-
-        }
-        if (Function.AVG.equalsIgnoreCase(function)) {
-           /* DB2 AVG is type sensitive - avg of int returns int (why IBM???)*/
-            return "AVG(" + expTranslated + "+0.0)";
+        switch (function.toUpperCase()) {
+            case Function.STDDEV:
+                function = "STDDEV_SAMP";
+                break;
+            case Function.AVG:
+                /* DB2 AVG is type sensitive - avg of int returns int (why IBM???)*/
+                return "AVG(CAST(" + expTranslated + " AS DOUBLE PRECISION))";
         }
 
         // if it is a user-defined function
@@ -134,15 +132,6 @@ public class DB2Translator extends AbstractTranslator {
         } else {
             return function + "(" + expTranslated + ")";
         }
-    }
-
-    @Override
-    public String translate(Modulo m) {
-        final Expression dividend = m.getDividend();
-        final Expression divisor = m.getDivisor();
-        inject(dividend, divisor);
-
-        return String.format("MOD(%s, %s)", dividend.translate(), divisor.translate());
     }
 
     @Override

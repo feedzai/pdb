@@ -22,7 +22,9 @@ import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.Rename;
 import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.Function;
 import com.feedzai.commons.sql.abstraction.dml.K;
+import com.feedzai.commons.sql.abstraction.dml.Name;
 import com.feedzai.commons.sql.abstraction.dml.Query;
 import com.feedzai.commons.sql.abstraction.dml.Truncate;
 import com.feedzai.commons.sql.abstraction.dml.Update;
@@ -48,18 +50,24 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfigurati
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
 import mockit.MockUp;
 import mockit.Verifications;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.SoftAssertions;
+import org.assertj.core.data.Offset;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
@@ -68,10 +76,12 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.IntSummaryStatistics;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -87,8 +97,18 @@ import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.INT;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.LONG;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.STRING;
+import static com.feedzai.commons.sql.abstraction.dml.Function.AVG;
+import static com.feedzai.commons.sql.abstraction.dml.Function.CEILING;
+import static com.feedzai.commons.sql.abstraction.dml.Function.COUNT;
+import static com.feedzai.commons.sql.abstraction.dml.Function.FLOOR;
+import static com.feedzai.commons.sql.abstraction.dml.Function.MAX;
+import static com.feedzai.commons.sql.abstraction.dml.Function.MIN;
+import static com.feedzai.commons.sql.abstraction.dml.Function.STDDEV;
+import static com.feedzai.commons.sql.abstraction.dml.Function.STDDEV_POP;
+import static com.feedzai.commons.sql.abstraction.dml.Function.SUM;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.L;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.all;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.ascii;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.avg;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.between;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.caseWhen;
@@ -111,11 +131,13 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.f;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.floor;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.in;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.k;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.length;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.like;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lit;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.lower;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.min;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.minus;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.mod;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.neq;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notBetween;
@@ -123,7 +145,9 @@ import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.notIn;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.or;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.select;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddev;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stddevp;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.stringAgg;
+import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.subString;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.sum;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.table;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.udf;
@@ -158,8 +182,12 @@ import static org.junit.Assume.assumeTrue;
 @RunWith(Parameterized.class)
 public class EngineGeneralTest {
 
+    /**
+     * Logger for this class.
+     */
+    private static final Logger logger = LoggerFactory.getLogger(EngineGeneralTest.class);
 
-    private static final double DELTA = 1e-7;
+    private static final Offset<Double> DELTA = Assertions.offset(1e-7);
 
     protected DatabaseEngine engine;
     protected Properties properties;
@@ -1072,136 +1100,32 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void stddevTest() throws DatabaseEngineException {
+    public void statsTest() throws DatabaseEngineException {
         create5ColumnsEntity();
 
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
+        class FullStats extends IntSummaryStatistics {
+            private double sumQ = 0.0;
 
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
+            @Override
+            public void accept(final int value) {
+                final double prevSumQ = this.sumQ;
+                final double prevAvg = getAverage();
+                super.accept(value);
+                this.sumQ = prevSumQ + (value - prevAvg) * (value - getAverage());
+            }
+
+            public double getStdevSample() {
+                return Math.sqrt(this.sumQ / (getCount() - 1));
+            }
+
+            public double getStdevPop() {
+                return Math.sqrt(this.sumQ / getCount());
+            }
         }
-        List<Map<String, ResultColumn>> query = engine.query(select(stddev(column("COL1")).alias("STDDEV")).from(table("TEST")));
 
-        assertEquals("result ok?", 3.0276503540974917D, query.get(0).get("STDDEV").toDouble(), 0.0001D);
-    }
+        final FullStats stats = new FullStats();
 
-    @Test
-    public void sumTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
-
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
-        List<Map<String, ResultColumn>> query = engine.query(select(sum(column("COL1")).alias("SUM")).from(table("TEST")));
-
-        assertEquals("result ok?", 45, (int) query.get(0).get("SUM").toInt());
-    }
-
-    @Test
-    public void countTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
-
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
-        List<Map<String, ResultColumn>> query = engine.query(select(count(column("COL1")).alias("COUNT")).from(table("TEST")));
-
-        assertEquals("result ok?", 10, (int) query.get(0).get("COUNT").toInt());
-    }
-
-    @Test
-    public void avgTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
-
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
-        List<Map<String, ResultColumn>> query = engine.query(select(avg(column("COL1")).alias("AVG")).from(table("TEST")));
-
-        assertEquals("result ok?", 4.5D, query.get(0).get("AVG").toDouble(), 0);
-    }
-
-    @Test
-    public void maxTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
-
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
-        List<Map<String, ResultColumn>> query = engine.query(select(max(column("COL1")).alias("MAX")).from(table("TEST")));
-
-        assertEquals("result ok?", 9, (int) query.get(0).get("MAX").toInt());
-    }
-
-    @Test
-    public void minTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
-                .set("COL1", 2)
-                .set("COL2", false)
-                .set("COL3", 2D)
-                .set("COL4", 3L)
-                .set("COL5", "ADEUS");
-
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
-        List<Map<String, ResultColumn>> query = engine.query(select(min(column("COL1")).alias("MIN")).from(table("TEST")));
-
-        assertEquals("result ok?", 0, (int) query.get(0).get("MIN").toInt());
-    }
-
-    @Test
-    public void floorTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-
-        EntityEntry.Builder entry = entry()
+        final EntityEntry.Builder entry = entry()
                 .set("COL1", 2)
                 .set("COL2", false)
                 .set("COL3", 2.5D)
@@ -1210,35 +1134,60 @@ public class EngineGeneralTest {
 
         for (int i = 0; i < 10; i++) {
             entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
+            engine.persist("TEST", entry.build());
+            stats.accept(i);
         }
 
-        List<Map<String, ResultColumn>> query = engine.query(select(floor(column("COL3")).alias("FLOOR")).from(table("TEST")));
+        final Name col1 = column("COL1");
+        final List<Map<String, ResultColumn>> result = engine.query(select(
+                count(col1).alias(COUNT),
+                sum(col1).alias(SUM),
+                avg(col1).alias(AVG),
+                stddev(col1).alias(STDDEV),
+                stddevp(col1).alias(STDDEV_POP),
+                min(col1).alias(MIN),
+                max(col1).alias(MAX)
+        )
+                .from(table("TEST")));
 
-        assertEquals("result ok?", 2.0, query.get(0).get("FLOOR").toDouble(), DELTA);
+        assertThat(result).hasSize(1);
+
+        final Map<String, ResultColumn> statsResult = result.get(0);
+
+        final SoftAssertions softly = new SoftAssertions();
+        softly.assertThat(statsResult.get(COUNT).toInt()).as(COUNT).isEqualTo(stats.getCount());
+        softly.assertThat(statsResult.get(SUM).toInt()).as(SUM).isEqualTo(stats.getSum());
+        softly.assertThat(statsResult.get(AVG).toDouble()).as(AVG).isEqualTo(stats.getAverage(), DELTA);
+        softly.assertThat(statsResult.get(STDDEV).toDouble()).as(STDDEV).isEqualTo(stats.getStdevSample(), DELTA);
+        softly.assertThat(statsResult.get(STDDEV_POP).toDouble()).as(STDDEV_POP).isEqualTo(stats.getStdevPop(), DELTA);
+        softly.assertThat(statsResult.get(MIN).toInt()).as(MIN).isEqualTo(stats.getMin());
+        softly.assertThat(statsResult.get(MAX).toInt()).as(MAX).isEqualTo(stats.getMax());
+        softly.assertAll();
     }
 
     @Test
-    public void ceilingTest() throws DatabaseEngineException {
+    public void roundingTest() throws DatabaseEngineException {
         create5ColumnsEntity();
 
-        EntityEntry.Builder entry = entry()
+        engine.persist("TEST", entry()
                 .set("COL1", 2)
                 .set("COL2", false)
                 .set("COL3", 2.5D)
                 .set("COL4", 3L)
-                .set("COL5", "ADEUS");
+                .set("COL5", "ADEUS")
+                .build());
 
-        for (int i = 0; i < 10; i++) {
-            entry.set("COL1", i);
-            engine.persist("TEST", entry
-                    .build());
-        }
+        final Map<String, ResultColumn> result = engine.query(select(
+                floor(column("COL3")).alias(FLOOR),
+                ceiling(column("COL3")).alias(CEILING)
+        )
+                .from(table("TEST")))
+                .get(0);
 
-        List<Map<String, ResultColumn>> query = engine.query(select(ceiling(column("COL3")).alias("CEILING")).from(table("TEST")));
-
-        assertEquals("result ok?", 3.0, query.get(0).get("CEILING").toDouble(), DELTA);
+        final SoftAssertions softly = new SoftAssertions();
+        softly.assertThat(result.get(FLOOR).toDouble()).as(FLOOR).isEqualTo(2, DELTA);
+        softly.assertThat(result.get(CEILING).toDouble()).as(CEILING).isEqualTo(3, DELTA);
+        softly.assertAll();
     }
 
     @Test
@@ -4083,17 +4032,79 @@ public class EngineGeneralTest {
     }
 
     @Test
-    public void upperTest() throws DatabaseEngineException {
+    public void stringFunctionsTest() throws DatabaseEngineException {
         create5ColumnsEntity();
-        engine.persist("TEST", entry().set("COL5", "ola").build());
-        assertEquals("text is uppercase", "OLA", engine.query(select(upper(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
-    }
+        final Map<String, Set<Dialect>> testData = ImmutableMap.of(
+                "oLaZAo!", ImmutableSet.of(),
+                " oLaZAo!", ImmutableSet.of(),
+                "oLaZAo! ", ImmutableSet.of(),
+                "oLáZÃo!", ImmutableSet.of(),
+                // H2 doesn't support getting the length for strings with these extended characters
+                "oLáZÃ😁", ImmutableSet.of(Dialect.H2)
+        );
 
-    @Test
-    public void lowerTest() throws DatabaseEngineException {
-        create5ColumnsEntity();
-        engine.persist("TEST", entry().set("COL5", "OLA").build());
-        assertEquals("text is lowercase", "ola", engine.query(select(lower(column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES").toString());
+        final SoftAssertions softly = new SoftAssertions();
+        int i = 0;
+
+        for (final Map.Entry<String, Set<Dialect>> testEntry : testData.entrySet()) {
+            final String testString = testEntry.getKey();
+            final Dialect engineDialect = engine.getDialect();
+
+            if (testEntry.getValue().contains(engineDialect)) {
+                logger.debug("Test string '{}' skipped for engine '{}' (not supported)", testString, engineDialect);
+                continue;
+            }
+
+            i++;
+
+            final int testStringLength = testString.codePointCount(0, testString.length());
+            engine.persist("TEST", entry().set("COL1", i).set("COL5", testString).build());
+
+        final Name col5 = column("COL5");
+        final Map<String, ResultColumn> queryResult = engine.query(
+                        select(
+                                upper(col5).alias(Function.UPPER),
+                                lower(col5).alias(Function.LOWER),
+                                subString(col5, 2, 2).alias("substring1"),
+                                    subString(col5, k(2), minus(length(col5), k(testStringLength - 2))).alias("substring2"),
+                                ascii(col5).alias(Function.ASCII),
+                                length(col5).alias(Function.CHAR_LENGTH)
+                        )
+                                    .from(table("TEST"))
+                                    .where(eq(column("COL1"), k(i)))
+                    )
+                .get(0);
+
+        softly.assertThat(queryResult.get(Function.UPPER).toString())
+                    .as("text '%s' in uppercase", testString)
+                .isEqualTo(testString.toUpperCase());
+
+        softly.assertThat(queryResult.get(Function.LOWER).toString())
+                    .as("text '%s' in lowercase", testString)
+                .isEqualTo(testString.toLowerCase());
+
+        softly.assertThat(queryResult.get("substring1").toString())
+                    .as("substring of text '%s'", testString)
+                // start position is 0-based in Java, 1-based in SQL
+                // SQL start: 2, length: 2 ─> Java start (inclusive): 1, end (exclusive): 1 + 2 = 3
+                .isEqualTo(testString.substring(1, 3));
+
+        softly.assertThat(queryResult.get("substring2").toString())
+                    .as("substring of text '%s'", testString)
+                    // SQL start: 2, length: len - {length - 2} ─> Java start: 1, end: 1 + (length - (length - 2)) = 3
+                .isEqualTo(testString.substring(1, 3));
+
+        final char asciiVal = testString.charAt(0);
+        softly.assertThat(queryResult.get(Function.ASCII).toInt())
+                .as("ascii for '%s' in '%s' is %d", asciiVal, testString, (int) asciiVal)
+                .isEqualTo(asciiVal);
+
+        softly.assertThat(queryResult.get(Function.CHAR_LENGTH).toInt())
+                    .as("text '%s' length", testString)
+                    .isEqualTo(testStringLength);
+        }
+
+        softly.assertAll();
     }
 
     @Test
@@ -4102,6 +4113,22 @@ public class EngineGeneralTest {
         engine.persist("TEST", entry().set("COL5", "OLA").build());
         assertEquals("text is uppercase", "ola", engine.query(select(f("LOWER", column("COL5")).alias("RES")).from(table("TEST"))).get(0).get("RES")
                 .toString());
+    }
+
+    @Test
+    public void caseInsensitivityTest() throws DatabaseEngineException {
+        final DbEntity entity = dbEntity()
+                .name("TEST")
+                .addColumn("COL1", STRING, DbColumnConstraint.UNIQUE, DbColumnConstraint.NOT_NULL)
+                .build();
+
+        engine.addEntity(entity);
+
+        engine.persist("TEST", entry().set("COL1", "OLA").build());
+
+        assertThatCode(() -> engine.persist("TEST", entry().set("COL1", "ola").build()))
+                .describedAs("Should consider lowercase different from uppercase, and not throw unique constraint violation")
+                .doesNotThrowAnyException();
     }
 
     @Test

@@ -624,7 +624,17 @@
                                         <env>
                                             <MYSQL_ROOT_PASSWORD>AaBb12.#</MYSQL_ROOT_PASSWORD>
                                         </env>
-                                        <cmd>--max-allowed-packet=16000000 --innodb-log-file-size=160000000</cmd>
+                                        <!--
+                                         For some tests to work (e.g. sending large values to LOB columns) we need
+                                          packet size and log file size increased from the default.
+                                         To be able to correctly obtain the length and a substring of a string with
+                                          some special characters, full UTF-8 support is needed, so the default
+                                          character set needs to be defined as "utf8mb4", instead of the default utf8
+                                          which is "utf8mb3".
+                                         To be able to distinguish strings with same characters but different case, a
+                                          case-sensitive collation is needed, hence utf8mb4_bin is used.
+                                        -->
+                                        <cmd>--character-set-server=utf8mb4 --collation-server=utf8mb4_bin --max-allowed-packet=32000000 --innodb-log-file-size=160000000</cmd>
                                         <wait>
                                             <time>40000</time>
                                             <log>MySQL init process done. Ready for start up.</log>
@@ -683,8 +693,13 @@
                                                  isolation level) and ALLOW_SNAPSHOT_ISOLATION enabled to allow using the
                                                  TRANSACTION_SNAPSHOT level (equivalent to SERIALIZABLE in Oracle).
                                                 A new database needs to be used because the flags can't be enabled on "master" database.
+                                                This new database will also have a default collation that is case-sensitive
+                                                 and supports extended characters, so that tests that verify string length
+                                                 functions work correctly, and to be able to distinguish strings with same
+                                                 characters but different case. In particular, the selected collation supports:
+                                                 case-sensitive, accent-sensitive, kanatype-sensitive, width-sensitive, supplementary characters, UTF8.
                                                 -->
-                                                <postStart>/opt/mssql-tools/bin/sqlcmd -l 45 -U sa -P AaBb12.# -Q CREATE\ DATABASE\ pdb;\ ALTER\ DATABASE\ pdb\ SET\ READ_COMMITTED_SNAPSHOT\ ON;\ ALTER\ DATABASE\ pdb\ SET\ ALLOW_SNAPSHOT_ISOLATION\ ON</postStart>
+                                                <postStart>/opt/mssql-tools/bin/sqlcmd -l 45 -U sa -P AaBb12.# -Q CREATE\ DATABASE\ pdb\ COLLATE\ Latin1_General_100_CS_AS_KS_WS_SC_UTF8;\ ALTER\ DATABASE\ pdb\ SET\ READ_COMMITTED_SNAPSHOT\ ON;\ ALTER\ DATABASE\ pdb\ SET\ ALLOW_SNAPSHOT_ISOLATION\ ON</postStart>
                                             </exec>
                                         </wait>
                                     </run>

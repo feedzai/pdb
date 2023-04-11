@@ -44,9 +44,15 @@ public class Function extends Expression {
      */
     public static final String COUNT = "COUNT";
     /**
-     * The STDDEV function.
+     * The STDDEV function (sample standard deviation).
      */
     public static final String STDDEV = "STDDEV";
+
+    /**
+     * The STDDEV_POP function (population standard deviation).
+     */
+    public static final String STDDEV_POP = "STDDEV_POP";
+
     /**
      * The SUM function.
      */
@@ -67,6 +73,17 @@ public class Function extends Expression {
      * The CEILING function.
      */
     public static final String CEILING = "CEIL";
+
+    /**
+     * The ASCII SQL function (returns the ASCII code of the first character of the provided string).
+     */
+    public static final String ASCII = "ASCII";
+
+    /**
+     * The CHAR_LENGTH SQL function (returns the length of the provided string in number of characters).
+     */
+    public static final String CHAR_LENGTH = "CHAR_LENGTH";
+
     /**
      * The list of functions.
      */
@@ -79,22 +96,25 @@ public class Function extends Expression {
                 .add(AVG)
                 .add(COUNT)
                 .add(STDDEV)
+                .add(STDDEV_POP)
                 .add(SUM)
                 .add(UPPER)
                 .add(LOWER)
                 .add(FLOOR)
                 .add(CEILING)
+                .add(ASCII)
+                .add(CHAR_LENGTH)
                 .build();
     }
 
     /**
      * The function.
      */
-    private String function;
+    private final String function;
     /**
      * The expression enclosed in the function.
      */
-    private Expression exp;
+    private final Expression exp;
 
     /**
      * Creates a new instance of {@link Function}.
