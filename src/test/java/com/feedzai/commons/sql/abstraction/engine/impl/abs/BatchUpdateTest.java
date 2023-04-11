@@ -15,8 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
 import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
@@ -47,11 +45,9 @@ import mockit.MockUp;
 import org.assertj.core.api.ObjectAssert;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -137,11 +133,6 @@ public class BatchUpdateTest {
 
     @Parameterized.Parameter(1)
     public Supplier<AbstractBatchConfig.Builder<?, ?, ?>> batchConfigBuilderSupplier;
-
-    @BeforeClass
-    public static void initStatic() {
-        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
-    }
 
     @Before
     public void init() throws DatabaseFactoryException {

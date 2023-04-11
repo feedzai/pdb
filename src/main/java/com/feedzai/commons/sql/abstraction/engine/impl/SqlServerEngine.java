@@ -669,7 +669,7 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
             final String sString = format(
                     "SELECT T1.TABLE_NAME, CONSTRAINT_NAME "
                             + "FROM INFORMATION_SCHEMA.CONSTRAINT_TABLE_USAGE AS T1 "
-                            + "JOIN SYS.FOREIGN_KEYS AS F "
+                            + "JOIN sys.foreign_keys AS F "
                             + "ON (F.parent_object_id = OBJECT_ID(N'%s') OR "
                             + "F.referenced_object_id = OBJECT_ID(N'%s')) AND "
                             + "T1.CONSTRAINT_NAME = OBJECT_NAME(F.object_id) AND "

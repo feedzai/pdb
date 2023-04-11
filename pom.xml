@@ -65,12 +65,12 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.5.0</version>
+                <version>42.6.0</version>
             </dependency>
             <dependency>
                 <groupId>com.oracle.database.jdbc</groupId>
                 <artifactId>ojdbc8</artifactId>
-                <version>21.9.0.0</version>
+                <version>23.2.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.h2database</groupId>
@@ -115,7 +115,7 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
-                <version>1.2.11</version>
+                <version>1.2.12</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -681,7 +681,7 @@
                                                 Prepare a new "pdb" database for tests with READ_COMMITTED_SNAPSHOT enabled
                                                  (required for SQL server to have the same behavior as other DBs in READ_COMMITTED
                                                  isolation level) and ALLOW_SNAPSHOT_ISOLATION enabled to allow using the
-                                                 TRANSACTION_SNAPSHOT level (equivalent to SERIALIZABLE in PostgreSQL and Oracle).
+                                                 TRANSACTION_SNAPSHOT level (equivalent to SERIALIZABLE in Oracle).
                                                 A new database needs to be used because the flags can't be enabled on "master" database.
                                                 -->
                                                 <postStart>/opt/mssql-tools/bin/sqlcmd -l 45 -U sa -P AaBb12.# -Q CREATE\ DATABASE\ pdb;\ ALTER\ DATABASE\ pdb\ SET\ READ_COMMITTED_SNAPSHOT\ ON;\ ALTER\ DATABASE\ pdb\ SET\ ALLOW_SNAPSHOT_ISOLATION\ ON</postStart>
@@ -746,7 +746,7 @@
         <profile>
             <id>cockroach</id>
             <properties>
-                <image.cockroach>cockroachdb/cockroach:v21.2.5</image.cockroach>
+                <image.cockroach>cockroachdb/cockroach:v22.2.7</image.cockroach>
             </properties>
             <build>
                 <plugins>

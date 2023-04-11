@@ -15,8 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
 import com.feedzai.commons.sql.abstraction.ddl.AlterColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
@@ -39,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.ConnectionResetException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
-import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.MappedEntity;
@@ -50,8 +47,8 @@ import com.feedzai.commons.sql.abstraction.engine.testconfig.BlobTest;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineUniqueConstraintViolationException;
 import com.google.common.collect.ImmutableSet;
-import java.sql.SQLException;
 import mockit.Expectations;
 import mockit.Invocation;
 import mockit.Mock;
@@ -59,16 +56,15 @@ import mockit.MockUp;
 import mockit.Verifications;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -175,11 +171,6 @@ public class EngineGeneralTest {
 
     @Parameterized.Parameter
     public DatabaseConfiguration config;
-
-    @BeforeClass
-    public static void initStatic() {
-        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
-    }
 
     @Before
     public void init() throws DatabaseFactoryException {
@@ -683,7 +674,7 @@ public class EngineGeneralTest {
 
     /**
      * Tests that on a rollback situation, the prepared statement batches are cleared.
-     *
+     * <p>
      * The steps performed on this test are:
      * <ol>
      *     <li>Add batch to transaction and purposely fail to flush</li>
@@ -4162,7 +4153,7 @@ public class EngineGeneralTest {
     /**
      * Test that closing a database engine a 'create-drop' policy with multiple entities closes all insert statements
      * associated with each entity, regardless of the schema policy used.
-     *
+     * <p>
      * Each entity is associated with 3 prepared statements. This test ensures that 3 PSs per entity are closed.
      *
      * @throws DatabaseEngineException  If something goes wrong while adding an entity to the engine.
@@ -4257,7 +4248,7 @@ public class EngineGeneralTest {
 
     /**
      * Tests that when inserting duplicated entries in a table the right exception is returned.
-     *
+     * <p>
      * The steps performed on this test are:
      * <ol>
      *     <li>Add duplicated entries in a transaction and fail to persist</li>
@@ -4289,7 +4280,7 @@ public class EngineGeneralTest {
 
     /**
      * Tests that on a duplicated batch entry situation the right exception is returned.
-     *
+     * <p>
      * The steps performed on this test are:
      * <ol>
      *     <li>Add duplicated batch entries to transaction and fail to flush</li>
