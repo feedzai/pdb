@@ -52,6 +52,7 @@ import java.util.Set;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static org.apache.commons.lang3.StringUtils.join;
 
 /**
@@ -122,6 +123,11 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                                              final boolean fromBatch) throws Exception {
         switch (dbColumn.getDbColumnType()) {
             case BLOB:
+                if (isNull(value)) {
+                    ps.setBytes(index, null);
+                    break;
+                }
+
                 ps.setBytes(index, objectToArray(value));
 
                 break;
