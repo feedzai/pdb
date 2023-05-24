@@ -236,13 +236,10 @@ public class OracleEngine extends AbstractDatabaseEngine {
                                              final boolean fromBatch) throws Exception {
         switch (dbColumn.getDbColumnType()) {
             case BLOB:
-                if (isNull(value)) {
-                    ps.setBytes(index, null);
-                    break;
-                }
-
                 final byte[] valArray = objectToArray(value);
-                if (fromBatch && valArray.length > MIN_SIZE_FOR_BLOB) {
+                if (isNull(valArray)) {
+                    ps.setBytes(index, null);
+                } else if (fromBatch && valArray.length > MIN_SIZE_FOR_BLOB) {
                     // Use a blob for columns greater than 4K when inside a batch
                     // update because the Oracle driver creates one and only releases
                     // it when the PreparedStatement is closed. This will be closed

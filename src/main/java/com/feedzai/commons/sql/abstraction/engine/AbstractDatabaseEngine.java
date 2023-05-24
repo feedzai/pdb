@@ -96,6 +96,7 @@ import static com.feedzai.commons.sql.abstraction.util.Constants.NO_TIMEOUT;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.readString;
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 
 /**
  * Provides a set of functions to interact with the database.
@@ -2308,12 +2309,19 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
     /**
      * Converts an object to byte array.
+     * <p>
+     * If the given {@code val} is {@code null}, returns {@code null}.
      *
      * @param val The object to convert.
-     * @return The byte array representation of the object.
+     * @return The byte array representation of the object, if the given {@code val} is present; otherwise, returns
+     *         {@code null}.
      * @throws IOException If the buffer is not enough to make the conversion.
      */
     protected final synchronized byte[] objectToArray(Object val) throws IOException {
+        if (isNull(val)) {
+            return null;
+        }
+
         final ByteArrayOutputStream bos = new InitiallyReusableByteArrayOutputStream(getReusableByteBuffer());
         final ObjectOutputStream oos = new ObjectOutputStream(bos);
         oos.writeObject(val);
