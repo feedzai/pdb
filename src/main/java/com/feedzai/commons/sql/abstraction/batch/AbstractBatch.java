@@ -15,22 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.batch;
 
-import com.feedzai.commons.sql.abstraction.FailureListener;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
-import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 import com.google.common.base.Strings;
-import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
-
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -42,6 +27,21 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
+import com.feedzai.commons.sql.abstraction.FailureListener;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 
 /**
  * A Batch that periodically flushes pending insertions to the database.
@@ -366,6 +366,17 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     }
 
     /**
+     * A functional interface to represent a {@link java.util.function.BiConsumer} that throws an exception.
+     *
+     * @param <T> the type of the first argument to the operation.
+     * @param <R> the type of the second argument to the operation.
+     */
+    @FunctionalInterface
+    public interface ThrowingBiConsumer<T, R> {
+        void accept(T t, R r) throws Exception;
+    }
+
+    /**
      * Starts the timer task.
      */
     protected void start() {
@@ -452,6 +463,24 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @implSpec Same as {@link #flush(boolean)} with {@code false}.
      */
     public void flush() {
+        logger.trace("Start batch flushing entries.");
+        flush(this::processBatch);
+    }
+
+    /**
+     * Flushes the pending batches ignoring duplicate entries.
+     */
+    public void flushIgnore() {
+        logger.trace("Start batch flushing ignoring duplicated entries.");
+        flush((this::processBatchIgnoring));
+    }
+
+    /**
+     * Flushes the pending batches given a processing callback function.
+     *
+     * @param processBatch A (throwing) BiConsumer to process the batch entries.
+     */
+    private void flush(final ThrowingBiConsumer<DatabaseEngine, List<BatchEntry>> processBatch) {
         this.metricsListener.onFlushTriggered();
         final long flushTriggeredMs = System.currentTimeMillis();
         List<BatchEntry> temp;
@@ -485,7 +514,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
             this.metricsListener.onFlushStarted(flushTriggeredMs, temp.size());
             start = System.currentTimeMillis();
 
-            processBatch(de, temp);
+            processBatch.accept(de, temp);
 
             onFlushFinished(flushTriggeredMs, temp, Collections.emptyList());
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, System.currentTimeMillis() - start, temp.size());

@@ -16,12 +16,12 @@
 
 package com.feedzai.commons.sql.abstraction.batch;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * A abstract {@link PdbBatch} with useful default base methods for concrete implementations.
@@ -72,4 +72,29 @@ public abstract class AbstractPdbBatch implements PdbBatch {
         de.flush();
         de.commit();
     }
+
+    /**
+     * Processes all batch entries ignoring duplicate entries.
+     *
+     * @implSpec Same as {@link #processBatch(DatabaseEngine, List)}}.
+     *
+     * @param de                        The {@link DatabaseEngine} on which to perform the flush.
+     * @param batchEntries              The list of batch entries to be flushed.
+     * @throws DatabaseEngineException  If the operation failed.
+     */
+    protected void processBatchIgnoring(final DatabaseEngine de, final List<BatchEntry> batchEntries) throws DatabaseEngineException {
+        /*
+         Begin transaction before the addBatch calls, in order to force the retry of the connection if it was lost during
+         or since the last batch. Otherwise, the addBatch call that uses a prepared statement will fail.
+         */
+        de.beginTransaction();
+
+        for (final BatchEntry entry : batchEntries) {
+            de.addBatchIgnore(entry.getTableName(), entry.getEntityEntry());
+        }
+
+        de.flushIgnore();
+        de.commit();
+    }
+
 }

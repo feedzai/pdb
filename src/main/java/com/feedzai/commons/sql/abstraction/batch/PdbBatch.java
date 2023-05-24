@@ -16,9 +16,9 @@
 
 package com.feedzai.commons.sql.abstraction.batch;
 
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-
 import java.util.concurrent.CompletableFuture;
+
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 /**
  * Interface specifying a batch that periodically flushes pending insertions to the database.
@@ -60,4 +60,12 @@ public interface PdbBatch extends AutoCloseable {
      * @return A void {@link CompletableFuture} that completes when the flush action finishes.
      */
     CompletableFuture<Void> flushAsync() throws Exception;
+
+    /**
+     * Flushes the pending batches ignoring duplicated key violations.
+     *
+     * @throws Exception If an error occurs while flushing.
+     */
+    void flushIgnore() throws Exception;
+
 }

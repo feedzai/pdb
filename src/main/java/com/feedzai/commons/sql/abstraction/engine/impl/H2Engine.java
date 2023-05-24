@@ -15,6 +15,21 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.Serializable;
+import java.io.StringReader;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
@@ -33,21 +48,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.h2.H2QueryExceptionHandler;
-
-import java.io.ByteArrayInputStream;
-import java.io.Serializable;
-import java.io.StringReader;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
@@ -463,6 +463,7 @@ public class H2Engine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
+        final String statementWithMerge = buildMergeStatement(entity, columns, values);
 
         final String statement = join(insertInto, " ");
         // The H2 DB doesn't implement INSERT RETURNING. Therefore, we just create a dummy statement, which will
@@ -472,7 +473,7 @@ public class H2Engine extends AbstractDatabaseEngine {
         logger.trace(statement);
 
 
-        final PreparedStatement ps, psReturn, psWithAutoInc;
+        final PreparedStatement ps, psReturn, psWithAutoInc, psMerge;
         try {
 
             // Generate keys when the table has at least 1 column with auto generate value.
@@ -480,17 +481,44 @@ public class H2Engine extends AbstractDatabaseEngine {
             ps = this.conn.prepareStatement(statement, generateKeys);
             psReturn = this.conn.prepareStatement(insertReturnStatement, generateKeys);
             psWithAutoInc = this.conn.prepareStatement(statementWithAutoInt, generateKeys);
-
+            psMerge = this.conn.prepareStatement(statementWithMerge, generateKeys);
             return new MappedEntity()
                 .setInsert(ps)
                 .setInsertReturning(psReturn)
                 .setInsertWithAutoInc(psWithAutoInc)
                 // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
                 // by consulting the column name from this MappedEntity.
-                .setAutoIncColumn(columnWithAutoIncName);
+                .setAutoIncColumn(columnWithAutoIncName)
+                .setInsertIgnoring(psMerge);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
+    }
+
+    /**
+     * Helper method to create a merge statement for this engine.
+     *
+     * @param entity    The entity.
+     * @param columns   The columns of this entity.
+     * @param values    The values of the entity.
+     *
+     * @return          A merge statement.
+     */
+    private String buildMergeStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+        final String statementWithMerge;
+        if (!entity.getPkFields().isEmpty() && !columns.isEmpty() && !values.isEmpty()) {
+            final List<String> mergeInto = new ArrayList<>();
+            mergeInto.add("MERGE INTO");
+            mergeInto.add(quotize(entity.getName()));
+
+            mergeInto.add("(" + join(columns, ", ") + ")");
+            mergeInto.add("VALUES (" + join(values, ", ") + ")");
+
+            statementWithMerge = join(mergeInto, " ");
+        } else {
+            statementWithMerge = "";
+        }
+        return statementWithMerge;
     }
 
     @Override
