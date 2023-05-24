@@ -16,9 +16,9 @@
 
 package com.feedzai.commons.sql.abstraction.batch;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Interface specifying a batch that periodically flushes pending insertions to the database.

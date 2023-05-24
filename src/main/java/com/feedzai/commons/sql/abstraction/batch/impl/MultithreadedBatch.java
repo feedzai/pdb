@@ -16,7 +16,21 @@
 
 package com.feedzai.commons.sql.abstraction.batch.impl;
 
+import com.feedzai.commons.sql.abstraction.batch.AbstractPdbBatch;
+import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
+import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -38,20 +52,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import javax.inject.Inject;
-import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
-
-import com.feedzai.commons.sql.abstraction.batch.AbstractPdbBatch;
-import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
-import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 
 /**
  * A Batch that periodically flushes pending insertions to the database using multiple threads/connections.
