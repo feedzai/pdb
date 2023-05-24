@@ -15,7 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
@@ -33,7 +32,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.google.common.collect.Sets;
-import java.sql.PreparedStatement;
 import org.assertj.core.api.MapAssert;
 import org.assertj.core.data.MapEntry;
 import org.junit.Before;
