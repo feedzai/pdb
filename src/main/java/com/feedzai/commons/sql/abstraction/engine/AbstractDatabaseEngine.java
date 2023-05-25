@@ -502,7 +502,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             final PreparedStatement insert = mappedEntity.getInsert();
             final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
             final PreparedStatement insertWithAutoInc = mappedEntity.getInsertWithAutoInc();
-            final PreparedStatement insertIgnoring = mappedEntity.getInsertIgnoring();
+            final PreparedStatement insertIgnoring = mappedEntity.getUpsert();
 
             if (!insert.isClosed()) {
                 insert.executeBatch();
@@ -954,19 +954,19 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
-     * Flushes the batches for all the registered entities.
+     * Flushes the batches for all the registered entities, upserting any following .
      *
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     @Override
-    public synchronized void flushIgnore() throws DatabaseEngineException {
+    public synchronized void flushUpsert() throws DatabaseEngineException {
         /*
          * Reconnect on this method does not make sense since a new connection will have nothing to flush.
          */
 
         try {
             for (MappedEntity me : entities.values()) {
-                me.getInsertIgnoring().executeBatch();
+                me.getUpsert().executeBatch();
             }
         } catch (final Exception ex) {
             throw getQueryExceptionHandler().handleException(ex, "Something went wrong while flushing");
@@ -1340,7 +1340,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public synchronized void addBatchIgnore(final String name, final EntityEntry entry) throws DatabaseEngineException {
+    public synchronized void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException {
         try {
 
             final MappedEntity me = entities.get(name);
@@ -1349,7 +1349,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
             }
 
-            PreparedStatement ps = me.getInsertIgnoring();
+            PreparedStatement ps = me.getUpsert();
 
             entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
 

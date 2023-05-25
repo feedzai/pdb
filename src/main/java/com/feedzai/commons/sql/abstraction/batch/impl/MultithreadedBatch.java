@@ -341,7 +341,7 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
     }
 
     @Override
-    public void flushIgnore() {
+    public void flushUpsert() {
         logger.trace("Flush ignoring not available for MultithreadedBatch. Skipping ...");
     }
 
