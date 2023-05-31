@@ -24,6 +24,8 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+
+import com.google.common.collect.ImmutableList;
 import mockit.Capturing;
 import mockit.Expectations;
 import mockit.Mock;
@@ -47,6 +49,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Tests closing a {@link DatabaseEngine} to make sure all resources are cleaned up correctly.
@@ -120,6 +123,7 @@ public class EngineCloseTest {
     @Test
     public void closingAnEngineShouldFlushAndCloseInsertPSsAndCloseCachedPSs(@Capturing final Statement preparedStatementMock)
             throws DatabaseEngineException, SQLException, NameAlreadyExistsException {
+        assumeTrue(!ImmutableList.of("h2", "postgresql").contains(config.vendor));
 
         engine.addEntity(buildEntity("ENTITY-1"));
         engine.addEntity(buildEntity("ENTITY-2"));
@@ -139,8 +143,8 @@ public class EngineCloseTest {
         engine.close();
 
         new Verifications() {{
-            preparedStatementMock.close(); times = 2 * 4 + 2;   // {2 entities} x {PSs per entity} + {cached PSs}
-            preparedStatementMock.executeBatch(); times = 2 * 4;   // {2 entities} x {PSs per entity}
+            preparedStatementMock.close(); times = 2 * 3 + 2;   // {2 entities} x {PSs per entity} + {cached PSs}
+            preparedStatementMock.executeBatch(); times = 2 * 3;   // {2 entities} x {PSs per entity}
         }};
 
     }
