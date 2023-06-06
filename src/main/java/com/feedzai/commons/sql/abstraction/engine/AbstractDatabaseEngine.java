@@ -2060,8 +2060,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public ResultIterator getPSIterator(String name, int fetchSize) throws DatabaseEngineException, ConnectionResetException {
-        final PreparedStatementCapsule ps = stmts.get(name);
+    public ResultIterator getPSIterator(final String name, final int fetchSize) throws DatabaseEngineException, ConnectionResetException {
+        final PreparedStatementCapsule ps = this.stmts.get(name);
         if (ps == null) {
             throw new DatabaseEngineRuntimeException(String.format("PreparedStatement named '%s' does not exist", name));
         }
@@ -2072,11 +2072,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             throw new DatabaseEngineException("Error creating PS Iterator", e);
         }
 
-        try {
-            return createResultIterator(ps.ps);
-        } catch (final DatabaseEngineException e2) {
-           reconnectExceptionally("Connection is down");
-           throw new ConnectionResetException("Connection was lost and restablished. You need to reset the prepared statement parameters and re-execute the statement");
+        for (int retry = 0; ; ++retry) {
+            try {
+                return createResultIterator(ps.ps);
+            } catch (final DatabaseEngineException ex) {
+                // Try to reconnect first.
+                reconnectExceptionally("Connection is down");
+                // Only throw exception if already tried to reconnect 3 times.
+                if (retry >= 2) {
+                    throw new ConnectionResetException("Connection was lost and restablished. You need to reset the prepared statement parameters and re-execute the statement", ex);
+                }
+            }
         }
     }
 
