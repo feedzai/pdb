@@ -63,6 +63,7 @@ import java.util.concurrent.TimeUnit;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
 import static java.lang.String.format;
+import static java.util.Objects.isNull;
 import static java.util.stream.Collectors.joining;
 import static org.apache.commons.lang3.StringUtils.join;
 
@@ -236,7 +237,9 @@ public class OracleEngine extends AbstractDatabaseEngine {
         switch (dbColumn.getDbColumnType()) {
             case BLOB:
                 final byte[] valArray = objectToArray(value);
-                if (fromBatch && valArray.length > MIN_SIZE_FOR_BLOB) {
+                if (isNull(valArray)) {
+                    ps.setBytes(index, null);
+                } else if (fromBatch && valArray.length > MIN_SIZE_FOR_BLOB) {
                     // Use a blob for columns greater than 4K when inside a batch
                     // update because the Oracle driver creates one and only releases
                     // it when the PreparedStatement is closed. This will be closed
