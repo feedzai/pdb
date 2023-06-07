@@ -188,6 +188,13 @@ public interface DatabaseEngine extends AutoCloseable {
     void flush() throws DatabaseEngineException;
 
     /**
+     * Flushes the batches for all the registered entities upserting duplicated entries.
+     *
+     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     */
+    void flushUpsert() throws DatabaseEngineException;
+
+    /**
      * Commits the current transaction. You should only call this method if you've previously called
      * {@link DatabaseEngine#beginTransaction()}.
      *
@@ -384,6 +391,15 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     void addBatch(final String name, final EntityEntry entry) throws DatabaseEngineException;
+
+    /**
+     * Adds an entry to the batch upserting duplicate entries.
+     *
+     * @param name  The entity name.
+     * @param entry The entry to persist.
+     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     */
+    void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException;
 
     /**
      * Executes the given query.

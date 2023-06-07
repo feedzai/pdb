@@ -35,6 +35,8 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
+
+import java.util.stream.Collectors;
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
@@ -404,21 +406,64 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
+        final String upsert = buildUpsertStatement(entity, columns, values);
 
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
+        logger.trace(upsert);
 
-        PreparedStatement ps, psReturn, psWithAutoInc;
+        PreparedStatement ps, psReturn, psWithAutoInc, psUpsert;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
+            psUpsert = conn.prepareStatement(upsert);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setUpsert(psUpsert).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
+    }
+
+    /**
+     * Helper method to create a insert on conflict statement that updates for this engine.
+     *
+     * @param entity    The entity.
+     * @param columns   The columns of this entity.
+     * @param values    The values of the entity.
+     *
+     * @return          A insert on conflict statement.
+     */
+    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+
+        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
+            return "";
+        }
+
+        List<String> insertIntoIgnoring = new ArrayList<>();
+        insertIntoIgnoring.add("INSERT INTO");
+        insertIntoIgnoring.add(quotize(entity.getName()));
+
+        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
+        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
+
+        final List<String> primaryKeys = entity.getPkFields().stream().map(pk -> quotize(pk)).collect(Collectors.toList());
+        insertIntoIgnoring.add("ON CONFLICT (" + join(primaryKeys, ", ") + ")");
+
+        insertIntoIgnoring.add("DO UPDATE");
+        final List<String> columnsWithoutPKs = new ArrayList<>(columns);
+        columnsWithoutPKs.removeAll(primaryKeys);
+
+        final String columnsToUpdate = columnsWithoutPKs
+                                        .stream()
+                                        .map(column -> String.format("%s = EXCLUDED.%s", column, column))
+                                        .collect(Collectors.joining(", "));
+
+        insertIntoIgnoring.add("SET " + columnsToUpdate);
+
+        return join(insertIntoIgnoring, " ");
+
     }
 
     @Override

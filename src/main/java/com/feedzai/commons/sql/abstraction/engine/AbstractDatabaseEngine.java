@@ -503,6 +503,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             final PreparedStatement insert = mappedEntity.getInsert();
             final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
             final PreparedStatement insertWithAutoInc = mappedEntity.getInsertWithAutoInc();
+            final PreparedStatement upsert = mappedEntity.getUpsert();
 
             if (!insert.isClosed()) {
                 insert.executeBatch();
@@ -514,6 +515,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
             if (insertWithAutoInc != null && !insertWithAutoInc.isClosed()) {
                 insertWithAutoInc.executeBatch();
+            }
+
+            if (upsert != null && !upsert.isClosed()) {
+                upsert.executeBatch();
             }
 
         } catch (final SQLException e) {
@@ -950,6 +955,26 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     }
 
     /**
+     * Flushes the batches for all the registered entities, upserting any following .
+     *
+     * @throws DatabaseEngineException If something goes wrong while persisting data.
+     */
+    @Override
+    public synchronized void flushUpsert() throws DatabaseEngineException {
+        /*
+         * Reconnect on this method does not make sense since a new connection will have nothing to flush.
+         */
+
+        try {
+            for (MappedEntity me : entities.values()) {
+                me.getUpsert().executeBatch();
+            }
+        } catch (final Exception ex) {
+            throw getQueryExceptionHandler().handleException(ex, "Something went wrong while flushing");
+        }
+    }
+
+    /**
      * Commits the current transaction. You should only call this method if you've previously called {@link AbstractDatabaseEngine#beginTransaction()}.
      *
      * @throws DatabaseEngineRuntimeException If something goes wrong while persisting data.
@@ -1306,6 +1331,27 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             PreparedStatement ps = me.getInsert();
+            entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
+
+            ps.addBatch();
+        } catch (final Exception ex) {
+            throw new DatabaseEngineException("Error adding to batch", ex);
+        }
+
+    }
+
+    @Override
+    public synchronized void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException {
+        try {
+
+            final MappedEntity me = entities.get(name);
+
+            if (me == null) {
+                throw new DatabaseEngineException(String.format("Unknown entity '%s'", name));
+            }
+
+            PreparedStatement ps = me.getUpsert();
+
             entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
 
             ps.addBatch();

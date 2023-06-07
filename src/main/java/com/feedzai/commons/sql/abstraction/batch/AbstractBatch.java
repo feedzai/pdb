@@ -366,6 +366,17 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     }
 
     /**
+     * A functional interface to represent a {@link java.util.function.BiConsumer} that throws an exception.
+     *
+     * @param <T> the type of the first argument to the operation.
+     * @param <R> the type of the second argument to the operation.
+     */
+    @FunctionalInterface
+    private interface FlushConsumer<T, R> {
+        void accept(T t, R r) throws DatabaseEngineException;
+    }
+
+    /**
      * Starts the timer task.
      */
     protected void start() {
@@ -452,6 +463,24 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @implSpec Same as {@link #flush(boolean)} with {@code false}.
      */
     public void flush() {
+        logger.trace("Start batch flushing entries.");
+        flush(this::processBatch);
+    }
+
+    /**
+     * Flushes the pending batches ignoring duplicate entries.
+     */
+    public void flushUpsert() {
+        logger.trace("Start batch flushing upserting duplicated entries.");
+        flush((this::processBatchUpsert));
+    }
+
+    /**
+     * Flushes the pending batches given a processing callback function.
+     *
+     * @param processBatch A (throwing) BiConsumer to process the batch entries.
+     */
+    private void flush(final FlushConsumer<DatabaseEngine, List<BatchEntry>> processBatch) {
         this.metricsListener.onFlushTriggered();
         final long flushTriggeredMs = System.currentTimeMillis();
         List<BatchEntry> temp;
@@ -485,7 +514,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
             this.metricsListener.onFlushStarted(flushTriggeredMs, temp.size());
             start = System.currentTimeMillis();
 
-            processBatch(de, temp);
+            processBatch.accept(de, temp);
 
             onFlushFinished(flushTriggeredMs, temp, Collections.emptyList());
             logger.trace("[{}] Batch flushed. Took {} ms, {} rows.", name, System.currentTimeMillis() - start, temp.size());
@@ -510,7 +539,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                         de.rollback();
                     }
 
-                    processBatch(de, temp);
+                    processBatch.accept(de, temp);
 
                     success = true;
                 } catch (final InterruptedException ex) {

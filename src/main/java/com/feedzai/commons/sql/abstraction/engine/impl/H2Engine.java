@@ -463,6 +463,7 @@ public class H2Engine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
+        final String statementWithMerge = buildUpsertStatement(entity, columns, values);
 
         final String statement = join(insertInto, " ");
         // The H2 DB doesn't implement INSERT RETURNING. Therefore, we just create a dummy statement, which will
@@ -472,7 +473,7 @@ public class H2Engine extends AbstractDatabaseEngine {
         logger.trace(statement);
 
 
-        final PreparedStatement ps, psReturn, psWithAutoInc;
+        final PreparedStatement ps, psReturn, psWithAutoInc, psMerge;
         try {
 
             // Generate keys when the table has at least 1 column with auto generate value.
@@ -480,17 +481,44 @@ public class H2Engine extends AbstractDatabaseEngine {
             ps = this.conn.prepareStatement(statement, generateKeys);
             psReturn = this.conn.prepareStatement(insertReturnStatement, generateKeys);
             psWithAutoInc = this.conn.prepareStatement(statementWithAutoInt, generateKeys);
-
+            psMerge = this.conn.prepareStatement(statementWithMerge, generateKeys);
             return new MappedEntity()
                 .setInsert(ps)
                 .setInsertReturning(psReturn)
                 .setInsertWithAutoInc(psWithAutoInc)
                 // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
                 // by consulting the column name from this MappedEntity.
-                .setAutoIncColumn(columnWithAutoIncName);
+                .setAutoIncColumn(columnWithAutoIncName)
+                .setUpsert(psMerge);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
+    }
+
+    /**
+     * Helper method to create a merge statement for this engine.
+     *
+     * @param entity    The entity.
+     * @param columns   The columns of this entity.
+     * @param values    The values of the entity.
+     *
+     * @return          A merge statement.
+     */
+    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+
+        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
+            return "";
+        }
+
+        final List<String> mergeInto = new ArrayList<>();
+        mergeInto.add("MERGE INTO");
+        mergeInto.add(quotize(entity.getName()));
+
+        mergeInto.add("(" + join(columns, ", ") + ")");
+        mergeInto.add("VALUES (" + join(values, ", ") + ")");
+
+        return join(mergeInto, " ");
+
     }
 
     @Override

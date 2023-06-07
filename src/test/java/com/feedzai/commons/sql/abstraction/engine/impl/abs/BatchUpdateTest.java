@@ -821,6 +821,58 @@ public class BatchUpdateTest {
     }
 
     /**
+     * Tests if a batch with entries having duplicate ignores when there is an error.
+     *
+     * @throws Exception if any operations on the batch fail.
+     */
+    @Test
+    public void batchInsertOnIgnoreDuplicateFlushTest() throws Exception {
+        assumeTrue(ImmutableList.of("h2", "postresql").contains(dbConfig.vendor));
+        final TestBatchListener batchListener = new TestBatchListener();
+        final int numTestEntries = 2;
+
+        addTestEntityWithPrimaryKey();
+
+        final DefaultBatch batch = engine.createBatch(DefaultBatchConfig.builder()
+                                                             .withName("batchInsertOnIgnoreDuplicateFlushTest")
+                                                             .withBatchSize(numTestEntries + 1)
+                                                             .withBatchTimeout(Duration.ofSeconds(100))
+                                                             .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                                                             .withBatchListener(batchListener)
+                                                             .build()
+        );
+
+        // Add entries to batch, no flush should take place because numTestEntries < batch size and batch timeout is huge
+        final int idx = 0;
+        final EntityEntry testEntry = getTestEntry(idx);
+        batch.add("TEST", testEntry);
+
+        final Object testEntryKey = testEntry.get("COL1");
+        final  EntityEntry testEntryDuplicatedKey = entry()
+                                                    .set("COL1", testEntryKey)
+                                                    .set("COL2", true)
+                                                    .set("COL3", 250D)
+                                                    .set("COL4", 350L)
+                                                    .set("COL5", "OLA")
+                                                    .build();
+        batch.add("TEST", testEntryDuplicatedKey);
+
+        // Explicit flush, but ignoring the duplicate entries in the batch.
+        batch.flushUpsert();
+
+        // Check that entries were not added to onFlushFailure().
+        assertTrue("Entries should not be added to failed", batchListener.failed.isEmpty());
+
+        // Check that all entries succeeded
+        assertEquals("Entries should have all succeeded to be persisted", numTestEntries, batchListener.succeeded.size());
+
+        // Check if only the second entry was persisted in the DB, e.g. performed the upsert.
+        final List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")).orderby(column("COL1").asc()));
+        assertEquals("Inserted entries not as expected", 1, result.size());
+        checkTestEntry(result.get(0), testEntryDuplicatedKey);
+    }
+
+    /**
      * Create test table.
      */
     private void addTestEntity() throws DatabaseEngineException {
@@ -937,6 +989,16 @@ public class BatchUpdateTest {
         assertTrue("COL5 exists", row.containsKey("COL5"));
 
         EntityEntry expectedEntry = getTestEntry(idx);
+        checkTestEntry(row, expectedEntry);
+    }
+
+    /**
+     * Checks that a DB row matches the expected entry row for that position.
+     *
+     * @param row The DB row.
+     * @param expectedEntry The expected entry.
+     */
+    private void checkTestEntry(final Map<String, ResultColumn> row, final EntityEntry expectedEntry) {
         assertEquals("COL1 ok?", expectedEntry.get("COL1"), row.get("COL1").toInt());
         assertEquals("COL2 ok?", expectedEntry.get("COL2"), row.get("COL2").toBoolean());
         assertEquals("COL3 ok?", (double) expectedEntry.get("COL3"), row.get("COL3").toDouble(), 0);
