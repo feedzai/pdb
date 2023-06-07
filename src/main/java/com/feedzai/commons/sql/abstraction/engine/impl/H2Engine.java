@@ -463,7 +463,7 @@ public class H2Engine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
-        final String statementWithMerge = buildMergeStatement(entity, columns, values);
+        final String statementWithMerge = buildUpsertStatement(entity, columns, values);
 
         final String statement = join(insertInto, " ");
         // The H2 DB doesn't implement INSERT RETURNING. Therefore, we just create a dummy statement, which will
@@ -504,7 +504,7 @@ public class H2Engine extends AbstractDatabaseEngine {
      *
      * @return          A merge statement.
      */
-    private String buildMergeStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
             return "";

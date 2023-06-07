@@ -372,8 +372,8 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * @param <R> the type of the second argument to the operation.
      */
     @FunctionalInterface
-    public interface ThrowingBiConsumer<T, R> {
-        void accept(T t, R r) throws Exception;
+    private interface FlushConsumer<T, R> {
+        void accept(T t, R r) throws DatabaseEngineException;
     }
 
     /**
@@ -480,7 +480,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      *
      * @param processBatch A (throwing) BiConsumer to process the batch entries.
      */
-    private void flush(final ThrowingBiConsumer<DatabaseEngine, List<BatchEntry>> processBatch) {
+    private void flush(final FlushConsumer<DatabaseEngine, List<BatchEntry>> processBatch) {
         this.metricsListener.onFlushTriggered();
         final long flushTriggeredMs = System.currentTimeMillis();
         List<BatchEntry> temp;
@@ -539,7 +539,7 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                         de.rollback();
                     }
 
-                    processBatch(de, temp);
+                    processBatch.accept(de, temp);
 
                     success = true;
                 } catch (final InterruptedException ex) {
