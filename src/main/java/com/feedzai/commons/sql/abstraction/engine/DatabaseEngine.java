@@ -196,7 +196,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     default void flushUpsert() throws DatabaseEngineException {
-        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+        throw new UnsupportedOperationException("Method not implemented.");
     }
 
     /**
@@ -399,7 +399,7 @@ public interface DatabaseEngine extends AutoCloseable {
 
     /**
      * Adds an entry to the batch upserting duplicate entries.
-
+     *
      * @param name  The entity name.
      * @param entry The entry to persist.
      *
@@ -409,7 +409,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
     default void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        throw new UnsupportedOperationException("This method needs to be explicitly implemented ");
+        throw new UnsupportedOperationException("Method not implemented.");
     }
 
     /**
