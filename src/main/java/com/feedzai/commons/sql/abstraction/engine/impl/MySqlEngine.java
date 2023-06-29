@@ -408,7 +408,7 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                         .setUpsert(psUpsert);
 
         } catch (final IllegalArgumentException e) {
-            logger.trace("Returning entity without an UPSERT/MERGE prepared statement.");
+            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)

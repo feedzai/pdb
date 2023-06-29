@@ -429,7 +429,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                         .setAutoIncColumn(returning);
 
         } catch (final IllegalArgumentException e) {
-            logger.trace("Returning entity without an UPSERT/MERGE prepared statement.");
+            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)
