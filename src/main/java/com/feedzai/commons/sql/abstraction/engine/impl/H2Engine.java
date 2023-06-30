@@ -481,7 +481,7 @@ public class H2Engine extends AbstractDatabaseEngine {
             psWithAutoInc = this.conn.prepareStatement(statementWithAutoInt, generateKeys);
 
             final String statementWithMerge = buildUpsertStatement(entity, columns, values);
-            psMerge = this.conn.prepareStatement(statementWithMerge);
+            psMerge = this.conn.prepareStatement(statementWithMerge, generateKeys);
 
             return new MappedEntity()
                         .setInsert(ps)
@@ -497,8 +497,7 @@ public class H2Engine extends AbstractDatabaseEngine {
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setAutoIncColumn(columnWithAutoIncName);
+                        .setInsertWithAutoInc(psWithAutoInc);
 
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
