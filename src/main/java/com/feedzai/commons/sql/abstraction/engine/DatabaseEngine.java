@@ -190,14 +190,9 @@ public interface DatabaseEngine extends AutoCloseable {
     /**
      * Flushes the batches for all the registered entities upserting duplicated entries.
      *
-     * @implNote The default implementation of this method throws an {@link UnsupportedOperationException}
-     * for backward-compatibility reasons. If this method is supposed to be called, it must be explicitly overridden.
-     *
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
-    default void flushUpsert() throws DatabaseEngineException {
-        throw new UnsupportedOperationException("Method not implemented.");
-    }
+    void flushUpsert() throws DatabaseEngineException;
 
     /**
      * Commits the current transaction. You should only call this method if you've previously called
@@ -402,15 +397,9 @@ public interface DatabaseEngine extends AutoCloseable {
      *
      * @param name  The entity name.
      * @param entry The entry to persist.
-     *
-     * @implNote The default implementation of this method throws an {@link UnsupportedOperationException}
-     * for backward-compatibility reasons. If this method is supposed to be called, it must be explicitly overridden.
-     *
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
-    default void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        throw new UnsupportedOperationException("Method not implemented.");
-    }
+    void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException;
 
     /**
      * Executes the given query.
