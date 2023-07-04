@@ -406,21 +406,21 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
-        final String upsert = buildUpsertStatement(entity, columns, values);
+        final String insertIgnoring = buildInsertOnConflictStatement(entity, columns, values);
 
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
-        logger.trace(upsert);
+        logger.trace(insertIgnoring);
 
-        PreparedStatement ps, psReturn, psWithAutoInc, psUpsert;
+        PreparedStatement ps, psReturn, psWithAutoInc, psWithInsertIgnoring;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
-            psUpsert = conn.prepareStatement(upsert);
+            psWithInsertIgnoring = conn.prepareStatement(insertIgnoring);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setUpsert(psUpsert).setAutoIncColumn(returning);
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setUpsert(psWithInsertIgnoring).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
@@ -435,7 +435,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      *
      * @return          A insert on conflict statement.
      */
-    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+    private String buildInsertOnConflictStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
             return "";
