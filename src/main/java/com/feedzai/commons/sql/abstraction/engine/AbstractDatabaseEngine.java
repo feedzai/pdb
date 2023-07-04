@@ -503,7 +503,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             final PreparedStatement insert = mappedEntity.getInsert();
             final PreparedStatement insertReturning = mappedEntity.getInsertReturning();
             final PreparedStatement insertWithAutoInc = mappedEntity.getInsertWithAutoInc();
-            final PreparedStatement upsert = mappedEntity.getUpsert();
+            final PreparedStatement insertIgnoring = mappedEntity.getUpsert();
 
             if (!insert.isClosed()) {
                 insert.executeBatch();
@@ -517,8 +517,8 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 insertWithAutoInc.executeBatch();
             }
 
-            if (upsert != null && !upsert.isClosed()) {
-                upsert.executeBatch();
+            if (insertIgnoring != null && !insertIgnoring.isClosed()) {
+                insertIgnoring.executeBatch();
             }
 
         } catch (final SQLException e) {
