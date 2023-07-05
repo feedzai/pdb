@@ -15,33 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
-import com.feedzai.commons.sql.abstraction.FailureListener;
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
-import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
-import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
-import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
-import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
-import com.feedzai.commons.sql.abstraction.ddl.DbFk;
-import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
-import com.feedzai.commons.sql.abstraction.dml.Expression;
-import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
-import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
-import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
-import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
-import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
-import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableRuntimeException;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.util.AESHelper;
-import com.feedzai.commons.sql.abstraction.util.Constants;
-import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
-import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
@@ -49,14 +22,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Stage;
 import com.google.inject.util.Providers;
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
-
-import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,6 +50,41 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
+import com.feedzai.commons.sql.abstraction.FailureListener;
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.DefaultBatch;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
+import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntityType;
+import com.feedzai.commons.sql.abstraction.ddl.DbFk;
+import com.feedzai.commons.sql.abstraction.ddl.DbIndex;
+import com.feedzai.commons.sql.abstraction.dml.Expression;
+import com.feedzai.commons.sql.abstraction.dml.dialect.Dialect;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultIterator;
+import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
+import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
+import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
+import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableException;
+import com.feedzai.commons.sql.abstraction.exceptions.DatabaseEngineRetryableRuntimeException;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.util.AESHelper;
+import com.feedzai.commons.sql.abstraction.util.Constants;
+import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
+import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 
 import static com.feedzai.commons.sql.abstraction.batch.AbstractBatch.DEFAULT_RETRY_INTERVAL;
 import static com.feedzai.commons.sql.abstraction.batch.AbstractBatch.NO_RETRY;
@@ -1141,7 +1141,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Creates a new batch that periodically flushes a batch. A flush will also occur when the maximum number of statements in the batch is reached.
      * <p>
-     * Please be sure to call {@link com.feedzai.commons.sql.abstraction.batch.AbstractBatch#destroy() } before closing the session with the database
+     * Please be sure to call {@link AbstractBatch#destroy() } before closing the session with the database
      *
      * @param batchSize    The batch size.
      * @param batchTimeout If inserts do not occur after the specified time, a flush will be performed.
@@ -1940,7 +1940,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * Maps the database type to {@link DbColumnType}. If there's no mapping a {@link DbColumnType#UNMAPPED} is returned.
      *
-     * @param type     The SQL type from {@link java.sql.Types}.
+     * @param type     The SQL type from {@link Types}.
      * @param typeName The native database type name.  It provides additional information for
      *                 derived classes to resolve types unmapped here.
      * @return The {@link DbColumnType}.

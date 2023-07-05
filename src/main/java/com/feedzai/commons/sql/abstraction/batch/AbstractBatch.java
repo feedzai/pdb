@@ -15,22 +15,7 @@
  */
 package com.feedzai.commons.sql.abstraction.batch;
 
-import com.feedzai.commons.sql.abstraction.FailureListener;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
-import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 import com.google.common.base.Strings;
-import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.Marker;
-import org.slf4j.MarkerFactory;
-
-import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -42,6 +27,21 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+
+import com.feedzai.commons.sql.abstraction.FailureListener;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 
 /**
  * A Batch that periodically flushes pending insertions to the database.

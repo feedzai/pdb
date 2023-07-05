@@ -15,6 +15,15 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
+import java.sql.Connection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Properties;
+import javax.annotation.Nullable;
+import org.slf4j.Logger;
+
 import com.feedzai.commons.sql.abstraction.FailureListener;
 import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
 import com.feedzai.commons.sql.abstraction.batch.BatchConfig;
@@ -30,15 +39,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.ExceptionHandler;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import org.slf4j.Logger;
-
-import javax.annotation.Nullable;
-import java.sql.Connection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Properties;
 
 /**
  * Interface with the specific database implementation.
@@ -73,14 +73,14 @@ public interface DatabaseEngine extends AutoCloseable {
     /**
      * Loads an entity into the engine.
      * <p>
-     * No DDL commands will be executed, only prepared statements will be created in order to {@link #persist(String, com.feedzai.commons.sql.abstraction.entry.EntityEntry) persist}
+     * No DDL commands will be executed, only prepared statements will be created in order to {@link #persist(String, EntityEntry) persist}
      * data into the entities.
      *
      * @param entity The entity to load into the connection.
      * @throws DatabaseEngineException If something goes wrong while loading the entity.
      * @implSpec The invocation of this method multiple times is allowed. If the entity already exists, the invocation is a no-op.
-     * @implNote The implementation is similar to the {@link #addEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity) addEntity} that configured with
-     * {@link com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties#SCHEMA_POLICY SCHEMA_POLICY} of none.
+     * @implNote The implementation is similar to the {@link #addEntity(DbEntity) addEntity} that configured with
+     * {@link PdbProperties#SCHEMA_POLICY SCHEMA_POLICY} of none.
      * @since 2.1.2
      */
     void loadEntity(DbEntity entity) throws DatabaseEngineException;
@@ -90,7 +90,7 @@ public interface DatabaseEngine extends AutoCloseable {
      * Updates an entity in the engine.
      * </p>
      * <p>
-     * If the entity does not exists in the instance, the method {@link #addEntity(com.feedzai.commons.sql.abstraction.ddl.DbEntity)} will be invoked.
+     * If the entity does not exists in the instance, the method {@link #addEntity(DbEntity)} will be invoked.
      * </p>
      * <p>
      * The engine will compare the entity with the {@link #getMetadata(String)} information and update the schema of the table.
