@@ -2788,27 +2788,6 @@ public class EngineGeneralTest {
         assertEquals(updBlob, result.get(0).get("COL2").<BlobTest>toBlob());
     }
 
-    /**
-     * Tests that persisting a null value to a BLOB type column persists a null value.
-     *
-     * @throws Exception If anything goes wrong on engine-related operations, namely adding an entity, persisting an
-     *                   entry and querying an entry.
-     */
-    @Test
-    public void testBlobPersistNull() throws Exception {
-        DbEntity entity = dbEntity().name("TEST").addColumn("COL1", STRING).addColumn("COL2", BLOB)
-                                    .build();
-        engine.addEntity(entity);
-        EntityEntry entry = entry().set("COL1", "CENINHAS").set("COL2", null)
-                                   .build();
-
-        engine.persist("TEST", entry);
-
-        List<Map<String, ResultColumn>> result = engine.query(select(all()).from(table("TEST")));
-        assertEquals("CENINHAS", result.get(0).get("COL1").toString());
-        assertNull(result.get(0).get("COL2").toObject());
-    }
-
     @Test
     public void testBlobSettingWithIndexTest() throws Exception {
         DbEntity entity = dbEntity().name("TEST").addColumn("COL1", STRING).addColumn("COL2", BLOB)
