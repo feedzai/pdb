@@ -150,6 +150,11 @@ public class SqlServerEngine extends AbstractDatabaseEngine {
                                              final boolean fromBatch) throws Exception {
         switch (dbColumn.getDbColumnType()) {
             case BLOB:
+                if (isNull(value)) {
+                    ps.setBytes(index, null);
+                    break;
+                }
+
                 ps.setBytes(index, objectToArray(value));
                 break;
 

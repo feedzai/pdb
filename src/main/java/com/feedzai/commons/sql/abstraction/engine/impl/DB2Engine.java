@@ -125,6 +125,11 @@ public class DB2Engine extends AbstractDatabaseEngine {
             case JSON:
             case CLOB:
             case BLOB:
+                if (isNull(value)) {
+                    ps.setBytes(index, null);
+                    break;
+                }
+
                 ps.setBytes(index, objectToArray(value));
 
                 break;
