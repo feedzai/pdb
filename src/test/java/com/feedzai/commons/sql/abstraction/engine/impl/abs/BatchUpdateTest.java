@@ -15,12 +15,40 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import org.assertj.core.api.ObjectAssert;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -42,38 +70,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import org.assertj.core.api.ObjectAssert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.slf4j.LoggerFactory;
-
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
-import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
-import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
-import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch;
-import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatchConfig;
-import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
-import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
-import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
@@ -137,11 +133,6 @@ public class BatchUpdateTest {
 
     @Parameterized.Parameter(1)
     public Supplier<AbstractBatchConfig.Builder<?, ?, ?>> batchConfigBuilderSupplier;
-
-    @BeforeClass
-    public static void initStatic() {
-        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
-    }
 
     @Before
     public void init() throws DatabaseFactoryException {
@@ -827,46 +818,6 @@ public class BatchUpdateTest {
 
         // Check that entries were added to onFlushFailure()
         checkFailedDuplicateEntries(batchListener, numTestEntries, idx);
-    }
-
-    /**
-     * Tests if a batch with entries having duplicate ignores when there is an error.
-     *
-     * @throws Exception if any operations on the batch fail.
-     */
-    @Test
-    public void batchInsertOnIgnoreDuplicateFlushTest() throws Exception {
-        final TestBatchListener batchListener = new TestBatchListener();
-        final int numTestEntries = 2;
-
-        addTestEntityWithPrimaryKey();
-
-        final DefaultBatch batch = engine.createBatch(DefaultBatchConfig.builder()
-                                                             .withName("batchInsertOnIgnoreDuplicateFlushTest")
-                                                             .withBatchSize(numTestEntries + 1)
-                                                             .withBatchTimeout(Duration.ofSeconds(100))
-                                                             .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
-                                                             .withBatchListener(batchListener)
-                                                             .build()
-        );
-
-        // Add entries to batch, no flush should take place because numTestEntries < batch size and batch timeout is huge
-        final int idx = 0;
-        final EntityEntry testEntry = getTestEntry(idx);
-        batch.add("TEST", testEntry);
-        batch.add("TEST", testEntry);
-
-        // Explicit flush, but ignoring the duplicate entries in the batch.
-        batch.flushIgnore();
-
-        // Check that entries were not added to onFlushFailure().
-        assertTrue("Entries should not be added to failed", batchListener.failed.isEmpty());
-
-        // Check that all entries succeeded
-        assertEquals("Entries should have all succeeded to be persisted", numTestEntries, batchListener.succeeded.size());
-
-        // Considering they are the same entry, only one should be inserted in the database.
-        checkTestEntriesInDB(1);
     }
 
     /**

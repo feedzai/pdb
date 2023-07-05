@@ -155,11 +155,6 @@ class PooledDatabaseEngine implements DatabaseEngine {
     }
 
     @Override
-    public void flushIgnore() throws DatabaseEngineException {
-        engine.flushIgnore();
-    }
-
-    @Override
     public void commit() throws DatabaseEngineRuntimeException {
         engine.commit();
     }
@@ -232,11 +227,6 @@ class PooledDatabaseEngine implements DatabaseEngine {
     @Override
     public void addBatch(final String name, final EntityEntry entry) throws DatabaseEngineException {
         engine.addBatch(name, entry);
-    }
-
-    @Override
-    public void addBatchIgnore(final String name, final EntityEntry entry) throws DatabaseEngineException {
-        engine.addBatchIgnore(name, entry);
     }
 
     @Override
