@@ -51,9 +51,9 @@ public class MappedEntity implements AutoCloseable {
      */
     private PreparedStatement insertReturning = null;
     /**
-     * The prepared statement to upsert new values to avoid duplicated keys violation.
+     * The prepared statement to insert new values ignoring duplicated keys.
      */
-    private PreparedStatement upsert = null;
+    private PreparedStatement insertIgnoring = null;
     /**
      * The auto increment column if exists;
      */
@@ -160,23 +160,23 @@ public class MappedEntity implements AutoCloseable {
     }
 
     /**
-     * Gets the prepared statement for upsert operation.
+     * Gets the prepared statement for inserts ignoring duplicated keys.
      *
-     * @return The upsert statement.
+     * @return The insert statement that allows ignoring duplicated keys.
      */
-    public PreparedStatement getUpsert() {
-        return upsert;
+    public PreparedStatement getInsertIgnoring() {
+        return insertIgnoring;
     }
 
     /**
-     * Sets the upsert statement.
+     * Sets the insert that allows ignoring duplicated keys.
      *
-     * @param upsert The upsert statement
+     * @param insertIgnoring The insert statement that allows ignoring duplicated keys
      * @return This mapped entity
      */
-    public MappedEntity setUpsert(final PreparedStatement upsert) {
-        closeQuietly(this.upsert);
-        this.upsert = upsert;
+    public MappedEntity setInsertIgnoring(final PreparedStatement insertIgnoring) {
+        closeQuietly(this.insertIgnoring);
+        this.insertIgnoring = insertIgnoring;
 
         return this;
     }
@@ -241,6 +241,6 @@ public class MappedEntity implements AutoCloseable {
         closeQuietly(this.insert);
         closeQuietly(this.insertWithAutoInc);
         closeQuietly(this.insertReturning);
-        closeQuietly(this.upsert);
+        closeQuietly(this.insertIgnoring);
     }
 }

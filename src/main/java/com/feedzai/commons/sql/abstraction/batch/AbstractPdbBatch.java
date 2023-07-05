@@ -90,10 +90,10 @@ public abstract class AbstractPdbBatch implements PdbBatch {
         de.beginTransaction();
 
         for (final BatchEntry entry : batchEntries) {
-            de.addBatchUpsert(entry.getTableName(), entry.getEntityEntry());
+            de.addBatchIgnore(entry.getTableName(), entry.getEntityEntry());
         }
 
-        de.flushUpsert();
+        de.flushIgnore();
         de.commit();
     }
 
