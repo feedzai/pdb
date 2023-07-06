@@ -35,6 +35,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
+import com.feedzai.commons.sql.abstraction.util.StringUtils;
 
 import java.util.stream.Collectors;
 import org.postgresql.Driver;
@@ -406,39 +407,53 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
-        final String upsert = buildUpsertStatement(entity, columns, values);
 
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
-        logger.trace(upsert);
 
-        PreparedStatement ps, psReturn, psWithAutoInc, psUpsert;
+        PreparedStatement ps = null, psReturn = null, psWithAutoInc = null, psUpsert;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
+
+            final String upsert = buildUpsertStatement(entity, columns, values);
             psUpsert = conn.prepareStatement(upsert);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setUpsert(psUpsert).setAutoIncColumn(returning);
+            return new MappedEntity()
+                        .setInsert(ps)
+                        .setInsertReturning(psReturn)
+                        .setInsertWithAutoInc(psWithAutoInc)
+                        .setUpsert(psUpsert)
+                        .setAutoIncColumn(returning);
+
+        } catch (final IllegalArgumentException e) {
+            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
+            return new MappedEntity()
+                        .setInsert(ps)
+                        .setInsertReturning(psReturn)
+                        .setInsertWithAutoInc(psWithAutoInc)
+                        .setAutoIncColumn(returning);
+
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
     }
 
     /**
-     * Helper method to create a insert on conflict statement that updates for this engine.
+     * Helper method to create an insert statement on duplicate key conflict for this engine.
      *
      * @param entity    The entity.
      * @param columns   The columns of this entity.
      * @param values    The values of the entity.
      *
-     * @return          A insert on conflict statement.
+     * @return          An insert statement on duplicate key conflict.
      */
     private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            return "";
+            throw new IllegalArgumentException("The MERGE command was not created because the entity has no primary keys. Skipping statement creation.");
         }
 
         List<String> insertIntoIgnoring = new ArrayList<>();
@@ -448,7 +463,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
         insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
 
-        final List<String> primaryKeys = entity.getPkFields().stream().map(pk -> quotize(pk)).collect(Collectors.toList());
+        final List<String> primaryKeys = entity.getPkFields().stream().map(StringUtils::quotize).collect(Collectors.toList());
         insertIntoIgnoring.add("ON CONFLICT (" + join(primaryKeys, ", ") + ")");
 
         insertIntoIgnoring.add("DO UPDATE");

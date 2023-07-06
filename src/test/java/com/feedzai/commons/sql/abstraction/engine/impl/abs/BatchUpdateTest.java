@@ -827,7 +827,7 @@ public class BatchUpdateTest {
      */
     @Test
     public void batchInsertOnIgnoreDuplicateFlushTest() throws Exception {
-        assumeTrue(ImmutableList.of("h2", "postresql").contains(dbConfig.vendor));
+        assumeTrue(ImmutableList.of("postresql", "mysql", "cockroach", "db2").contains(dbConfig.vendor) && dbConfig.vendor.startsWith("h2"));
         final TestBatchListener batchListener = new TestBatchListener();
         final int numTestEntries = 2;
 

@@ -463,8 +463,6 @@ public class H2Engine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
-        final String statementWithMerge = buildUpsertStatement(entity, columns, values);
-
         final String statement = join(insertInto, " ");
         // The H2 DB doesn't implement INSERT RETURNING. Therefore, we just create a dummy statement, which will
         // never be invoked by this implementation.
@@ -473,23 +471,35 @@ public class H2Engine extends AbstractDatabaseEngine {
         logger.trace(statement);
 
 
-        final PreparedStatement ps, psReturn, psWithAutoInc, psMerge;
+        PreparedStatement ps = null, psReturn = null, psWithAutoInc = null, psMerge;
         try {
 
             // Generate keys when the table has at least 1 column with auto generate value.
-            final int generateKeys = columnWithAutoIncName != null? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
+            final int generateKeys = columnWithAutoIncName != null ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
             ps = this.conn.prepareStatement(statement, generateKeys);
             psReturn = this.conn.prepareStatement(insertReturnStatement, generateKeys);
             psWithAutoInc = this.conn.prepareStatement(statementWithAutoInt, generateKeys);
-            psMerge = this.conn.prepareStatement(statementWithMerge, generateKeys);
+
+            final String statementWithMerge = buildUpsertStatement(entity, columns, values);
+            psMerge = this.conn.prepareStatement(statementWithMerge);
+
             return new MappedEntity()
-                .setInsert(ps)
-                .setInsertReturning(psReturn)
-                .setInsertWithAutoInc(psWithAutoInc)
-                // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
-                // by consulting the column name from this MappedEntity.
-                .setAutoIncColumn(columnWithAutoIncName)
-                .setUpsert(psMerge);
+                        .setInsert(ps)
+                        .setInsertReturning(psReturn)
+                        .setInsertWithAutoInc(psWithAutoInc)
+                        // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
+                        // by consulting the column name from this MappedEntity.
+                        .setAutoIncColumn(columnWithAutoIncName)
+                        .setUpsert(psMerge);
+
+        } catch (final IllegalArgumentException e) {
+            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
+            return new MappedEntity()
+                        .setInsert(ps)
+                        .setInsertReturning(psReturn)
+                        .setInsertWithAutoInc(psWithAutoInc)
+                        .setAutoIncColumn(columnWithAutoIncName);
+
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
@@ -507,7 +517,7 @@ public class H2Engine extends AbstractDatabaseEngine {
     private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            return "";
+            throw new IllegalArgumentException("The MERGE command was not created because the entity has no primary keys. Skipping statement creation.");
         }
 
         final List<String> mergeInto = new ArrayList<>();

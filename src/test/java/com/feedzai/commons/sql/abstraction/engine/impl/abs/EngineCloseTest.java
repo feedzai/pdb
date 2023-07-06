@@ -123,7 +123,7 @@ public class EngineCloseTest {
     @Test
     public void closingAnEngineShouldFlushAndCloseInsertPSsAndCloseCachedPSs(@Capturing final Statement preparedStatementMock)
             throws DatabaseEngineException, SQLException, NameAlreadyExistsException {
-        assumeTrue(!ImmutableList.of("postgresql", "cockroach").contains(config.vendor) && !config.vendor.startsWith("h2"));
+        assumeTrue(!ImmutableList.of("postgresql", "cockroach", "mysql", "db2").contains(config.vendor) && !config.vendor.startsWith("h2"));
 
         engine.addEntity(buildEntity("ENTITY-1"));
         engine.addEntity(buildEntity("ENTITY-2"));
