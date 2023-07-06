@@ -13,10 +13,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     name: Test Oracle PDB Java ${{ matrix.java-version }}
-
+    max-parallel: 1
     strategy:
       matrix:
-        java-version: [ 17 ]
+        java-version: [ 8, 11, 17 ]
     steps:
     - uses: actions/checkout@v3
     - name: Set up JDK ${{ matrix.java-version }}
