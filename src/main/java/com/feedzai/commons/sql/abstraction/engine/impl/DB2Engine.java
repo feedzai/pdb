@@ -444,7 +444,7 @@ public class DB2Engine extends AbstractDatabaseEngine {
                         .setUpsert(psUpsert);
 
         } catch (final IllegalArgumentException e) {
-            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
+            logger.error("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)
@@ -469,7 +469,9 @@ public class DB2Engine extends AbstractDatabaseEngine {
     private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            throw new IllegalArgumentException("The MERGE command was not created because the entity has no primary keys. Skipping statement creation.");
+            throw new IllegalArgumentException(String.format("The 'MERGE INTO' prepared statement was not created because the entity "
+                                                             + "'%s' has no primary keys. Skipping statement creation.",
+                                                             entity.getName()));
         }
 
         final List<String> merge = new ArrayList<>();
