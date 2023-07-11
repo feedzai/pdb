@@ -493,7 +493,8 @@ public class H2Engine extends AbstractDatabaseEngine {
                         .setUpsert(psMerge);
 
         } catch (final IllegalArgumentException e) {
-            logger.error("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
+            logger.warn("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
+            logger.debug("Stack trace error: ", e);
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)

@@ -966,12 +966,11 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
          */
 
         try {
-            final List<MappedEntity> upsertableEntities = entities.values()
-                                                                  .stream()
-                                                                  .filter(entity -> entity.getUpsert() != null)
-                                                                  .collect(Collectors.toList());
-            for (MappedEntity me : upsertableEntities) {
-                me.getUpsert().executeBatch();
+            for (MappedEntity me : entities.values()) {
+                final PreparedStatement upsert = me.getUpsert();
+                if (upsert != null) {
+                    upsert.executeBatch();
+                }
             }
         } catch (final Exception ex) {
             throw getQueryExceptionHandler().handleException(ex, "Something went wrong while flushing");
