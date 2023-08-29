@@ -37,7 +37,14 @@ import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.util.StringUtils;
 
+import java.time.Duration;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
@@ -112,6 +119,13 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * @since 2.5.1
      */
     public static final QueryExceptionHandler PG_QUERY_EXCEPTION_HANDLER = new PostgresSqlQueryExceptionHandler();
+
+    /**
+     * The {@link ExecutorService} which will print some logs while Postgres {@link Statement update queries} are
+     * being executed. This will print a log from time to time in order to easily identify cases where the query might
+     * be stuck due to the database being locked because of another external query.
+     */
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     /**
      * Creates a new PostgreSql connection.
@@ -236,24 +250,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
         logger.trace(createTableStatement);
 
-        Statement s = null;
         try {
-            s = conn.createStatement();
-            s.executeUpdate(createTableStatement);
+            executeUpdateQuery(createTableStatement);
         } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(NAME_ALREADY_EXISTS)) {
                 logger.debug(dev, "'{}' is already defined", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.TABLE_ALREADY_EXISTS), ex);
             } else {
                 throw new DatabaseEngineException("Something went wrong handling statement", ex);
-            }
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
             }
         }
     }
@@ -283,24 +287,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
         logger.trace(addPrimaryKey);
 
-        Statement s = null;
         try {
-            s = conn.createStatement();
-            s.executeUpdate(addPrimaryKey);
+            executeUpdateQuery(addPrimaryKey);
         } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(TABLE_CAN_ONLY_HAVE_ONE_PRIMARY_KEY)) {
                 logger.debug(dev, "'{}' already has a primary key", entity.getName());
                 handleOperation(new OperationFault(entity.getName(), OperationFault.Type.PRIMARY_KEY_ALREADY_EXISTS), ex);
             } else {
                 throw new DatabaseEngineException("Something went wrong handling statement", ex);
-            }
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
             }
         }
     }
@@ -334,24 +328,14 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
             logger.trace(statement);
 
-            Statement s = null;
             try {
-                s = conn.createStatement();
-                s.executeUpdate(statement);
+                executeUpdateQuery(statement);
             } catch (final SQLException ex) {
                 if (ex.getSQLState().startsWith(NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "'{}' is already defined", idxName);
                     handleOperation(new OperationFault(entity.getName(), OperationFault.Type.INDEX_ALREADY_EXISTS), ex);
                 } else {
                     throw new DatabaseEngineException("Something went wrong handling statement", ex);
-                }
-            } finally {
-                try {
-                    if (s != null) {
-                        s.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
                 }
             }
         }
@@ -495,12 +479,10 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
     @Override
     protected void dropTable(DbEntity entity) throws DatabaseEngineException {
-        Statement drop = null;
+        final String query = format("DROP TABLE %s CASCADE", quotize(entity.getName()));
+        logger.trace(query);
         try {
-            drop = conn.createStatement();
-            final String query = format("DROP TABLE %s CASCADE", quotize(entity.getName()));
-            logger.trace(query);
-            drop.executeUpdate(query);
+            executeUpdateQuery(query);
         } catch (final SQLException ex) {
             if (ex.getSQLState().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
@@ -508,21 +490,11 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             } else {
                 throw new DatabaseEngineException("Error dropping table", ex);
             }
-        } finally {
-            try {
-                if (drop != null) {
-                    drop.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
         }
     }
 
     @Override
     protected void dropColumn(DbEntity entity, String... columns) throws DatabaseEngineException {
-        Statement drop = null;
-
         List<String> removeColumns = new ArrayList<>();
         removeColumns.add("ALTER TABLE");
         removeColumns.add(quotize(entity.getName()));
@@ -531,25 +503,16 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             cols.add("DROP COLUMN " + quotize(col));
         }
         removeColumns.add(join(cols, ","));
+        final String query = join(removeColumns, " ");
+        logger.trace(query);
 
         try {
-            drop = conn.createStatement();
-            final String query = join(removeColumns, " ");
-            logger.trace(query);
-            drop.executeUpdate(query);
+            executeUpdateQuery(query);
         } catch (final SQLException ex) {
             if (ex.getMessage().startsWith(TABLE_OR_VIEW_DOES_NOT_EXIST)) {
                 logger.debug(dev, "Table '{}' does not exist", entity.getName());
             } else {
                 throw new DatabaseEngineException("Error dropping column", ex);
-            }
-        } finally {
-            try {
-                if (drop != null) {
-                    drop.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
             }
         }
 
@@ -582,20 +545,10 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String addColumnsStatement = join(addColumns, " ");
         logger.trace(addColumnsStatement);
 
-        Statement s = null;
         try {
-            s = conn.createStatement();
-            s.executeUpdate(addColumnsStatement);
+            executeUpdateQuery(addColumnsStatement);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
         }
 
     }
@@ -678,11 +631,9 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                             quotizedForeignColumnsString
                     );
 
-            Statement alterTableStmt = null;
+            logger.trace(alterTable);
             try {
-                alterTableStmt = conn.createStatement();
-                logger.trace(alterTable);
-                alterTableStmt.executeUpdate(alterTable);
+                executeUpdateQuery(alterTable);
             } catch (final SQLException ex) {
                 if (ex.getSQLState().equals(CONSTRAINT_NAME_ALREADY_EXISTS)) {
                     logger.debug(dev, "Foreign key for table '{}' already exists. Error code: {}.", entity.getName(), ex.getSQLState());
@@ -692,14 +643,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
                             entity.getName(),
                             ex.getSQLState()
                     ), ex);
-                }
-            } finally {
-                try {
-                    if (alterTableStmt != null) {
-                        alterTableStmt.close();
-                    }
-                } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
                 }
             }
         }
@@ -831,5 +774,43 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
     @Override
     protected QueryExceptionHandler getQueryExceptionHandler() {
         return PG_QUERY_EXCEPTION_HANDLER;
+    }
+
+    /**
+     * Helper method that logs the time while the Postgres {@link Statement update query} is being executed.
+     * <br>
+     * This will help identify cases via logs where Postgres database is already locked due to an external query being
+     * executed and the current one is waiting for that one to finish first.
+     *
+     * @param query The query in {@link String} format which will be executed.
+     * @throws SQLException If the {@link Statement query} fails during its execution.
+     * @implNote It prints a log every 5 minutes so the user is aware that the query is still being executed.
+     */
+    private int executeUpdateQuery(final String query) throws SQLException {
+        final long startMilliSeconds = System.currentTimeMillis();
+        final Runnable printLog = () -> {
+            long timePassedMin = Duration.ofMillis(System.currentTimeMillis()).minusMillis(startMilliSeconds).toMinutes();
+            this.logger.info("Database is still executing for '{}'min a query.\n" +
+                "Are you sure the Database is not blocked due to another query being executed?",
+                timePassedMin
+            );
+            this.logger.trace("The query still being executed for '{}'min is: '{}'.\n", timePassedMin, query);
+        };
+        final ScheduledFuture<?> scheduledFutureLog = this.executor.scheduleAtFixedRate(printLog, 5L, 5L, TimeUnit.MINUTES);
+
+        Statement statement = null;
+        try {
+            statement = this.conn.createStatement();
+            return statement.executeUpdate(query);
+        } finally {
+            try {
+                if (statement != null) {
+                    statement.close();
+                }
+            } catch (final Exception e) {
+                logger.trace("Error closing statement.", e);
+            }
+            scheduledFutureLog.cancel(true);
+        }
     }
 }
