@@ -414,7 +414,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
         } catch (final IllegalArgumentException e) {
             logger.warn("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
-            logger.debug("Stack trace error: ", e);
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)
