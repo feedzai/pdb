@@ -43,7 +43,7 @@
 
         <jmockit.version>1.49</jmockit.version>
 
-        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+        <maven-source-plugin.version>3.3.0</maven-source-plugin.version>
         <maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
     </properties>
 
@@ -75,7 +75,7 @@
             <dependency>
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
-                <version>2.2.220</version>
+                <version>2.2.224</version>
             </dependency>
             <dependency>
                 <groupId>com.ibm.db2</groupId>
