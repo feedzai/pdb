@@ -37,7 +37,6 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.ibm.db2.jcc.am.SqlSyntaxErrorException;
-import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
@@ -426,92 +425,17 @@ public class DB2Engine extends AbstractDatabaseEngine {
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
 
-        PreparedStatement ps = null, psReturn = null, psWithAutoInc = null, psUpsert;
+        PreparedStatement ps, psReturn, psWithAutoInc;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(insertWithAutoInc);
 
-            final String upsert = buildUpsertStatement(entity, columns, values);
-            psUpsert = conn.prepareStatement(upsert);
-
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setAutoIncColumn(returning)
-                        .setUpsert(psUpsert);
-
-        } catch (final IllegalArgumentException e) {
-            logger.error("Returning entity without an UPSERT/MERGE prepared statement.", e);
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setAutoIncColumn(returning);
-
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
-
-    }
-
-    /**
-     * Helper method to create an upsert statement for this engine.
-     *
-     * @param entity    The entity.
-     * @param columns   The columns of this entity.
-     * @param values    The values of the entity.
-     *
-     * @return          An upsert statement.
-     */
-    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
-
-        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            throw new IllegalArgumentException("The MERGE command was not created because the entity has no primary keys. Skipping statement creation.");
-        }
-
-        final List<String> merge = new ArrayList<>();
-        merge.add("MERGE INTO " + quotize(entity.getName()) + " AS dest");
-
-        merge.add("USING (VALUES(" + join(values, ", ") + ")) AS src (" + join(columns, ", ") + ")");
-
-        final List<String> primaryKeys = entity.getPkFields()
-                                               .stream()
-                                               .map(com.feedzai.commons.sql.abstraction.util.StringUtils::quotize)
-                                               .collect(Collectors.toList());
-
-        final List<String> primaryKeysOnClause = primaryKeys
-                                                    .stream()
-                                                    .map(pk -> String.format("dest.%s = src.%s", pk, pk))
-                                                    .collect(Collectors.toList());
-
-        merge.add("ON ( " + join(primaryKeysOnClause, " AND ") + " )");
-
-        merge.add("WHEN MATCHED THEN");
-        merge.add("UPDATE");
-
-        final List<String> columnsWithoutPKs = new ArrayList<>(columns);
-        columnsWithoutPKs.removeAll(primaryKeys);
-
-        final String columnsToUpdate = columnsWithoutPKs
-                                        .stream()
-                                        .map(column -> String.format("%s = src.%s", column, column))
-                                        .collect(Collectors.joining(", "));
-
-        merge.add("SET " + columnsToUpdate);
-
-        merge.add("WHEN NOT MATCHED THEN");
-
-        final String insertColumns = columns.stream().map(column -> String.format("%s", column)).collect(Collectors.joining(", "));
-        merge.add("INSERT (" + insertColumns + ")");
-
-        final String insertColumnValues = columns.stream().map(value -> String.format("src.%s", value)).collect(Collectors.joining(", "));
-        merge.add("VALUES (" + insertColumnValues + ")");
-
-        return join(merge, " ");
-
     }
 
     @Override
