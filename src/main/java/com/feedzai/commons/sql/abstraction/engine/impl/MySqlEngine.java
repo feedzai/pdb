@@ -408,7 +408,8 @@ public class MySqlEngine extends AbstractDatabaseEngine {
                         .setUpsert(psUpsert);
 
         } catch (final IllegalArgumentException e) {
-            logger.info("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
+            logger.warn("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
+            logger.debug("Stack trace error: ", e);
             return new MappedEntity()
                         .setInsert(ps)
                         .setInsertReturning(psReturn)
@@ -432,7 +433,9 @@ public class MySqlEngine extends AbstractDatabaseEngine {
 
         if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
             throw new IllegalArgumentException(String.format("The 'INSERT INTO (...) ON DUPLICATE KEY UPDATE' prepared statement was "
-                                                             + "not created for entity '%s.", entity.getName()));
+                                                             + "not created because the entity '%s' has no primary keys. "
+                                                             + "Skipping statement creation.",
+                                                             entity.getName()));
         }
 
         List<String> insertIntoIgnoring = new ArrayList<>();
