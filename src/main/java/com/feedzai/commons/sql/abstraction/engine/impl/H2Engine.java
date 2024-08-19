@@ -489,7 +489,7 @@ public class H2Engine extends AbstractDatabaseEngine {
                 // The auto incremented column must be set, so when persisting a row, it's possible to retrieve its value
                 // by consulting the column name from this MappedEntity.
                 .setAutoIncColumn(columnWithAutoIncName)
-                .setUpsert(psMerge);
+                .setInsertIgnoring(psMerge);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
@@ -505,20 +505,20 @@ public class H2Engine extends AbstractDatabaseEngine {
      * @return          A merge statement.
      */
     private String buildMergeStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
+        final String statementWithMerge;
+        if (!entity.getPkFields().isEmpty() && !columns.isEmpty() && !values.isEmpty()) {
+            final List<String> mergeInto = new ArrayList<>();
+            mergeInto.add("MERGE INTO");
+            mergeInto.add(quotize(entity.getName()));
 
-        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            return "";
+            mergeInto.add("(" + join(columns, ", ") + ")");
+            mergeInto.add("VALUES (" + join(values, ", ") + ")");
+
+            statementWithMerge = join(mergeInto, " ");
+        } else {
+            statementWithMerge = "";
         }
-
-        final List<String> mergeInto = new ArrayList<>();
-        mergeInto.add("MERGE INTO");
-        mergeInto.add(quotize(entity.getName()));
-
-        mergeInto.add("(" + join(columns, ", ") + ")");
-        mergeInto.add("VALUES (" + join(values, ", ") + ")");
-
-        return join(mergeInto, " ");
-
+        return statementWithMerge;
     }
 
     @Override

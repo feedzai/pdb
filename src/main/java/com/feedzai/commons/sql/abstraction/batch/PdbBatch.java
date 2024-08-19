@@ -62,10 +62,10 @@ public interface PdbBatch extends AutoCloseable {
     CompletableFuture<Void> flushAsync() throws Exception;
 
     /**
-     * Flushes the pending batches upserting entries to avoid duplicated key violations.
+     * Flushes the pending batches ignoring duplicated key violations.
      *
      * @throws Exception If an error occurs while flushing.
      */
-    void flushUpsert() throws Exception;
+    void flushIgnore() throws Exception;
 
 }

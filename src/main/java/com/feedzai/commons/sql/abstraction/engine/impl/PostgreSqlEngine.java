@@ -42,7 +42,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import org.postgresql.Driver;
 import org.postgresql.PGProperty;
@@ -354,9 +353,15 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName()));
+
         List<String> insertIntoWithAutoInc = new ArrayList<>();
         insertIntoWithAutoInc.add("INSERT INTO");
         insertIntoWithAutoInc.add(quotize(entity.getName()));
+
+        List<String> insertIntoIgnoring = new ArrayList<>();
+        insertIntoIgnoring.add("INSERT INTO");
+        insertIntoIgnoring.add(quotize(entity.getName()));
+
         List<String> columns = new ArrayList<>();
         List<String> values = new ArrayList<>();
         List<String> columnsWithAutoInc = new ArrayList<>();
@@ -380,6 +385,10 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
+        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
+        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
+        insertIntoIgnoring.add("ON CONFLICT DO NOTHING");
+
         List<String> insertIntoReturn = new ArrayList<>(insertInto);
 
 
@@ -390,7 +399,7 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
-        final String insertIgnoring = buildInsertOnConflictStatement(entity, columns, values);
+        final String insertIgnoring = join(insertIntoIgnoring, " ");;
 
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
@@ -404,50 +413,10 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
             psWithInsertIgnoring = conn.prepareStatement(insertIgnoring);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setUpsert(psWithInsertIgnoring).setAutoIncColumn(returning);
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setInsertIgnoring(psWithInsertIgnoring).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
-    }
-
-    /**
-     * Helper method to create a insert on conflict statement that updates for this engine.
-     *
-     * @param entity    The entity.
-     * @param columns   The columns of this entity.
-     * @param values    The values of the entity.
-     *
-     * @return          A insert on conflict statement.
-     */
-    private String buildInsertOnConflictStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
-
-        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            return "";
-        }
-
-        List<String> insertIntoIgnoring = new ArrayList<>();
-        insertIntoIgnoring.add("INSERT INTO");
-        insertIntoIgnoring.add(quotize(entity.getName()));
-
-        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
-        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
-
-        final List<String> primaryKeys = entity.getPkFields().stream().map(pk -> quotize(pk)).collect(Collectors.toList());
-        insertIntoIgnoring.add("ON CONFLICT (" + join(primaryKeys, ", ") + ")");
-
-        insertIntoIgnoring.add("DO UPDATE");
-        final List<String> columnsWithoutPKs = new ArrayList<>(columns);
-        columnsWithoutPKs.removeAll(primaryKeys);
-
-        final String columnsToUpdate = columnsWithoutPKs
-                                        .stream()
-                                        .map(column -> String.format("%s = EXCLUDED.%s", column, column))
-                                        .collect(Collectors.joining(", "));
-
-        insertIntoIgnoring.add("SET " + columnsToUpdate);
-
-        return join(insertIntoIgnoring, " ");
-
     }
 
     @Override

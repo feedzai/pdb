@@ -188,11 +188,11 @@ public interface DatabaseEngine extends AutoCloseable {
     void flush() throws DatabaseEngineException;
 
     /**
-     * Flushes the batches for all the registered entities upserting duplicated entries.
+     * Flushes the batches for all the registered entities ignoring duplicated entries.
      *
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
-    void flushUpsert() throws DatabaseEngineException;
+    void flushIgnore() throws DatabaseEngineException;
 
     /**
      * Commits the current transaction. You should only call this method if you've previously called
@@ -393,13 +393,13 @@ public interface DatabaseEngine extends AutoCloseable {
     void addBatch(final String name, final EntityEntry entry) throws DatabaseEngineException;
 
     /**
-     * Adds an entry to the batch upserting duplicate entries.
+     * Adds an entry to the batch ignoring duplicate entries.
      *
      * @param name  The entity name.
      * @param entry The entry to persist.
      * @throws DatabaseEngineException If something goes wrong while persisting data.
      */
-    void addBatchUpsert(final String name, final EntityEntry entry) throws DatabaseEngineException;
+    void addBatchIgnore(final String name, final EntityEntry entry) throws DatabaseEngineException;
 
     /**
      * Executes the given query.
