@@ -351,15 +351,9 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         List<String> insertInto = new ArrayList<>();
         insertInto.add("INSERT INTO");
         insertInto.add(quotize(entity.getName()));
-
         List<String> insertIntoWithAutoInc = new ArrayList<>();
         insertIntoWithAutoInc.add("INSERT INTO");
         insertIntoWithAutoInc.add(quotize(entity.getName()));
-
-        List<String> insertIntoIgnoring = new ArrayList<>();
-        insertIntoIgnoring.add("INSERT INTO");
-        insertIntoIgnoring.add(quotize(entity.getName()));
-
         List<String> columns = new ArrayList<>();
         List<String> values = new ArrayList<>();
         List<String> columnsWithAutoInc = new ArrayList<>();
@@ -383,10 +377,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         insertIntoWithAutoInc.add("(" + join(columnsWithAutoInc, ", ") + ")");
         insertIntoWithAutoInc.add("VALUES (" + join(valuesWithAutoInc, ", ") + ")");
 
-        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
-        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
-        insertIntoIgnoring.add("ON CONFLICT DO NOTHING");
-
         List<String> insertIntoReturn = new ArrayList<>(insertInto);
 
 
@@ -397,21 +387,18 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         final String insertStatement = join(insertInto, " ");
         final String insertReturnStatement = join(insertIntoReturn, " ");
         final String statementWithAutoInt = join(insertIntoWithAutoInc, " ");
-        final String insertIgnoring = join(insertIntoIgnoring, " ");;
 
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
-        logger.trace(insertIgnoring);
 
-        PreparedStatement ps, psReturn, psWithAutoInc, psWithInsertIgnoring;
+        PreparedStatement ps, psReturn, psWithAutoInc;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
-            psWithInsertIgnoring = conn.prepareStatement(insertIgnoring);
 
-            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setInsertIgnoring(psWithInsertIgnoring).setAutoIncColumn(returning);
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }

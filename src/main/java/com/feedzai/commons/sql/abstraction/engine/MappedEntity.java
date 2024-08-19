@@ -15,13 +15,13 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 
 /**
  * Mapped entity contains information about an entity that has been mapped using the engine.
@@ -50,10 +50,6 @@ public class MappedEntity implements AutoCloseable {
      * The prepared statement to insert new values.
      */
     private PreparedStatement insertReturning = null;
-    /**
-     * The prepared statement to insert new values ignoring duplicated keys.
-     */
-    private PreparedStatement insertIgnoring = null;
     /**
      * The auto increment column if exists;
      */
@@ -149,35 +145,13 @@ public class MappedEntity implements AutoCloseable {
      * Sets the insert statement auto inc columns.
      *
      * @param insertWithAutoInc The insert statement with auto inc columns.
-     * @return This mapped entity;
+     * @return This mapped entity; 
      * @see DatabaseEngine#persist(String, EntityEntry, boolean)
      */
     public MappedEntity setInsertWithAutoInc(final PreparedStatement insertWithAutoInc) {
         closeQuietly(this.insertWithAutoInc);
         this.insertWithAutoInc = insertWithAutoInc;
-
-        return this;
-    }
-
-    /**
-     * Gets the prepared statement for inserts ignoring duplicated keys.
-     *
-     * @return The insert statement that allows ignoring duplicated keys.
-     */
-    public PreparedStatement getInsertIgnoring() {
-        return insertIgnoring;
-    }
-
-    /**
-     * Sets the insert that allows ignoring duplicated keys.
-     *
-     * @param insertIgnoring The insert statement that allows ignoring duplicated keys
-     * @return This mapped entity
-     */
-    public MappedEntity setInsertIgnoring(final PreparedStatement insertIgnoring) {
-        closeQuietly(this.insertIgnoring);
-        this.insertIgnoring = insertIgnoring;
-
+        
         return this;
     }
 
@@ -241,6 +215,5 @@ public class MappedEntity implements AutoCloseable {
         closeQuietly(this.insert);
         closeQuietly(this.insertWithAutoInc);
         closeQuietly(this.insertReturning);
-        closeQuietly(this.insertIgnoring);
     }
 }
