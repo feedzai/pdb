@@ -821,12 +821,12 @@ public class BatchUpdateTest {
     }
 
     /**
-     * Tests if a batch with entries having duplicate upserts the entry when flushing.
+     * Tests if a batch with entries having duplicate ignores when there is an error.
      *
      * @throws Exception if any operations on the batch fail.
      */
     @Test
-    public void batchUpsertDuplicateFlushTest() throws Exception {
+    public void batchInsertOnIgnoreDuplicateFlushTest() throws Exception {
         assumeTrue(ImmutableList.of("postresql", "mysql", "cockroach", "db2").contains(dbConfig.vendor) && dbConfig.vendor.startsWith("h2"));
         final TestBatchListener batchListener = new TestBatchListener();
         final int numTestEntries = 2;
@@ -834,12 +834,13 @@ public class BatchUpdateTest {
         addTestEntityWithPrimaryKey();
 
         final DefaultBatch batch = engine.createBatch(DefaultBatchConfig.builder()
-                                                                        .withName("batchUpsertDuplicateFlushTest")
-                                                                        .withBatchSize(numTestEntries + 1)
-                                                                        .withBatchTimeout(Duration.ofSeconds(100))
-                                                                        .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
-                                                                        .withBatchListener(batchListener)
-                                                                        .build());
+                                                             .withName("batchInsertOnIgnoreDuplicateFlushTest")
+                                                             .withBatchSize(numTestEntries + 1)
+                                                             .withBatchTimeout(Duration.ofSeconds(100))
+                                                             .withMaxAwaitTimeShutdown(Duration.ofSeconds(1000))
+                                                             .withBatchListener(batchListener)
+                                                             .build()
+        );
 
         // Add entries to batch, no flush should take place because numTestEntries < batch size and batch timeout is huge
         final int idx = 0;

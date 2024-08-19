@@ -967,10 +967,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
         try {
             for (MappedEntity me : entities.values()) {
-                final PreparedStatement upsert = me.getUpsert();
-                if (upsert != null) {
-                    upsert.executeBatch();
-                }
+                me.getUpsert().executeBatch();
             }
         } catch (final Exception ex) {
             throw getQueryExceptionHandler().handleException(ex, "Something went wrong while flushing");
@@ -1015,9 +1012,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 mappedEntity.getInsert().clearBatch();
                 mappedEntity.getInsertReturning().clearBatch();
                 mappedEntity.getInsertWithAutoInc().clearBatch();
-                if (mappedEntity.getUpsert() != null) {
-                    mappedEntity.getUpsert().clearBatch();
-                }
             }
             conn.rollback();
             conn.setAutoCommit(true);
@@ -1357,10 +1351,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
             PreparedStatement ps = me.getUpsert();
-
-            if (ps == null) {
-                throw new DatabaseEngineException(String.format("Error adding to batch: Entity %s has a null merge/upsert statement.", name));
-            }
 
             entityToPreparedStatementForBatch(me.getEntity(), ps, entry, true);
 
