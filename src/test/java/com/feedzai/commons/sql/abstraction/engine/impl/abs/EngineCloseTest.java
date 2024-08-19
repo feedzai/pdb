@@ -15,6 +15,26 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Properties;
+import mockit.Capturing;
+import mockit.Expectations;
+import mockit.Mock;
+import mockit.MockUp;
+import mockit.Verifications;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
+
 import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
 import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
@@ -24,22 +44,6 @@ import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
 import com.feedzai.commons.sql.abstraction.engine.NameAlreadyExistsException;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
 import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import mockit.Capturing;
-import mockit.Expectations;
-import mockit.Mock;
-import mockit.MockUp;
-import mockit.Verifications;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Properties;
 
 import static com.feedzai.commons.sql.abstraction.engine.EngineTestUtils.buildEntity;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.ENGINE;
@@ -47,6 +51,7 @@ import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProper
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.PASSWORD;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.SCHEMA_POLICY;
 import static com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties.USERNAME;
+
 
 /**
  * Tests closing a {@link DatabaseEngine} to make sure all resources are cleaned up correctly.
@@ -92,6 +97,11 @@ public class EngineCloseTest {
         this.schemaPolicy = schemaPolicy;
     }
 
+    @BeforeClass
+    public static void initStatic() {
+        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
+    }
+
     @Before
     public void setUp() throws DatabaseFactoryException {
         properties = new Properties() {{
@@ -108,7 +118,7 @@ public class EngineCloseTest {
     /**
      * Test that closing a database engine with multiple entities closes all insert statements associated with each
      * entity, regardless of the schema policy used.
-     * <p>
+     *
      * Each entity is associated with 3 prepared statements. This test ensures that 3 PSs per entity are closed.
      *
      * @param preparedStatementMock       The mock to check number of closed prepared statements.

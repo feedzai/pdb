@@ -15,13 +15,13 @@
  */
 package com.feedzai.commons.sql.abstraction.engine;
 
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
 
 /**
  * Mapped entity contains information about an entity that has been mapped using the engine.

@@ -16,12 +16,12 @@
 
 package com.feedzai.commons.sql.abstraction.batch;
 
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
 import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
 import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * A abstract {@link PdbBatch} with useful default base methods for concrete implementations.

@@ -15,40 +15,12 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl.abs;
 
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
-import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
-import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
-import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
-import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch;
-import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatchConfig;
-import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
-import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
-import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
-import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
-import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
-import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
-import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
-import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
-import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
-import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Uninterruptibles;
-import mockit.Invocation;
-import mockit.Mock;
-import mockit.MockUp;
-import org.assertj.core.api.ObjectAssert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -70,6 +42,38 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import mockit.Invocation;
+import mockit.Mock;
+import mockit.MockUp;
+import org.assertj.core.api.ObjectAssert;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.LoggerFactory;
+
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatch;
+import com.feedzai.commons.sql.abstraction.batch.AbstractBatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.BatchEntry;
+import com.feedzai.commons.sql.abstraction.batch.PdbBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatch;
+import com.feedzai.commons.sql.abstraction.batch.impl.DefaultBatchConfig;
+import com.feedzai.commons.sql.abstraction.batch.impl.MultithreadedBatchConfig;
+import com.feedzai.commons.sql.abstraction.ddl.DbEntity;
+import com.feedzai.commons.sql.abstraction.dml.result.ResultColumn;
+import com.feedzai.commons.sql.abstraction.engine.AbstractDatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngine;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseEngineRuntimeException;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactory;
+import com.feedzai.commons.sql.abstraction.engine.DatabaseFactoryException;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseConfiguration;
+import com.feedzai.commons.sql.abstraction.engine.testconfig.DatabaseTestUtil;
+import com.feedzai.commons.sql.abstraction.entry.EntityEntry;
+import com.feedzai.commons.sql.abstraction.listeners.BatchListener;
+import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.BOOLEAN;
 import static com.feedzai.commons.sql.abstraction.ddl.DbColumnType.DOUBLE;
@@ -133,6 +137,11 @@ public class BatchUpdateTest {
 
     @Parameterized.Parameter(1)
     public Supplier<AbstractBatchConfig.Builder<?, ?, ?>> batchConfigBuilderSupplier;
+
+    @BeforeClass
+    public static void initStatic() {
+        ((Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)).setLevel(Level.TRACE);
+    }
 
     @Before
     public void init() throws DatabaseFactoryException {
