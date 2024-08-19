@@ -471,8 +471,8 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
      * Flushes the pending batches ignoring duplicate entries.
      */
     public void flushUpsert() {
-        logger.trace("Start batch flushing upserting duplicated entries.");
-        flush((this::processBatchUpsert));
+        logger.trace("Start batch flushing ignoring duplicated entries.");
+        flush((this::processBatchIgnoring));
     }
 
     /**

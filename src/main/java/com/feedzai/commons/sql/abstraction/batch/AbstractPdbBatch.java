@@ -82,7 +82,7 @@ public abstract class AbstractPdbBatch implements PdbBatch {
      * @param batchEntries              The list of batch entries to be flushed.
      * @throws DatabaseEngineException  If the operation failed.
      */
-    protected void processBatchUpsert(final DatabaseEngine de, final List<BatchEntry> batchEntries) throws DatabaseEngineException {
+    protected void processBatchIgnoring(final DatabaseEngine de, final List<BatchEntry> batchEntries) throws DatabaseEngineException {
         /*
          Begin transaction before the addBatch calls, in order to force the retry of the connection if it was lost during
          or since the last batch. Otherwise, the addBatch call that uses a prepared statement will fail.
