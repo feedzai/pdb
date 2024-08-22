@@ -48,7 +48,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.md5;
 import static com.feedzai.commons.sql.abstraction.util.StringUtils.quotize;
@@ -392,71 +391,16 @@ public class MySqlEngine extends AbstractDatabaseEngine {
         logger.trace(statement);
         logger.trace(statementWithAutoInt);
 
-        PreparedStatement ps = null, psReturn = null, psWithAutoInc = null, psUpsert;
+        final PreparedStatement ps, psReturn, psWithAutoInc;
         try {
             ps = conn.prepareStatement(statement, Statement.RETURN_GENERATED_KEYS);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
-            final String upsertStatement = buildUpsertStatement(entity, columns, values);
-            psUpsert = conn.prepareStatement(upsertStatement);
-
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setUpsert(psUpsert);
-
-        } catch (final IllegalArgumentException e) {
-            logger.info("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc);
-
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
-    }
-
-    /**
-     * Helper method to create an insert statement on duplicate key conflict for this engine.
-     *
-     * @param entity    The entity.
-     * @param columns   The columns of this entity.
-     * @param values    The values of the entity.
-     *
-     * @return          An insert statement on duplicate key conflict.
-     */
-    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
-
-        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            throw new IllegalArgumentException(String.format("The 'INSERT INTO (...) ON DUPLICATE KEY UPDATE' prepared statement was "
-                                                             + "not created for entity '%s.", entity.getName()));
-        }
-
-        List<String> insertIntoIgnoring = new ArrayList<>();
-        insertIntoIgnoring.add("INSERT INTO");
-        insertIntoIgnoring.add(quotize(entity.getName(), escapeCharacter()));
-
-        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
-        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
-
-        final List<String> primaryKeys = entity.getPkFields().stream().map(pk -> quotize(pk, escapeCharacter())).collect(Collectors.toList());
-        insertIntoIgnoring.add("ON DUPLICATE KEY UPDATE");
-
-        final List<String> columnsWithoutPKs = new ArrayList<>(columns);
-        columnsWithoutPKs.removeAll(primaryKeys);
-
-        final String columnsToUpdate = columnsWithoutPKs
-                                        .stream()
-                                        .map(column -> String.format("%s = VALUES(%s)", column, column))
-                                        .collect(Collectors.joining(", "));
-
-        insertIntoIgnoring.add(columnsToUpdate);
-
-        return join(insertIntoIgnoring, " ");
-
     }
 
     @Override

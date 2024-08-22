@@ -51,10 +51,6 @@ public class MappedEntity implements AutoCloseable {
      */
     private PreparedStatement insertReturning = null;
     /**
-     * The prepared statement to upsert new values to avoid duplicated keys violation.
-     */
-    private PreparedStatement upsert = null;
-    /**
      * The auto increment column if exists;
      */
     private String autoIncColumn = null;
@@ -149,35 +145,13 @@ public class MappedEntity implements AutoCloseable {
      * Sets the insert statement auto inc columns.
      *
      * @param insertWithAutoInc The insert statement with auto inc columns.
-     * @return This mapped entity;
+     * @return This mapped entity; 
      * @see DatabaseEngine#persist(String, EntityEntry, boolean)
      */
     public MappedEntity setInsertWithAutoInc(final PreparedStatement insertWithAutoInc) {
         closeQuietly(this.insertWithAutoInc);
         this.insertWithAutoInc = insertWithAutoInc;
-
-        return this;
-    }
-
-    /**
-     * Gets the prepared statement for upsert operation.
-     *
-     * @return The upsert statement.
-     */
-    public PreparedStatement getUpsert() {
-        return upsert;
-    }
-
-    /**
-     * Sets the upsert statement.
-     *
-     * @param upsert The upsert statement
-     * @return This mapped entity
-     */
-    public MappedEntity setUpsert(final PreparedStatement upsert) {
-        closeQuietly(this.upsert);
-        this.upsert = upsert;
-
+        
         return this;
     }
 
@@ -241,6 +215,5 @@ public class MappedEntity implements AutoCloseable {
         closeQuietly(this.insert);
         closeQuietly(this.insertWithAutoInc);
         closeQuietly(this.insertReturning);
-        closeQuietly(this.upsert);
     }
 }

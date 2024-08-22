@@ -15,6 +15,27 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import org.postgresql.Driver;
+import org.postgresql.PGProperty;
+import org.postgresql.util.PGobject;
+
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
@@ -35,31 +56,6 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
-import com.feedzai.commons.sql.abstraction.util.StringUtils;
-
-import java.time.Duration;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.postgresql.Driver;
-import org.postgresql.PGProperty;
-import org.postgresql.util.PGobject;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
@@ -395,75 +391,17 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         logger.trace(insertStatement);
         logger.trace(insertReturnStatement);
 
-        PreparedStatement ps = null, psReturn = null, psWithAutoInc = null, psUpsert;
+        PreparedStatement ps, psReturn, psWithAutoInc;
         try {
 
             ps = conn.prepareStatement(insertStatement);
             psReturn = conn.prepareStatement(insertReturnStatement);
             psWithAutoInc = conn.prepareStatement(statementWithAutoInt);
 
-            final String upsert = buildUpsertStatement(entity, columns, values);
-            psUpsert = conn.prepareStatement(upsert);
-
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setUpsert(psUpsert)
-                        .setAutoIncColumn(returning);
-
-        } catch (final IllegalArgumentException e) {
-            logger.info("{} Returning an entity without an UPSERT/MERGE prepared statement.", e.getMessage());
-            return new MappedEntity()
-                        .setInsert(ps)
-                        .setInsertReturning(psReturn)
-                        .setInsertWithAutoInc(psWithAutoInc)
-                        .setAutoIncColumn(returning);
-
+            return new MappedEntity().setInsert(ps).setInsertReturning(psReturn).setInsertWithAutoInc(psWithAutoInc).setAutoIncColumn(returning);
         } catch (final SQLException ex) {
             throw new DatabaseEngineException("Something went wrong handling statement", ex);
         }
-    }
-
-    /**
-     * Helper method to create an insert statement on duplicate key conflict for this engine.
-     *
-     * @param entity    The entity.
-     * @param columns   The columns of this entity.
-     * @param values    The values of the entity.
-     *
-     * @return          An insert statement on duplicate key conflict.
-     */
-    private String buildUpsertStatement(final DbEntity entity, final List<String> columns, final List<String> values) {
-
-        if (entity.getPkFields().isEmpty() || columns.isEmpty() || values.isEmpty()) {
-            throw new IllegalArgumentException(String.format("The 'INSERT INTO (...) ON CONFLICT DO UPDATE' prepared "
-                                                             + "statement was not created for entity '%s'.", entity.getName()));
-        }
-
-        List<String> insertIntoIgnoring = new ArrayList<>();
-        insertIntoIgnoring.add("INSERT INTO");
-        insertIntoIgnoring.add(quotize(entity.getName()));
-
-        insertIntoIgnoring.add("(" + join(columns, ", ") + ")");
-        insertIntoIgnoring.add("VALUES (" + join(values, ", ") + ")");
-
-        final List<String> primaryKeys = entity.getPkFields().stream().map(StringUtils::quotize).collect(Collectors.toList());
-        insertIntoIgnoring.add("ON CONFLICT (" + join(primaryKeys, ", ") + ")");
-
-        insertIntoIgnoring.add("DO UPDATE");
-        final List<String> columnsWithoutPKs = new ArrayList<>(columns);
-        columnsWithoutPKs.removeAll(primaryKeys);
-
-        final String columnsToUpdate = columnsWithoutPKs
-                                        .stream()
-                                        .map(column -> String.format("%s = EXCLUDED.%s", column, column))
-                                        .collect(Collectors.joining(", "));
-
-        insertIntoIgnoring.add("SET " + columnsToUpdate);
-
-        return join(insertIntoIgnoring, " ");
-
     }
 
     @Override
