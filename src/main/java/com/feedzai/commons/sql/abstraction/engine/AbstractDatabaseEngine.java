@@ -43,6 +43,7 @@ import com.feedzai.commons.sql.abstraction.util.Constants;
 import com.feedzai.commons.sql.abstraction.util.InitiallyReusableByteArrayOutputStream;
 import com.feedzai.commons.sql.abstraction.util.PreparedStatementCapsule;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -137,7 +138,7 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
     /**
      * The logger that will be used.
      */
-    protected final Logger logger;
+    protected final Logger logger = LoggerFactory.getLogger(getClass());
     /**
      * The notification logger for administration.
      */
@@ -179,7 +180,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
      * An {@link ExecutorService} to be used by the DB drivers to break a connection if it has been blocked for longer
      * than the specified socket timeout
      */
-    protected final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor();
+    protected final ExecutorService socketTimeoutExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
+        .setNameFormat(getClass().getSimpleName() + "-socket-timeout-%d")
+        .setUncaughtExceptionHandler((thread, throwable) -> {
+            logger.error("Uncaught exception in '{}' thread.", thread.getName(), throwable);
+        })
+        .build()
+    );
 
     /**
      * The default instance of {@link QueryExceptionHandler} to be used in disambiguating SQL exceptions.
@@ -203,8 +210,6 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             driver = properties.getDriver();
         }
 
-
-        logger = LoggerFactory.getLogger(this.getClass());
         notificationLogger = LoggerFactory.getLogger("admin-notifications");
 
         this.dialect = dialect;

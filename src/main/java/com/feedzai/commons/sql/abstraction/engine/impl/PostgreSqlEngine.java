@@ -56,6 +56,7 @@ import com.feedzai.commons.sql.abstraction.engine.configuration.PdbProperties;
 import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
@@ -121,7 +122,13 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
      * being executed. This will print a log from time to time in order to easily identify cases where the query might
      * be stuck due to the database being locked because of another external query.
      */
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
+        .setNameFormat(getClass().getSimpleName() + "-query-logger-%d")
+        .setUncaughtExceptionHandler((thread, throwable) -> {
+            logger.error("Uncaught exception in '{}' thread.", thread.getName(), throwable);
+        })
+        .build()
+    );
 
     /**
      * Creates a new PostgreSql connection.

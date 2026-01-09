@@ -24,6 +24,8 @@ import com.feedzai.commons.sql.abstraction.listeners.MetricsListener;
 import com.feedzai.commons.sql.abstraction.listeners.impl.NoopBatchListener;
 import com.feedzai.commons.sql.abstraction.listeners.impl.NoopMetricsListener;
 import com.google.common.base.Strings;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +112,13 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
     /**
      * The Timer that runs this task.
      */
-    protected ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    protected ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1, new ThreadFactoryBuilder()
+        .setNameFormat(getClass().getSimpleName() + "-timer-%d")
+        .setUncaughtExceptionHandler((thread, throwable) -> {
+            logger.error("Uncaught exception in '{}' thread.", thread.getName(), throwable);
+        })
+        .build()
+    );
     /**
      * The batchSize.
      */
