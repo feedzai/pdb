@@ -10,7 +10,7 @@ updates:
     # Check for Maven updates at 4am UTC
     time: "04:00"
     timezone: "Europe/Lisbon"
-  open-pull-requests-limit: 5
+  open-pull-requests-limit: 10
   # Raise all Maven pull requests with reviewers
   #reviewers:
   #  - "<someone>"
