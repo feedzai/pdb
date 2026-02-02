@@ -41,7 +41,7 @@
             -Djdk.attach.allowAttachSelf
         </default.test.cmdArgs>
 
-        <jmockit.version>1.49</jmockit.version>
+        <jmockit.version>1.50</jmockit.version>
 
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-gpg-plugin.version>3.2.4</maven-gpg-plugin.version>
