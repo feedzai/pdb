@@ -15,27 +15,6 @@
  */
 package com.feedzai.commons.sql.abstraction.engine.impl;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Types;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import org.postgresql.Driver;
-import org.postgresql.PGProperty;
-import org.postgresql.util.PGobject;
-
 import com.feedzai.commons.sql.abstraction.ddl.DbColumn;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnConstraint;
 import com.feedzai.commons.sql.abstraction.ddl.DbColumnType;
@@ -57,6 +36,27 @@ import com.feedzai.commons.sql.abstraction.engine.handler.OperationFault;
 import com.feedzai.commons.sql.abstraction.engine.handler.QueryExceptionHandler;
 import com.feedzai.commons.sql.abstraction.engine.impl.postgresql.PostgresSqlQueryExceptionHandler;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.postgresql.Driver;
+import org.postgresql.PGProperty;
+import org.postgresql.util.PGobject;
+
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.column;
 import static com.feedzai.commons.sql.abstraction.dml.dialect.SqlBuilder.max;
@@ -617,65 +617,6 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
         }
 
         return props;
-    }
-
-    @Override
-    protected boolean checkConnection(final Connection conn) {
-        final int timeout = this.properties.getCheckConnectionTimeout();
-        final int socketTimeout;
-        try {
-            socketTimeout = conn.getNetworkTimeout();
-            try {
-                // Set the socket timeout to verify the connection.
-                conn.setNetworkTimeout(socketTimeoutExecutor, timeout * 1000);
-                return pingConnection(conn);
-            } catch (final Exception ex) {
-                logger.debug("It wasn't possible to verify the connection state within the timeout of {} seconds.",
-                        timeout,
-                        ex);
-                return false;
-            } finally {
-                // Make sure to respect it afterwards.
-                conn.setNetworkTimeout(socketTimeoutExecutor, socketTimeout);
-            }
-        } catch (final Exception ex) {
-            logger.debug("It wasn't possible to reset the connection. Connection might be closed.");
-
-            try {
-                conn.close();
-            } catch (final Exception e) {
-                logger.debug("Error closing the connection.", e);
-            }
-
-            return false;
-        }
-    }
-
-    /**
-     * Executes a dummy query to verify if the connection is alive.
-     *
-     * @param conn The connection to test.
-     * @return {@code true} if the connection is valid, {@code false} otherwise.
-     */
-    private boolean pingConnection(final Connection conn) {
-        Statement s = null;
-        try {
-            s = conn.createStatement();
-            s.executeQuery("select 1");
-
-            return true;
-        } catch (final SQLException e) {
-            logger.debug("Connection is down.", e);
-            return false;
-        } finally {
-            try {
-                if (s != null) {
-                    s.close();
-                }
-            } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
-            }
-        }
     }
 
     @Override
