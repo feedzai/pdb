@@ -699,7 +699,17 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
 
     @Override
     public synchronized void close() {
-        this.executor.shutdownNow();
+        this.executor.shutdown();
+        try {
+            if (!this.executor.awaitTermination(10L, TimeUnit.SECONDS)) {
+                this.executor.shutdownNow();
+                this.executor.awaitTermination(10L, TimeUnit.SECONDS);
+            }
+        } catch (final InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            this.executor.shutdownNow();
+        }
+
         super.close();
     }
 }
