@@ -696,10 +696,4 @@ public class PostgreSqlEngine extends AbstractDatabaseEngine {
             scheduledFutureLog.cancel(true);
         }
     }
-
-    @Override
-    public synchronized void close() {
-        this.executor.shutdownNow();
-        super.close();
-    }
 }
