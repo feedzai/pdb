@@ -40,7 +40,7 @@ import org.postgresql.Driver;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PGobject;
 
-
+import java.lang.Thread;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
