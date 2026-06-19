@@ -271,7 +271,10 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.debug("Interrupted while waiting.", e);
+            logger.warn("Interrupted while waiting.");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Interrupted while waiting.", e);
+            }
         }
     }
 
@@ -376,7 +379,9 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
                     // If the connection was established, we might need a rollback.
                     if (de.checkConnection() && de.isTransactionActive()) {
+                        logger.info("[{}] Attempting retry {}/{}. Rolling back previous transaction before retrying.", name, retryCount, this.maxFlushRetries);
                         de.rollback();
+                        logger.info("[{}] Previous transaction rolled back.", name);
                     }
 
                     processBatch(de, batchEntries);
@@ -384,7 +389,10 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
                     success = true;
 
                 } catch (final InterruptedException ex) {
-                    logger.debug("Interrupted while trying to flush batch. Stopping retries.");
+                    logger.warn("Interrupted while trying to flush batch. Stopping retries.");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Interrupted while trying to flush batch. Stopping retries.", ex);
+                    }
                     Thread.currentThread().interrupt();
                     break;
 
@@ -400,14 +408,16 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
             if (!success) {
                 try {
                     if (de.isTransactionActive()) {
+                        logger.info("[{}] Batch flush failed after {} retries. Rolling back transaction.", name, retryCount);
                         de.rollback();
+                        logger.info("[{}] Batch flush failed after {} retries. Transaction rolled back.", name, retryCount);
                     }
                 } catch (final Exception ee) {
                     ee.addSuppressed(e);
                     final String msg = "[{}] Batch failed to check the flush transaction state";
-                    confidentialLogger.trace(msg, name, ee);
+                    confidentialLogger.error(msg, name, ee);
                     if (confidentialLogger != logger) {
-                        logger.trace(msg, name);
+                        logger.error(msg, name);
                     }
                 }
 
@@ -426,13 +436,14 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
         } finally {
             try {
                 if (de.isTransactionActive()) {
+                    logger.info("[{}] Flush finished but transaction still active. Rolling back to avoid dangling transaction.", name);
                     de.rollback();
                 }
             } catch (final Exception e) {
                 final String msg = "[{}] Batch failed to check the flush transaction state";
-                confidentialLogger.trace(msg, name, e);
+                confidentialLogger.error(msg, name, e);
                 if (confidentialLogger != logger) {
-                    logger.trace(msg, name);
+                    logger.error(msg, name);
                 }
             }
         }
