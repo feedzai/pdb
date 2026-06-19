@@ -420,11 +420,17 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 // return it.
                 return conn;
             } catch (final InterruptedException ex) {
-                logger.debug("Thread interrupted.");
+                logger.warn("Thread interrupted.");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Thread interrupted.", ex);
+                }
                 Thread.currentThread().interrupt();
                 throw ex;
             } catch (final SQLException ex) {
-                logger.debug("Connection failed.");
+                logger.error("Connection failed.");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Connection failed.", ex);
+                }
 
                 if (maximumNumberOfTries > 0 && retries > maximumNumberOfTries) {
                     throw new RetryLimitExceededException("Maximum number of retries for a connection exceeded.", ex);
@@ -446,7 +452,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             try {
                 me.close();
             } catch (final Exception e) {
-                logger.trace("Could not close prepared statement.", e);
+                logger.error("Could not close prepared statement.");
+                if (logger.isTraceEnabled()) {
+                    logger.trace("Could not close prepared statement.", e);
+                }
             }
             loadEntity(me.getEntity());
         }
@@ -522,8 +531,13 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             }
 
         } catch (final SQLException e) {
-            logger.debug(String.format("Failed to flush before closing mapped entity '%s'",
-                    mappedEntity.getEntity().getName()), e);
+            logger.error(String.format("Failed to flush before closing mapped entity '%s'",
+                mappedEntity.getEntity().getName()));
+            if (logger.isDebugEnabled()) {
+                logger.debug(String.format("Failed to flush before closing mapped entity '%s'",
+                    mappedEntity.getEntity().getName()), e
+                );
+            }
 
         } finally {
             try {
@@ -771,14 +785,20 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             toRemove.getInsert().executeBatch();
         } catch (final SQLException ex) {
-            logger.debug("Could not flush before remove '{}'", name, ex);
+            logger.error("Could not flush before remove '{}'", name);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Could not flush before remove '{}'", name, ex);
+            }
         }
 
         if (properties.isSchemaPolicyCreateDrop()) {
             try {
                 dropEntity(toRemove.getEntity());
             } catch (final DatabaseEngineException ex) {
-                logger.debug(String.format("Something went wrong while dropping entity '%s'", name), ex);
+                logger.error(String.format("Something went wrong while dropping entity '%s'", name));
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Something went wrong while dropping entity '%s'", name), ex);
+                }
             }
         }
 
@@ -833,7 +853,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
             try {
                 dropEntity(mappedEntity.getEntity());
             } catch (final DatabaseEngineException ex) {
-                logger.debug(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()), ex);
+                logger.error(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()));
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Failed to drop entity '%s'", mappedEntity.getEntity().getName()), ex);
+                }
             }
         }
     }
@@ -1040,7 +1063,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                 try {
                     s.close();
                 } catch (final Exception e) {
-                    logger.trace("Error closing statement.", e);
+                    logger.error("Error closing statement.");
+                    if (logger.isTraceEnabled()) {
+                        logger.trace("Error closing statement.", e);
+                    }
                 }
             }
         }
@@ -1252,7 +1278,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             return conn.isValid(this.properties.getCheckConnectionTimeout());
         } catch (final Exception ex) {
-            logger.debug("Connection is down.", ex);
+            logger.error("Connection is down.");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Connection is down.", ex);
+            }
             return false;
         }
     }
@@ -1274,7 +1303,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
 
                 return true;
             } catch (final Exception ex) {
-                logger.debug(dev, "reconnection failure", ex);
+                logger.error(dev, "reconnection failure");
+                if (logger.isDebugEnabled()) {
+                    logger.debug(dev, "reconnection failure", ex);
+                }
                 return false;
             }
         }
@@ -1883,7 +1915,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     rs.close();
                 }
             } catch (final Exception e) {
-                logger.trace("Error closing result set.", e);
+                logger.error("Error closing result set.");
+                if (logger.isTraceEnabled()) {
+                    logger.trace("Error closing result set.", e);
+                }
             }
 
             try {
@@ -1891,7 +1926,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
                     stmt.close();
                 }
             } catch (final Exception e) {
-                logger.trace("Error closing statement.", e);
+                logger.error("Error closing statement.");
+                if (logger.isTraceEnabled()) {
+                    logger.trace("Error closing statement.", e);
+                }
             }
         }
     }
@@ -2042,7 +2080,10 @@ public abstract class AbstractDatabaseEngine implements DatabaseEngine {
         try {
             ps.ps.close();
         } catch (final SQLException e) {
-            logger.debug("Error closing prepared statement '{}'.", name, e);
+            logger.error("Error closing prepared statement '{}'.", name);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Error closing prepared statement '{}'.", name, e);
+            }
         }
     }
 
