@@ -503,9 +503,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
                 final String msg = "[{}] Error occurred while flushing. Retrying.";
-                confidentialLogger.warn(dev, msg, name, e);
+                logger.warn(dev, msg, name);
                 if (confidentialLogger != logger) {
-                    logger.warn(dev, msg, name);
+                    confidentialLogger.warn(dev, msg, name, e);
                 }
             }
 
@@ -533,9 +533,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                     break;
                 } catch (final Exception ex) {
                     final String msg = "[{}] Error occurred while flushing (retry attempt {}).";
-                    confidentialLogger.warn(dev, msg, name, retryCount + 1, ex);
+                    logger.warn(dev, msg, name, retryCount + 1);
                     if (confidentialLogger != logger) {
-                        logger.warn(dev, msg, name, retryCount + 1);
+                        confidentialLogger.warn(dev, msg, name, retryCount + 1, ex);
                     }
                 }
             }
@@ -550,18 +550,18 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                 } catch (final Exception ee) {
                     ee.addSuppressed(e);
                     final String msg = "[{}] Batch failed to check the flush transaction state";
-                    confidentialLogger.error(msg, name, ee);
+                    logger.error(msg, name);
                     if (confidentialLogger != logger) {
-                        logger.error(msg, name);
+                        confidentialLogger.error(msg, name, ee);
                     }
                 }
 
                 onFlushFinished(flushTriggeredMs, Collections.emptyList(), temp);
 
                 final String msg = "[{}] Error occurred while flushing. Aborting batch flush.";
-                confidentialLogger.error(dev, msg, name, e);
+                logger.error(dev, msg, name);
                 if (confidentialLogger != logger) {
-                    logger.error(dev, msg, name);
+                    confidentialLogger.error(dev, msg, name, e);
                 }
             } else {
                 onFlushFinished(flushTriggeredMs, temp, Collections.emptyList());
@@ -576,9 +576,9 @@ public abstract class AbstractBatch extends AbstractPdbBatch implements Runnable
                 }
             } catch (final Exception e) {
                 final String msg = "[{}] Batch failed to check the flush transaction state";
-                confidentialLogger.error(msg, name, e);
+                logger.error(msg, name);
                 if (confidentialLogger != logger) {
-                    logger.error(msg, name);
+                    confidentialLogger.error(msg, name, e);
                 }
             } finally {
                 flushTransactionLock.unlock();

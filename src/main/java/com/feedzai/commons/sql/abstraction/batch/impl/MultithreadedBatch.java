@@ -364,9 +364,9 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
         } catch (final Exception e) {
             if (this.maxFlushRetries > 0) {
                 final String msg = "[{}] Error occurred while flushing. Retrying.";
-                confidentialLogger.warn(DEV, msg, name, e);
+                logger.warn(DEV, msg, name);
                 if (confidentialLogger != logger) {
-                    logger.warn(DEV, msg, name);
+                    confidentialLogger.warn(DEV, msg, name, e);
                 }
             }
 
@@ -398,9 +398,9 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
 
                 } catch (final Exception ex) {
                     final String msg = "[{}] Error occurred while flushing (retry attempt {}).";
-                    confidentialLogger.warn(DEV, msg, name, retryCount + 1, ex);
+                    logger.warn(DEV, msg, name, retryCount + 1);
                     if (confidentialLogger != logger) {
-                        logger.warn(DEV, msg, name, retryCount + 1);
+                        confidentialLogger.warn(DEV, msg, name, retryCount + 1, ex);
                     }
                 }
             }
@@ -415,18 +415,18 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
                 } catch (final Exception ee) {
                     ee.addSuppressed(e);
                     final String msg = "[{}] Batch failed to check the flush transaction state";
-                    confidentialLogger.error(msg, name, ee);
+                    logger.error(msg, name);
                     if (confidentialLogger != logger) {
-                        logger.error(msg, name);
+                        confidentialLogger.error(msg, name, ee);
                     }
                 }
 
                 onFlushFinished(flushTriggeredMs, Collections.emptyList(), batchEntries);
 
                 final String msg = "[{}] Error occurred while flushing. Aborting batch flush.";
-                confidentialLogger.error(DEV, msg, name, e);
+                logger.error(DEV, msg, name);
                 if (confidentialLogger != logger) {
-                    logger.error(DEV, msg, name);
+                    confidentialLogger.error(DEV, msg, name, e);
                 }
             } else {
                 onFlushFinished(flushTriggeredMs, batchEntries, Collections.emptyList());
@@ -441,9 +441,9 @@ public class MultithreadedBatch extends AbstractPdbBatch implements PdbBatch {
                 }
             } catch (final Exception e) {
                 final String msg = "[{}] Batch failed to check the flush transaction state";
-                confidentialLogger.error(msg, name, e);
+                logger.error(msg, name);
                 if (confidentialLogger != logger) {
-                    logger.error(msg, name);
+                    confidentialLogger.error(msg, name, e);
                 }
             }
         }
