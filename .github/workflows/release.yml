@@ -38,6 +38,14 @@ jobs:
           gpg-private-key: ${{ secrets.PGP_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
+      # jgitver only treats annotated tags as release versions. A tag created in the GitHub UI (Releases)
+      # is lightweight and would give "<version>-SNAPSHOT", so annotate it (locally, on the runner only).
+      - name: Annotate the release tag
+        if: github.ref_type == 'tag'
+        run: |
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -f -a "$GITHUB_REF_NAME" -m "Release $GITHUB_REF_NAME" "$GITHUB_REF_NAME^{commit}"
+
       - name: Check that the Maven version matches the tag
         if: github.ref_type == 'tag'
         run: |
