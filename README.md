@@ -901,6 +901,26 @@ engine.dropView("view_name");
 |[dropView](https://feedzai.github.io/pdb/com/feedzai/commons/sql/abstraction/engine/AbstractDatabaseEngine.html#dropView(java.lang.String))|Drops a view with the given name.|
 
 
+## Releasing
+
+Releases are published to [Maven Central](https://central.sonatype.com/) by the
+[Release PDB to Maven Central](.github/workflows/release.yml) GitHub workflow. The version comes from the git tag
+(via [jgitver](https://github.com/jgitver/jgitver-maven-plugin)), so there is nothing to change in the `pom.xml`.
+
+1. Make sure the commit to release is on `master` and its checks are green.
+2. Create and push a tag with the new version, in the format `x.y.z` (for example `2.8.29`):
+
+   ```bash
+   git tag 2.8.29 <commit>
+   git push upstream 2.8.29
+   ```
+
+3. The workflow signs and publishes the jar, the sources jar and the javadoc jar. Follow it in the repository's
+   *Actions* tab. The artifact shows up at <https://central.sonatype.com/artifact/com.feedzai/pdb>.
+
+The workflow needs these repository secrets: `SONATYPE_USER` and `SONATYPE_PASS` (a user token generated on
+https://central.sonatype.com/), `PGP_PRIVATE_KEY` (ASCII-armored signing key) and `PGP_PASS` (its passphrase).
+
 ## Further Documentation
 
 For more insight on the available functionality please see projects [javadoc](https://feedzai.github.io/pdb).
