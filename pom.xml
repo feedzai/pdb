@@ -5,6 +5,7 @@
     <artifactId>pdb</artifactId>
     <version>0.0.0-SNAPSHOT</version>
     <name>pdb</name>
+    <description>PulseDB is a database-mapping software library written in Java, it provides a transparent access and manipulation to a great variety of database implementations.</description>
 
     <url>https://github.com/feedzai/pdb</url>
     <organization>
