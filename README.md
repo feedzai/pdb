@@ -918,6 +918,9 @@ Releases are published to [Maven Central](https://central.sonatype.com/) by the
 3. The workflow signs and publishes the jar, the sources jar and the javadoc jar. Follow it in the repository's
    *Actions* tab. The artifact shows up at <https://central.sonatype.com/artifact/com.feedzai/pdb>.
 
+To check the signing setup without releasing, run the workflow by hand from the *Actions* tab
+(*Run workflow*, on a branch): it builds and signs the jars but uploads nothing.
+
 The workflow needs these repository secrets: `SONATYPE_USER` and `SONATYPE_PASS` (a user token generated on
 https://central.sonatype.com/), `PGP_PRIVATE_KEY` (ASCII-armored signing key) and `PGP_PASS` (its passphrase).
 

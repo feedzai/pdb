@@ -2,10 +2,14 @@ name: Release PDB to Maven Central
 
 # Publishes a release every time a version tag (x.y.z) is pushed.
 # The version is derived from the tag by jgitver (see .mvn/jgitver.config.xml).
+#
+# It can also be started by hand from the Actions tab on a branch: that is a dry run which imports the key,
+# builds and signs the jars, but uploads nothing to Maven Central.
 on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -35,6 +39,7 @@ jobs:
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
       - name: Check that the Maven version matches the tag
+        if: github.ref_type == 'tag'
         run: |
           version=$(mvn -B -q -ntp help:evaluate -Dexpression=project.version -DforceStdout)
           echo "Maven version: $version, tag: $GITHUB_REF_NAME"
@@ -42,8 +47,18 @@ jobs:
 
       # Tests run in the PR workflows. JDK 8 keeps the Java 8 bytecode of previous PDB releases.
       - name: Publish to Maven Central
+        if: github.ref_type == 'tag'
         run: mvn -B -ntp deploy -Prelease -DskipTests
         env:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_USER }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_PASS }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.PGP_PASS }}
+
+      # Same build and signing as a release, but nothing is sent to Central (skipPublishing).
+      - name: Dry run (sign and bundle, nothing is uploaded)
+        if: github.ref_type != 'tag'
+        run: |
+          mvn -B -ntp deploy -Prelease -DskipTests -DskipPublishing=true
+          ls -l target/*.jar target/*.asc
+        env:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.PGP_PASS }}
